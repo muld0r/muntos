@@ -41,7 +41,7 @@ __attribute__((noreturn)) static void idle_task_fn(size_t argc, uintptr_t *argv)
   }
 }
 
-void rt_start(void)
+__attribute__((noreturn)) void rt_start(void)
 {
   static char idle_task_stack[RT_CONTEXT_STACK_MIN];
   static const struct rt_task_config idle_task_cfg = {
@@ -55,8 +55,15 @@ void rt_start(void)
   };
   static struct rt_task idle_task;
   rt_task_init(&idle_task, &idle_task_cfg);
-  rt_yield();
+  rt.active_task =
+      list_item(list_pop_front(&rt.ready_list), struct rt_task, list_node);
+  context_restore(&rt.active_task->ctx);
+
   // TODO
+  for (;;)
+  {
+    rt_yield();
+  }
 }
 
 void rt_suspend(void)
@@ -67,4 +74,9 @@ void rt_suspend(void)
 
 void rt_yield(void)
 {
+  context_save(&rt.active_task->ctx);
+  list_add_tail(&rt.ready_list, &rt.active_task->list_node);
+  rt.active_task =
+      list_item(list_pop_front(&rt.ready_list), struct rt_task, list_node);
+  context_restore(&rt.active_task->ctx);
 }

@@ -11,7 +11,7 @@ __attribute__((noreturn)) static void simple_fn(size_t argc, uintptr_t *argv)
   for (;;)
   {
     printf("%u\n", x);
-    sleep(1);
+    rt_yield();
     ++x;
   }
 }
