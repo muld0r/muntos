@@ -1,6 +1,6 @@
 #pragma once
 
-#include <context_port.h>
+#include <rt/context.h>
 
 #include <rt/list.h>
 
@@ -29,7 +29,7 @@ struct rt_task
 {
   struct list list_node;
   struct rt_task_config cfg;
-  context_t ctx;
+  rt_context_t ctx;
   bool runnable;
 };
 
