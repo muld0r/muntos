@@ -2,8 +2,6 @@
 
 #include <rt/context.h>
 
-#include <stdio.h>
-
 struct rt
 {
   struct list ready_list;
@@ -43,7 +41,6 @@ __attribute__((noreturn)) static void idle_task_fn(size_t argc, uintptr_t *argv)
 
   for (;;)
   {
-    printf("idle task run\n");
     rt_yield();
   }
 }
