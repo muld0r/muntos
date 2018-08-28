@@ -17,14 +17,14 @@ static sem_t *thread_start_sem;
 
 static void *pthread_fn(void *arg)
 {
+  pthread_cond_t cond;
+  pthread_cond_init(&cond, NULL);
   pthread_mutex_lock(&thread_lock);
   struct pthread_arg *parg = arg;
   void (*cfn)(void *) = parg->fn;
   void *carg = parg->arg;
-  free(parg);
-  pthread_cond_t cond;
-  pthread_cond_init(&cond, NULL);
   parg->ctx->cond = &cond;
+  free(parg);
   sem_post(thread_start_sem);
   pthread_cond_wait(&cond, &thread_lock);
   cfn(carg);
