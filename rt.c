@@ -2,21 +2,19 @@
 
 #include <rt/context.h>
 
-struct rt
+static struct rt
 {
   struct list ready_list;
   struct rt_task *active_task;
+} rt = {
+    .ready_list = LIST_HEAD_INIT(rt.ready_list),
+    .active_task = NULL,
 };
 
 static inline struct rt_task *task_from_node(struct list *node)
 {
   return list_item(node, struct rt_task, list_node);
 }
-
-static struct rt rt = {
-    .ready_list = LIST_HEAD_INIT(rt.ready_list),
-    .active_task = NULL,
-};
 
 static void run_task(void *arg)
 {
