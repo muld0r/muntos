@@ -33,21 +33,29 @@ static struct list *task_list = &idle_task.list;
 // TODO: refactor rt_suspend, rt_yield, and rt_exit to call rt_switch
 // special cases of a rt_switch
 
+static inline struct rt_task *current_task(void)
+{
+  return list_item(task_list, struct rt_task, list);
+}
+
+static inline void cycle_tasks(void)
+{
+  task_list = task_list->next;
+}
+
 void rt_yield(void)
 {
-  struct rt_task *old = list_item(task_list, struct rt_task, list);
-  task_list = task_list->next;
-  const struct rt_task *new = list_item(task_list, struct rt_task, list);
-  rt_context_swap(&old->ctx, &new->ctx);
+  struct rt_task *old = current_task();
+  cycle_tasks();
+  rt_context_swap(&old->ctx, &current_task()->ctx);
 }
 
 void rt_suspend(void)
 {
-  struct rt_task *old = list_item(task_list, struct rt_task, list);
-  task_list = task_list->next;
-  const struct rt_task *new = list_item(task_list, struct rt_task, list);
+  struct rt_task *old = current_task();
+  cycle_tasks();
   list_del(&old->list);
-  rt_context_swap(&old->ctx, &new->ctx);
+  rt_context_swap(&old->ctx, &current_task()->ctx);
 }
 
 static void run_task(void *arg)
