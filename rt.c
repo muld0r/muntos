@@ -30,11 +30,31 @@ static struct rt_task idle_task = {
 
 static struct list *task_list = &idle_task.list;
 
+// TODO: refactor rt_suspend, rt_yield, and rt_exit to call rt_switch
+// special cases of a rt_switch
+
+void rt_yield(void)
+{
+  struct rt_task *old = list_item(task_list, struct rt_task, list);
+  task_list = task_list->next;
+  const struct rt_task *new = list_item(task_list, struct rt_task, list);
+  rt_context_swap(&old->ctx, &new->ctx);
+}
+
+void rt_suspend(void)
+{
+  struct rt_task *old = list_item(task_list, struct rt_task, list);
+  task_list = task_list->next;
+  const struct rt_task *new = list_item(task_list, struct rt_task, list);
+  list_del(&old->list);
+  rt_context_swap(&old->ctx, &new->ctx);
+}
+
 static void run_task(void *arg)
 {
   const struct rt_task *task = arg;
   task->cfg.fn(task->cfg.argc, task->cfg.argv);
-  // TODO: clean up/disable context/task when fn returns
+  rt_suspend();
 }
 
 void rt_task_init(struct rt_task *task, const struct rt_task_config *cfg)
@@ -49,22 +69,4 @@ void rt_task_init(struct rt_task *task, const struct rt_task_config *cfg)
 void rt_start(void)
 {
   idle_task.cfg.fn(idle_task.cfg.argc, idle_task.cfg.argv);
-}
-
-// TODO: refactor rt_suspend, rt_yield, and rt_exit to call rt_switch
-// special cases of a rt_switch
-
-void rt_suspend(void)
-{
-  // TODO
-  // rt.active_task->runnable = false;
-  rt_yield();
-}
-
-void rt_yield(void)
-{
-  struct rt_task *old = list_item(task_list, struct rt_task, list);
-  task_list = task_list->next;
-  const struct rt_task *new = list_item(task_list, struct rt_task, list);
-  rt_context_swap(&old->ctx, &new->ctx);
 }

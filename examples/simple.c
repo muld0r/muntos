@@ -3,12 +3,12 @@
 #include <stdio.h>
 #include <unistd.h>
 
-__attribute__((noreturn)) static void simple_fn(size_t argc, uintptr_t *argv)
+static void simple_fn(size_t argc, uintptr_t *argv)
 {
   (void)argc;
   (void)argv;
   unsigned int x = 0;
-  for (;;)
+  while (x < 1000)
   {
     printf("%u\n", x);
     rt_yield();
