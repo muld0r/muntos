@@ -14,6 +14,7 @@ static void simple_fn(size_t argc, uintptr_t *argv)
     rt_yield();
     ++x;
   }
+  fflush(stdout);
 }
 
 int main(void)
