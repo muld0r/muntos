@@ -48,23 +48,3 @@ static inline void list_del(struct list *node)
   node->next->prev = node->prev;
   node->prev->next = node->next;
 }
-
-static inline bool list_empty(struct list *head)
-{
-  return head->next == head;
-}
-
-static inline struct list *list_front(struct list *head)
-{
-  return head->next;
-}
-
-static inline struct list *list_pop_front(struct list *head)
-{
-  struct list *front = list_front(head);
-  list_del(front);
-  return front;
-}
-
-#define list_for_each(node, head)                                              \
-  for (struct list *node = (head)->next; node != (head); node = node->next)

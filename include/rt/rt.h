@@ -27,7 +27,7 @@ struct rt_task_config
 
 struct rt_task
 {
-  struct list list_node;
+  struct list list;
   struct rt_task_config cfg;
   rt_context_t ctx;
   bool runnable;
