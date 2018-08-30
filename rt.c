@@ -47,21 +47,21 @@ __attribute__((noreturn)) static void idle_task_fn(size_t argc, uintptr_t *argv)
 
 void rt_start(void)
 {
-  static char idle_task_stack[RT_CONTEXT_STACK_MIN];
-  static const struct rt_task_config idle_task_cfg = {
-      .fn = idle_task_fn,
-      .argc = 0,
-      .argv = NULL,
-      .stack = idle_task_stack,
-      .stack_size = sizeof(idle_task_stack),
-      .name = "idle",
-      .priority = 0,
+  static struct rt_task idle_task = {
+      .cfg =
+          {
+              .fn = idle_task_fn,
+              .argc = 0,
+              .argv = NULL,
+              .stack = NULL,
+              .stack_size = 0,
+              .name = "idle",
+              .priority = 0,
+          },
+      .runnable = true,
   };
-  static struct rt_task idle_task;
-  rt_task_init(&idle_task, &idle_task_cfg);
-  rt.active_task = task_from_node(list_pop_front(&rt.ready_list));
-  rt_context_t main_context;
-  rt_context_swap(&main_context, &rt.active_task->ctx);
+  rt.active_task = &idle_task;
+  idle_task.cfg.fn(idle_task.cfg.argc, idle_task.cfg.argv);
 }
 
 // TODO: refactor rt_suspend, rt_yield, and rt_exit to call rt_switch
@@ -76,6 +76,10 @@ void rt_suspend(void)
 
 void rt_yield(void)
 {
+  if (list_empty(&rt.ready_list))
+  {
+    return;
+  }
   struct rt_task *old = rt.active_task;
   struct rt_task *new = task_from_node(list_pop_front(&rt.ready_list));
   list_add_tail(&rt.ready_list, &old->list_node);
