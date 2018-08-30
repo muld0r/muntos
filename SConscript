@@ -3,6 +3,7 @@ import os
 env = Environment(
     CC='clang',
     CCFLAGS=[
+        '-g',
         '-Os',
         '-Weverything', '-Werror', '-Wno-padded',
         '-pthread',

@@ -1,6 +1,9 @@
 #include <rt/rt.h>
 
 #include <rt/context.h>
+#include <rt/critical.h>
+#include <rt/port.h>
+#include <rt/tick.h>
 
 __attribute__((noreturn)) static void idle_task_fn(size_t argc, uintptr_t *argv)
 {
@@ -30,10 +33,7 @@ static struct rt_task idle_task = {
 
 static struct list *task_list = &idle_task.list;
 
-// TODO: refactor rt_suspend, rt_yield, and rt_exit to call rt_switch
-// special cases of a rt_switch
-
-static inline struct rt_task *current_task(void)
+struct rt_task *rt_self(void)
 {
   return list_item(task_list, struct rt_task, list);
 }
@@ -45,17 +45,23 @@ static inline void cycle_tasks(void)
 
 void rt_yield(void)
 {
-  struct rt_task *old = current_task();
+  rt_critical_begin();
+  struct rt_task *old = rt_self();
   cycle_tasks();
-  rt_context_swap(&old->ctx, &current_task()->ctx);
+  struct rt_task *new = rt_self();
+  rt_critical_end();
+  rt_context_swap(&old->ctx, &new->ctx);
 }
 
 void rt_suspend(void)
 {
-  struct rt_task *old = current_task();
+  rt_critical_begin();
+  struct rt_task *old = rt_self();
   cycle_tasks();
+  struct rt_task *new = rt_self();
   list_del(&old->list);
-  rt_context_swap(&old->ctx, &current_task()->ctx);
+  rt_critical_end();
+  rt_context_swap(&old->ctx, &new->ctx);
 }
 
 static void run_task(void *arg)
@@ -74,7 +80,13 @@ void rt_task_init(struct rt_task *task, const struct rt_task_config *cfg)
   // TODO: deal with different priorities
 }
 
+void rt_tick(void)
+{
+  rt_yield();
+}
+
 void rt_start(void)
 {
+  rt_port_start();
   idle_task.cfg.fn(idle_task.cfg.argc, idle_task.cfg.argv);
 }
