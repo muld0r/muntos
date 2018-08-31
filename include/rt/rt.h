@@ -44,9 +44,14 @@ void rt_task_init(struct rt_task *task, const struct rt_task_config *cfg);
 void rt_yield(void);
 
 /*
- * Suspend the current task.
+ * Suspend a task.
  */
-void rt_suspend(void);
+void rt_suspend(struct rt_task *task);
+
+/*
+ * Resume a task.
+ */
+void rt_resume(struct rt_task *task);
 
 /*
  * Get a pointer to the current task.

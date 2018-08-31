@@ -52,22 +52,43 @@ void rt_yield(void)
   rt_context_swap(&old->ctx, &new->ctx);
 }
 
-void rt_suspend(void)
+void rt_suspend(struct rt_task *task)
 {
+  if (task == rt_self())
+  {
+    rt_critical_begin();
+    cycle_tasks();
+    struct rt_task *new_task = rt_self();
+    list_del(&task->list);
+    rt_critical_end();
+    rt_context_swap(&task->ctx, &new_task->ctx);
+  }
+  else
+  {
+    rt_critical_begin();
+    task->runnable = false;
+    list_del(&task->list);
+    rt_critical_end();
+  }
+}
+
+void rt_resume(struct rt_task *task)
+{
+  if (task == rt_self())
+  {
+    return;
+  }
   rt_critical_begin();
-  struct rt_task *old = rt_self();
-  cycle_tasks();
-  struct rt_task *new = rt_self();
-  list_del(&old->list);
+  task->runnable = true;
+  list_add_tail(task_list, &task->list);
   rt_critical_end();
-  rt_context_swap(&old->ctx, &new->ctx);
 }
 
 static void run_task(void *arg)
 {
   const struct rt_task *task = arg;
   task->cfg.fn(task->cfg.argc, task->cfg.argv);
-  rt_suspend();
+  rt_suspend(rt_self());
 }
 
 void rt_task_init(struct rt_task *task, const struct rt_task_config *cfg)

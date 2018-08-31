@@ -2,27 +2,23 @@
 #include <rt/rt.h>
 
 #include <stdio.h>
-#include <unistd.h>
 
-__attribute__((noreturn)) static void simple_fn(size_t argc, uintptr_t *argv)
+static void simple_fn(size_t argc, uintptr_t *argv)
 {
   (void)argc;
   (void)argv;
-  for (;;)
+  while (argv[0] > 0)
   {
-    struct timespec ts;
-    clock_gettime(CLOCK_MONOTONIC, &ts);
     rt_critical_begin();
-    printf("%s %lu %ld\n", rt_self()->cfg.name, argv[0],
-           ts.tv_sec * 1000000 + ts.tv_nsec / 1000);
+    printf("%s %lu\n", rt_self()->cfg.name, argv[0]);
     rt_critical_end();
-    ++argv[0];
+    --argv[0];
   }
 }
 
 int main(void)
 {
-  static uintptr_t x, y;
+  static uintptr_t x = 10, y = 20;
   static char task0_stack[2048];
   static const struct rt_task_config task0_cfg = {
       .fn = simple_fn,
