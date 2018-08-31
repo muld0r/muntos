@@ -1,6 +1,5 @@
 #include <rt/context.h>
 #include <rt/port.h>
-#include <rt/tick.h>
 
 #include <rt/rt.h>
 

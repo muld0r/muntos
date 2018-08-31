@@ -3,7 +3,6 @@
 #include <rt/context.h>
 #include <rt/critical.h>
 #include <rt/port.h>
-#include <rt/tick.h>
 
 __attribute__((noreturn)) static void idle_task_fn(size_t argc, uintptr_t *argv)
 {

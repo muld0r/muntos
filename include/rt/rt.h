@@ -52,3 +52,8 @@ void rt_suspend(void);
  * Get a pointer to the current task.
  */
 struct rt_task *rt_self(void);
+
+/*
+ * Run a tick. Should be called periodically.
+ */
+void rt_tick(void);
