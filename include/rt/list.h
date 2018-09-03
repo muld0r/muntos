@@ -1,7 +1,6 @@
 #pragma once
 
-#include <stdbool.h>
-#include <stdint.h>
+#include "container.h"
 
 struct list
 {
@@ -21,8 +20,7 @@ static inline void list_init(struct list *head)
   head->next = head;
 }
 
-#define list_item(ptr, type, member)                                           \
-  ((type *)((uintptr_t)(ptr) - (uintptr_t)(&((type *)NULL)->member)))
+#define list_item container_item
 
 static inline void list_insert(struct list *node, struct list *prev,
                                struct list *next)
