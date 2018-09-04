@@ -114,6 +114,7 @@ void rt_port_start(void)
   sigemptyset(&tick_action.sa_mask);
   sigaction(SIGALRM, &tick_action, NULL);
 
-  ualarm(1, 1000);
+  ualarm(1000, 1000);
+  raise(SIGALRM); // tick immediately
   rt_enable_interrupts();
 }
