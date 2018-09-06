@@ -18,7 +18,7 @@ static void simple_fn(size_t argc, uintptr_t *argv)
 
 int main(void)
 {
-  static uintptr_t x = 10, y = 20;
+  static uintptr_t x = 100000, y = 100000;
   static char task0_stack[2048];
   static const struct rt_task_config task0_cfg = {
       .fn = simple_fn,
