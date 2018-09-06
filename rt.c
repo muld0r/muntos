@@ -16,7 +16,6 @@ __attribute__((noreturn)) static void idle_task_fn(size_t argc, uintptr_t *argv)
 }
 
 static struct rt_task idle_task = {
-    .list = LIST_HEAD_INIT(idle_task.list),
     .cfg =
         {
             .fn = idle_task_fn,
@@ -30,16 +29,20 @@ static struct rt_task idle_task = {
     .runnable = true,
 };
 
-static struct list *task_list = &idle_task.list;
+static struct list ready_list = LIST_INIT(ready_list);
+static struct rt_task *active_task = &idle_task;
 
 struct rt_task *rt_self(void)
 {
-  return list_item(task_list, struct rt_task, list);
+  return active_task;
 }
 
 static inline void cycle_tasks(void)
 {
-  task_list = task_list->next;
+  struct list *front = list_first(&ready_list);
+  list_del(front);
+  list_add_tail(&ready_list, &active_task->list);
+  active_task = list_item(front, struct rt_task, list);
 }
 
 void rt_yield(void)
@@ -80,7 +83,8 @@ void rt_resume(struct rt_task *task)
   }
   rt_critical_begin();
   task->runnable = true;
-  list_add_tail(task_list, &task->list);
+  list_add_tail(&ready_list, &task->list);
+  // TODO: deal with different priorities
   rt_critical_end();
 }
 
@@ -95,9 +99,7 @@ void rt_task_init(struct rt_task *task, const struct rt_task_config *cfg)
 {
   task->cfg = *cfg;
   rt_context_init(&task->ctx, cfg->stack, cfg->stack_size, run_task, task);
-  task->runnable = true;
-  list_add_tail(task_list, &task->list);
-  // TODO: deal with different priorities
+  rt_resume(task);
 }
 
 static rt_tick_t ticks;

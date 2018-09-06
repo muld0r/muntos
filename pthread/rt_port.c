@@ -57,7 +57,6 @@ static void thread_init(void)
 {
   thread_start_sem = sem_open("thread_start_sem", O_CREAT, S_IRWXU, 0);
   pthread_mutex_init(&thread_lock, NULL);
-  rt_disable_interrupts();
 }
 
 void rt_context_init(rt_context_t *ctx, void *stack, size_t stack_size,
@@ -75,7 +74,11 @@ void rt_context_init(rt_context_t *ctx, void *stack, size_t stack_size,
   parg->arg = arg;
   parg->ctx = ctx;
 
+  // launch each thread with signals blocked so only the active
+  // thread will be delivered the SIGALRM
+  rt_disable_interrupts();
   pthread_create(&ctx->thread, &attr, pthread_fn, parg);
+  rt_enable_interrupts();
   sem_wait(thread_start_sem);
 
   pthread_attr_destroy(&attr);
@@ -116,5 +119,4 @@ void rt_port_start(void)
 
   ualarm(1000, 1000);
   raise(SIGALRM); // tick immediately
-  rt_enable_interrupts();
 }

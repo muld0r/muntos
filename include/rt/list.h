@@ -7,12 +7,10 @@ struct list
   struct list *prev, *next;
 };
 
-#define LIST_HEAD_INIT(name)                                                   \
+#define LIST_INIT(name)                                                        \
   {                                                                            \
     .prev = &(name), .next = &(name),                                          \
   }
-
-#define LIST_HEAD(name) struct list name = LIST_HEAD_INIT(name)
 
 static inline void list_init(struct list *head)
 {
@@ -45,4 +43,9 @@ static inline void list_del(struct list *node)
 {
   node->next->prev = node->prev;
   node->prev->next = node->next;
+}
+
+static inline struct list *list_first(struct list *head)
+{
+  return head->next;
 }
