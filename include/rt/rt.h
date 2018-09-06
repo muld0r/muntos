@@ -15,6 +15,8 @@ void rt_start(void);
 
 typedef unsigned int rt_priority_t;
 
+typedef uint32_t rt_tick_t;
+
 struct rt_task_config
 {
   void (*fn)(size_t argc, uintptr_t *argv);
@@ -31,6 +33,8 @@ struct rt_task
   struct list list;
   struct rt_task_config cfg;
   rt_context_t ctx;
+  rt_tick_t delay_time;
+  rt_tick_t delay_duration;
   bool runnable;
 };
 
@@ -63,3 +67,13 @@ struct rt_task *rt_self(void);
  * Run a tick. Should be called periodically.
  */
 void rt_tick(void);
+
+/*
+ * Return the current tick number.
+ */
+rt_tick_t rt_tick_count(void);
+
+/*
+ * Delay the current task for a given number of ticks.
+ */
+void rt_delay(rt_tick_t ticks_to_delay);

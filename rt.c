@@ -100,9 +100,26 @@ void rt_task_init(struct rt_task *task, const struct rt_task_config *cfg)
   // TODO: deal with different priorities
 }
 
+static rt_tick_t ticks;
+
 void rt_tick(void)
 {
+  ++ticks;
+  // TODO: evaluate delay list
   rt_yield();
+}
+
+rt_tick_t rt_tick_count(void)
+{
+  return ticks;
+}
+
+void rt_delay(rt_tick_t ticks_to_delay)
+{
+  struct rt_task *self = rt_self();
+  self->delay_time = ticks;
+  self->delay_duration = ticks_to_delay;
+  // TODO
 }
 
 void rt_start(void)
