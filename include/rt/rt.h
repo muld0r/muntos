@@ -8,14 +8,10 @@
 #include <stddef.h>
 #include <stdint.h>
 
-/*
- * Start the rt scheduler.
- */
-void rt_start(void);
-
 typedef unsigned int rt_priority_t;
 
 typedef uint32_t rt_tick_t;
+#define RT_TICK_MAX ((rt_tick_t)UINT32_MAX)
 
 struct rt_task_config
 {
@@ -33,15 +29,23 @@ struct rt_task
   struct list list;
   struct rt_task_config cfg;
   rt_context_t ctx;
-  rt_tick_t delay_time;
-  rt_tick_t delay_duration;
-  bool runnable;
+  rt_tick_t delay_until;
 };
 
 /*
  * Initialize a task.
  */
 void rt_task_init(struct rt_task *task, const struct rt_task_config *cfg);
+
+/*
+ * Start the rt scheduler.
+ */
+void rt_start(void);
+
+/*
+ * Stop the rt scheduler.
+ */
+void rt_stop(void);
 
 /*
  * Yield control of the processor to another runnable task.

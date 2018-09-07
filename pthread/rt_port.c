@@ -118,5 +118,16 @@ void rt_port_start(void)
   sigaction(SIGALRM, &tick_action, NULL);
 
   ualarm(1000, 1000);
-  raise(SIGALRM); // tick immediately
+}
+
+void rt_port_stop(void)
+{
+  ualarm(0, 0);
+  pthread_mutex_unlock(&thread_lock);
+
+  struct sigaction tick_action = {
+      .sa_handler = SIG_DFL,
+  };
+  sigemptyset(&tick_action.sa_mask);
+  sigaction(SIGALRM, &tick_action, NULL);
 }

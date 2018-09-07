@@ -4,12 +4,14 @@
 #include <rt/critical.h>
 #include <rt/port.h>
 
-__attribute__((noreturn)) static void idle_task_fn(size_t argc, uintptr_t *argv)
+static bool rt_request_exit = false;
+
+static void idle_task_fn(size_t argc, uintptr_t *argv)
 {
   (void)argc;
   (void)argv;
 
-  for (;;)
+  while (!rt_request_exit)
   {
     rt_yield();
   }
@@ -21,15 +23,15 @@ static struct rt_task idle_task = {
             .fn = idle_task_fn,
             .argc = 0,
             .argv = NULL,
-            .stack = NULL,
+            .stack = NULL, // idle runs on the main stack
             .stack_size = 0,
             .name = "idle",
             .priority = 0,
         },
-    .runnable = true,
 };
 
-static struct list ready_list = LIST_INIT(ready_list);
+static LIST_HEAD(ready_list);
+static LIST_HEAD(delay_list);
 static struct rt_task *active_task = &idle_task;
 
 struct rt_task *rt_self(void)
@@ -37,39 +39,34 @@ struct rt_task *rt_self(void)
   return active_task;
 }
 
-static inline void cycle_tasks(void)
-{
-  struct list *front = list_first(&ready_list);
-  list_del(front);
-  list_add_tail(&ready_list, &active_task->list);
-  active_task = list_item(front, struct rt_task, list);
-}
+// TODO: coalesce rt_yield and rt_suspend
 
 void rt_yield(void)
 {
   rt_critical_begin();
-  struct rt_task *old = rt_self();
-  cycle_tasks();
-  struct rt_task *new = rt_self();
+  struct rt_task *old = active_task;
+  list_add_tail(&ready_list, &old->list);
+  active_task = list_item(list_front(&ready_list), struct rt_task, list);
+  list_del(&active_task->list);
   rt_critical_end();
-  rt_context_swap(&old->ctx, &new->ctx);
+  rt_context_swap(&old->ctx, &active_task->ctx);
 }
 
 void rt_suspend(struct rt_task *task)
 {
-  if (task == rt_self())
+  if (task == active_task)
   {
     rt_critical_begin();
-    cycle_tasks();
-    struct rt_task *new_task = rt_self();
-    list_del(&task->list);
+    active_task = list_item(list_front(&ready_list), struct rt_task, list);
+    list_del(&active_task->list);
     rt_critical_end();
-    rt_context_swap(&task->ctx, &new_task->ctx);
+    // TODO, call context swap in critical section? doesn't work right in
+    // pthread port
+    rt_context_swap(&task->ctx, &active_task->ctx);
   }
   else
   {
     rt_critical_begin();
-    task->runnable = false;
     list_del(&task->list);
     rt_critical_end();
   }
@@ -82,7 +79,6 @@ void rt_resume(struct rt_task *task)
     return;
   }
   rt_critical_begin();
-  task->runnable = true;
   list_add_tail(&ready_list, &task->list);
   // TODO: deal with different priorities
   rt_critical_end();
@@ -107,7 +103,17 @@ static rt_tick_t ticks;
 void rt_tick(void)
 {
   ++ticks;
-  // TODO: evaluate delay list
+  for (;;)
+  {
+    struct rt_task *task =
+        list_item(list_front(&delay_list), struct rt_task, list);
+    if (ticks != task->delay_until)
+    {
+      break;
+    }
+    list_del(&task->list);
+    rt_resume(task);
+  }
   rt_yield();
 }
 
@@ -118,16 +124,47 @@ rt_tick_t rt_tick_count(void)
 
 void rt_delay(rt_tick_t ticks_to_delay)
 {
+  if (ticks_to_delay == 0)
+  {
+    return;
+  }
   struct rt_task *self = rt_self();
-  self->delay_time = ticks;
-  self->delay_duration = ticks_to_delay;
-  // TODO
+  if (ticks_to_delay == RT_TICK_MAX)
+  {
+    rt_suspend(self);
+    return;
+  }
+
+  self->delay_until = rt_tick_count() + ticks_to_delay;
+
+  struct list *delay_insert;
+  rt_critical_begin();
+  for (delay_insert = delay_list.next; delay_insert != &delay_list;
+       delay_insert = delay_insert->next)
+  {
+    const struct rt_task *task =
+        list_item(delay_insert, struct rt_task, list);
+    if (task->delay_until - rt_tick_count() > ticks_to_delay)
+    {
+      break;
+    }
+  }
+  list_add_tail(delay_insert, &self->list);
+  rt_critical_end();
+  rt_suspend(self);
 }
 
 void rt_start(void)
 {
   rt_port_start();
   idle_task.cfg.fn(idle_task.cfg.argc, idle_task.cfg.argv);
+}
+
+void rt_stop(void)
+{
+  // TODO: suspend all other tasks and switch to idle
+  rt_port_stop();
+  rt_request_exit = true;
 }
 
 static uint_fast8_t critical_nesting = 0;

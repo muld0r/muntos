@@ -11,4 +11,6 @@ typedef struct rt_context
 
 void rt_port_start(void);
 
-#define RT_CONTEXT_STACK_MIN PTHREAD_STACK_MIN
+void rt_port_stop(void);
+
+#define RT_STACK_MIN PTHREAD_STACK_MIN
