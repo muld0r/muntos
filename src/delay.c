@@ -42,14 +42,11 @@ void rt_delay_periodic(rt_tick_t *last_wake_tick, rt_tick_t period)
 void rt_delay_wake_tasks(void)
 {
   rt_tick_t current_tick = rt_tick_count();
-  for (;;)
+  for (struct rt_task *task =
+           list_item(list_front(&delay_list), struct rt_task, list);
+       current_tick == task->wake_tick;
+       task = list_item(list_front(&delay_list), struct rt_task, list))
   {
-    struct rt_task *task =
-        list_item(list_front(&delay_list), struct rt_task, list);
-    if (current_tick != task->wake_tick)
-    {
-      break;
-    }
     list_del(&task->list);
     rt_resume(task);
   }
