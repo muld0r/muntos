@@ -107,7 +107,7 @@ void rt_tick(void)
   {
     struct rt_task *task =
         list_item(list_front(&delay_list), struct rt_task, list);
-    if (ticks != task->delay_until)
+    if (ticks != task->wake_tick)
     {
       break;
     }
@@ -120,38 +120,6 @@ void rt_tick(void)
 rt_tick_t rt_tick_count(void)
 {
   return ticks;
-}
-
-void rt_delay(rt_tick_t ticks_to_delay)
-{
-  if (ticks_to_delay == 0)
-  {
-    return;
-  }
-  struct rt_task *self = rt_self();
-  if (ticks_to_delay == RT_TICK_MAX)
-  {
-    rt_suspend(self);
-    return;
-  }
-
-  self->delay_until = rt_tick_count() + ticks_to_delay;
-
-  struct list *delay_insert;
-  rt_critical_begin();
-  for (delay_insert = delay_list.next; delay_insert != &delay_list;
-       delay_insert = delay_insert->next)
-  {
-    const struct rt_task *task =
-        list_item(delay_insert, struct rt_task, list);
-    if (task->delay_until - rt_tick_count() > ticks_to_delay)
-    {
-      break;
-    }
-  }
-  list_add_tail(delay_insert, &self->list);
-  rt_critical_end();
-  rt_suspend(self);
 }
 
 void rt_start(void)
@@ -182,4 +150,47 @@ void rt_critical_end(void)
   {
     rt_enable_interrupts();
   }
+}
+
+static void delay_until(rt_tick_t wake_tick, rt_tick_t max_delay)
+{
+  struct rt_task *self = rt_self();
+  bool should_suspend = false;
+
+  rt_critical_begin();
+  const rt_tick_t ticks_until_wake = wake_tick - rt_tick_count();
+  if (0 < ticks_until_wake && ticks_until_wake <= max_delay)
+  {
+    struct list *delay_insert;
+    for (delay_insert = list_front(&delay_list); delay_insert != &delay_list;
+         delay_insert = delay_insert->next)
+    {
+      const struct rt_task *task =
+          list_item(delay_insert, struct rt_task, list);
+      if (task->wake_tick - rt_tick_count() > ticks_until_wake)
+      {
+        break;
+      }
+    }
+    self->wake_tick = wake_tick;
+    list_add_tail(delay_insert, &self->list);
+    should_suspend = true;
+  }
+  rt_critical_end();
+
+  // TODO: make this work inside critical section
+  if (should_suspend)
+  {
+    rt_suspend(self);
+  }
+}
+
+void rt_delay(rt_tick_t delay)
+{
+  delay_until(rt_tick_count() + delay, delay);
+}
+
+void rt_delay_periodic(rt_tick_t *last_wake_tick, rt_tick_t period)
+{
+  delay_until(*last_wake_tick += period, period);
 }

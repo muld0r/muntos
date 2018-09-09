@@ -7,6 +7,7 @@ static void simple_fn(size_t argc, uintptr_t *argv)
 {
   (void)argc;
   (void)argv;
+  rt_tick_t wake_tick = rt_tick_count();
   while (argv[0] > 0)
   {
     rt_critical_begin();
@@ -14,7 +15,8 @@ static void simple_fn(size_t argc, uintptr_t *argv)
            rt_tick_count());
     fflush(stdout);
     rt_critical_end();
-    rt_delay(1);
+    rt_delay(5);
+    rt_delay_periodic(&wake_tick, 10);
     --argv[0];
   }
   rt_delay(10);
@@ -23,7 +25,7 @@ static void simple_fn(size_t argc, uintptr_t *argv)
 
 int main(void)
 {
-  static uintptr_t x = 100, y = 100;
+  static uintptr_t x = 10, y = 10;
   static char task0_stack[RT_STACK_MIN], task1_stack[RT_STACK_MIN];
   static const struct rt_task_config task0_cfg = {
       .fn = simple_fn,
