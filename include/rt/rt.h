@@ -53,6 +53,11 @@ void rt_stop(void);
 void rt_yield(void);
 
 /*
+ * Schedule the next task, suspending the current task.
+ */
+void rt_sched(void);
+
+/*
  * Suspend a task.
  */
 void rt_suspend(struct rt_task *task);
@@ -76,14 +81,3 @@ void rt_tick(void);
  * Return the current tick number.
  */
 rt_tick_t rt_tick_count(void);
-
-/*
- * Delay the current task for a given number of ticks.
- */
-void rt_delay(rt_tick_t delay);
-
-/*
- * Delay the current task until *last_wake_tick + period.
- * *last_wake_tick will be set to the next wakeup tick.
- */
-void rt_delay_periodic(rt_tick_t *last_wake_tick, rt_tick_t period);

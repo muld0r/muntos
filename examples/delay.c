@@ -1,4 +1,5 @@
 #include <rt/critical.h>
+#include <rt/delay.h>
 #include <rt/rt.h>
 
 #include <stdio.h>
