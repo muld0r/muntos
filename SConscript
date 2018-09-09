@@ -1,11 +1,9 @@
 import os
 
 env = Environment(
-    CC='clang',
     CCFLAGS=[
         '-g',
         '-Os',
-        '-Weverything', '-Werror', '-Wno-padded',
         '-pthread',
         '-ffunction-sections',
         '-fdata-sections',
@@ -20,10 +18,13 @@ if 'TERM' in os.environ:
 
 if env['PLATFORM'] in 'darwin':
     env['CC'] = 'clang'
-    env.Append(LINKFLAGS='-dead_strip')
+    env.Append(
+        CCFLAGS=['-Weverything', '-Werror', '-Wno-padded'],
+        LINKFLAGS=['-dead_strip'],
+    )
 elif env['PLATFORM'] in 'linux':
     env['CC'] = 'gcc'
-    env.Append(LINKFLAGS='--gc-sections')
+    env.Append(LINKFLAGS=['--gc-sections'])
 
 pthread_env = env.Clone()
 pthread_env.Append(
