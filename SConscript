@@ -34,6 +34,6 @@ pthread_env.Append(
 
 pthread_rt = pthread_env.Object(target='pthread_rt', source='rt.c')
 pthread_simple = pthread_env.Object(target='pthread_simple', source='examples/simple.c')
-pthread_env.Program(
-    [pthread_simple, pthread_rt, 'pthread/rt_port.c'],
-)
+pthread_delay = pthread_env.Object(target='pthread_delay', source='examples/delay.c')
+pthread_env.Program([pthread_simple, pthread_rt, 'pthread/rt_port.c'])
+pthread_env.Program([pthread_delay, pthread_rt, 'pthread/rt_port.c'])

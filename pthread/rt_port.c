@@ -91,14 +91,12 @@ void rt_context_swap(rt_context_t *old_ctx, const rt_context_t *new_ctx)
     return;
   }
 
-  rt_disable_interrupts();
   pthread_cond_t cond;
   pthread_cond_init(&cond, NULL);
   old_ctx->thread = pthread_self();
   old_ctx->cond = &cond;
   pthread_cond_signal(new_ctx->cond);
   pthread_cond_wait(old_ctx->cond, &thread_lock);
-  rt_enable_interrupts();
 }
 
 static void tick_handler(int sig)

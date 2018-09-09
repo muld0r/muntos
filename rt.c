@@ -47,27 +47,6 @@ void rt_critical_end(void)
   }
 }
 
-static uint_fast8_t critical_save(void)
-{
-  uint_fast8_t nesting = critical_nesting;
-  critical_nesting = 0;
-  rt_enable_interrupts();
-  return nesting;
-}
-
-static void critical_restore(uint_fast8_t nesting)
-{
-  rt_disable_interrupts();
-  critical_nesting = nesting;
-}
-
-static void swap(rt_context_t *old_ctx, const rt_context_t *new_ctx)
-{
-  uint_fast8_t nesting = critical_save();
-  rt_context_swap(old_ctx, new_ctx);
-  critical_restore(nesting);
-}
-
 static LIST_HEAD(ready_list);
 static LIST_HEAD(delay_list);
 static struct rt_task *active_task = &idle_task;
@@ -77,15 +56,32 @@ struct rt_task *rt_self(void)
   return active_task;
 }
 
+static void sched(void)
+{
+  rt_critical_begin();
+  struct rt_task *old = active_task;
+  active_task = list_item(list_front(&ready_list), struct rt_task, list);
+  list_del(&active_task->list);
+  const uint_fast8_t saved_nesting = critical_nesting;
+  critical_nesting = 0;
+  rt_context_swap(&old->ctx, &active_task->ctx);
+  critical_nesting = saved_nesting;
+  rt_critical_end();
+}
+
+void rt_yield(void)
+{
+  rt_critical_begin();
+  list_add_tail(&ready_list, &active_task->list);
+  sched();
+  rt_critical_end();
+}
+
 void rt_suspend(struct rt_task *task)
 {
   if (task == active_task)
   {
-    rt_critical_begin();
-    active_task = list_item(list_front(&ready_list), struct rt_task, list);
-    list_del(&active_task->list);
-    swap(&task->ctx, &active_task->ctx);
-    rt_critical_end();
+    sched();
   }
   else
   {
@@ -93,14 +89,6 @@ void rt_suspend(struct rt_task *task)
     list_del(&task->list);
     rt_critical_end();
   }
-}
-
-void rt_yield(void)
-{
-  rt_critical_begin();
-  list_add_tail(&ready_list, &active_task->list);
-  rt_suspend(active_task);
-  rt_critical_end();
 }
 
 void rt_resume(struct rt_task *task)
@@ -119,7 +107,7 @@ static void run_task(void *arg)
 {
   const struct rt_task *task = arg;
   task->cfg.fn(task->cfg.argc, task->cfg.argv);
-  rt_suspend(rt_self());
+  sched();
 }
 
 void rt_task_init(struct rt_task *task, const struct rt_task_config *cfg)
@@ -156,6 +144,7 @@ rt_tick_t rt_tick_count(void)
 void rt_start(void)
 {
   rt_port_start();
+  rt_yield();
   idle_task.cfg.fn(idle_task.cfg.argc, idle_task.cfg.argv);
 }
 
@@ -185,7 +174,7 @@ static void delay_until(rt_tick_t wake_tick, rt_tick_t max_delay)
     }
     active_task->wake_tick = wake_tick;
     list_add_tail(delay_insert, &active_task->list);
-    rt_suspend(active_task);
+    sched();
   }
   rt_critical_end();
 }
