@@ -111,9 +111,7 @@ void rt_port_start(void)
 {
   pthread_mutex_lock(&thread_lock);
 
-  struct sigaction tick_action = {
-      .sa_handler = tick_handler,
-  };
+  struct sigaction tick_action = {.sa_handler = tick_handler};
   sigemptyset(&tick_action.sa_mask);
   sigaction(SIGALRM, &tick_action, NULL);
 
@@ -122,12 +120,17 @@ void rt_port_start(void)
 
 void rt_port_stop(void)
 {
+  // prevent new SIGALRMs
   ualarm(0, 0);
-  pthread_mutex_unlock(&thread_lock);
 
-  struct sigaction tick_action = {
-      .sa_handler = SIG_DFL,
-  };
+  // change handler to SIG_IGN to drop any pending SIGALRM
+  struct sigaction tick_action = {.sa_handler = SIG_IGN};
   sigemptyset(&tick_action.sa_mask);
   sigaction(SIGALRM, &tick_action, NULL);
+
+  // restore the default handler
+  tick_action.sa_handler = SIG_DFL;
+  sigaction(SIGALRM, &tick_action, NULL);
+
+  pthread_mutex_unlock(&thread_lock);
 }
