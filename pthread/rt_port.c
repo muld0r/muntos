@@ -3,6 +3,7 @@
 
 #include <rt/rt.h>
 
+#include <pthread.h>
 #include <semaphore.h>
 #include <signal.h>
 #include <stdlib.h>
@@ -77,7 +78,9 @@ void rt_context_init(rt_context_t *ctx, void *stack, size_t stack_size,
   // launch each thread with signals blocked so only the active
   // thread will be delivered the SIGALRM
   rt_disable_interrupts();
-  pthread_create(&ctx->thread, &attr, pthread_fn, parg);
+  pthread_t thread;
+  pthread_create(&thread, &attr, pthread_fn, parg);
+  ctx->thread = thread;
   rt_enable_interrupts();
   sem_wait(thread_start_sem);
 
