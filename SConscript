@@ -4,7 +4,6 @@ env = Environment(
     CCFLAGS=[
         '-g',
         '-Os',
-        '-pthread',
         '-ffunction-sections',
         '-fdata-sections',
     ],
