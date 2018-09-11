@@ -2,22 +2,35 @@
 
 #include "container.h"
 
+#include <stdbool.h>
+
 struct list
 {
   struct list *prev, *next;
 };
 
-#define LIST_INIT(name)                                                        \
+#define LIST_HEAD_INIT(name)                                                   \
   {                                                                            \
     .prev = &(name), .next = &(name),                                          \
   }
 
-#define LIST_HEAD(name) struct list name = LIST_INIT(name)
+#define LIST_NODE_INIT                                                         \
+  {                                                                            \
+    .prev = NULL, .next = NULL,                                                \
+  }
 
-static inline void list_init(struct list *head)
+#define LIST_HEAD(name) struct list name = LIST_HEAD_INIT(name)
+
+static inline void list_head_init(struct list *head)
 {
   head->prev = head;
   head->next = head;
+}
+
+static inline void list_node_init(struct list *node)
+{
+  node->prev = NULL;
+  node->next = NULL;
 }
 
 #define list_item container_item
@@ -41,10 +54,19 @@ static inline void list_add_tail(struct list *head, struct list *node)
   list_insert(node, head->prev, head);
 }
 
-static inline void list_del(struct list *node)
+static inline void list_remove(struct list *node)
 {
-  node->next->prev = node->prev;
-  node->prev->next = node->next;
+  if (node->next && node->prev)
+  {
+    node->next->prev = node->prev;
+    node->prev->next = node->next;
+    node->next = node->prev = NULL;
+  }
+}
+
+static inline bool list_empty(struct list *head)
+{
+  return head == head->next;
 }
 
 static inline struct list *list_front(struct list *head)

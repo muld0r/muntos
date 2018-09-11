@@ -8,8 +8,8 @@
 struct rt_queue_config
 {
   void *buf;
-  size_t max_elems;
   size_t elem_size;
+  size_t num_elems;
 };
 
 struct rt_queue

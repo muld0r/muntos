@@ -1,17 +1,18 @@
 #include <rt/queue.h>
 
 #include <rt/critical.h>
+#include <rt/delay.h>
 
 #include <string.h>
 
 void rt_queue_init(struct rt_queue *queue, const struct rt_queue_config *cfg)
 {
-  list_init(&queue->recv_list);
-  list_init(&queue->send_list);
+  list_head_init(&queue->recv_list);
+  list_head_init(&queue->send_list);
   queue->buf = cfg->buf;
   queue->len = 0;
   queue->write_offset = 0;
-  queue->capacity = cfg->max_elems * cfg->elem_size;
+  queue->capacity = cfg->elem_size * cfg->num_elems;
   queue->elem_size = cfg->elem_size;
 }
 
@@ -21,8 +22,12 @@ bool rt_queue_send(struct rt_queue *queue, const void *elem,
   rt_critical_begin();
   if (queue->len == queue->capacity)
   {
-    (void)timeout;
-    // TODO
+    list_add_tail(&queue->send_list, &rt_self()->event_list);
+    rt_delay(timeout);
+    if (queue->len == queue->capacity)
+    {
+      return false;
+    }
   }
   memcpy(queue->buf + queue->write_offset, elem, queue->elem_size);
   queue->len += queue->elem_size;
@@ -31,7 +36,14 @@ bool rt_queue_send(struct rt_queue *queue, const void *elem,
   {
     queue->write_offset = 0;
   }
-  // TODO: notify tasks waiting for recv
+  if (!list_empty(&queue->recv_list))
+  {
+    struct rt_task *waiting_task =
+        list_item(list_front(&queue->recv_list), struct rt_task, event_list);
+    list_remove(&waiting_task->event_list);
+    list_remove(&waiting_task->list);
+    rt_resume(waiting_task);
+  }
   rt_critical_end();
   return true;
 }
@@ -41,8 +53,12 @@ bool rt_queue_recv(struct rt_queue *queue, void *elem, rt_tick_t timeout)
   rt_critical_begin();
   if (queue->len == 0)
   {
-    (void)timeout;
-    // TODO
+    list_add_tail(&queue->recv_list, &rt_self()->event_list);
+    rt_delay(timeout);
+    if (queue->len == 0)
+    {
+      return false;
+    }
   }
   memcpy(elem, queue->buf + queue->read_offset, queue->elem_size);
   queue->len -= queue->elem_size;
@@ -51,7 +67,14 @@ bool rt_queue_recv(struct rt_queue *queue, void *elem, rt_tick_t timeout)
   {
     queue->read_offset = 0;
   }
-  // TODO: notify tasks waiting for send
+  if (!list_empty(&queue->send_list))
+  {
+    struct rt_task *waiting_task =
+        list_item(list_front(&queue->send_list), struct rt_task, event_list);
+    list_remove(&waiting_task->event_list);
+    list_remove(&waiting_task->list);
+    rt_resume(waiting_task);
+  }
   rt_critical_end();
   return true;
 }

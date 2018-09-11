@@ -89,11 +89,6 @@ void rt_context_init(rt_context_t *ctx, void *stack, size_t stack_size,
 
 void rt_context_swap(rt_context_t *old_ctx, const rt_context_t *new_ctx)
 {
-  if (old_ctx == new_ctx)
-  {
-    return;
-  }
-
   pthread_cond_t cond;
   pthread_cond_init(&cond, NULL);
   old_ctx->thread = pthread_self();

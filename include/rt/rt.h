@@ -27,6 +27,7 @@ struct rt_task_config
 struct rt_task
 {
   struct list list;
+  struct list event_list;
   struct rt_task_config cfg;
   rt_context_t ctx;
   rt_tick_t wake_tick;

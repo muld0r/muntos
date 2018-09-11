@@ -58,14 +58,18 @@ struct rt_task *rt_self(void)
 
 void rt_sched(void)
 {
+  // TODO: deal with different priorities
   rt_critical_begin();
   struct rt_task *old = active_task;
   active_task = list_item(list_front(&ready_list), struct rt_task, list);
-  list_del(&active_task->list);
-  const uint_fast8_t saved_nesting = critical_nesting;
-  critical_nesting = 0;
-  rt_context_swap(&old->ctx, &active_task->ctx);
-  critical_nesting = saved_nesting;
+  list_remove(&active_task->list);
+  if (old != active_task)
+  {
+    const uint_fast8_t saved_nesting = critical_nesting;
+    critical_nesting = 0;
+    rt_context_swap(&old->ctx, &active_task->ctx);
+    critical_nesting = saved_nesting;
+  }
   rt_critical_end();
 }
 
@@ -86,14 +90,14 @@ void rt_suspend(struct rt_task *task)
   else
   {
     rt_critical_begin();
-    list_del(&task->list);
+    list_remove(&task->list);
     rt_critical_end();
   }
 }
 
 void rt_resume(struct rt_task *task)
 {
-  if (task == rt_self())
+  if (task == active_task)
   {
     return;
   }
@@ -112,23 +116,26 @@ static void run_task(void *arg)
 
 void rt_task_init(struct rt_task *task, const struct rt_task_config *cfg)
 {
+  list_node_init(&task->list);
+  list_node_init(&task->event_list);
   task->cfg = *cfg;
   rt_context_init(&task->ctx, cfg->stack, cfg->stack_size, run_task, task);
+  task->wake_tick = 0;
   rt_resume(task);
 }
 
-static rt_tick_t ticks;
+static rt_tick_t rt_ticks;
 
 void rt_tick(void)
 {
-  ++ticks;
+  ++rt_ticks;
   rt_delay_wake_tasks();
   rt_yield();
 }
 
 rt_tick_t rt_tick_count(void)
 {
-  return ticks;
+  return rt_ticks;
 }
 
 void rt_start(void)

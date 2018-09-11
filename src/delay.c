@@ -7,6 +7,11 @@ static LIST_HEAD(delay_list);
 
 static void delay_until(rt_tick_t wake_tick, rt_tick_t max_delay)
 {
+  if (max_delay == RT_TICK_MAX)
+  {
+    rt_suspend(rt_self());
+    return;
+  }
   rt_critical_begin();
   const rt_tick_t ticks_until_wake = wake_tick - rt_tick_count();
   if (0 < ticks_until_wake && ticks_until_wake <= max_delay)
@@ -47,7 +52,8 @@ void rt_delay_wake_tasks(void)
        current_tick == task->wake_tick;
        task = list_item(list_front(&delay_list), struct rt_task, list))
   {
-    list_del(&task->list);
+    list_remove(&task->list);
+    list_remove(&task->event_list);
     rt_resume(task);
   }
 }
