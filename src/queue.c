@@ -29,7 +29,10 @@ bool rt_queue_send(struct rt_queue *queue, const void *elem,
       return false;
     }
   }
-  memcpy(queue->buf + queue->write_offset, elem, queue->elem_size);
+  if (elem && queue->buf)
+  {
+    memcpy(queue->buf + queue->write_offset, elem, queue->elem_size);
+  }
   queue->len += queue->elem_size;
   queue->write_offset += queue->elem_size;
   if (queue->write_offset == queue->capacity)
@@ -60,7 +63,10 @@ bool rt_queue_recv(struct rt_queue *queue, void *elem, rt_tick_t timeout)
       return false;
     }
   }
-  memcpy(elem, queue->buf + queue->read_offset, queue->elem_size);
+  if (elem && queue->buf)
+  {
+    memcpy(elem, queue->buf + queue->read_offset, queue->elem_size);
+  }
   queue->len -= queue->elem_size;
   queue->read_offset += queue->elem_size;
   if (queue->read_offset == queue->capacity)
