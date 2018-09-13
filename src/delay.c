@@ -9,7 +9,7 @@ static void delay_until(rt_tick_t wake_tick, rt_tick_t max_delay)
 {
   if (max_delay == RT_TICK_MAX)
   {
-    rt_suspend(rt_self());
+    rt_sched();
     return;
   }
   rt_critical_begin();
