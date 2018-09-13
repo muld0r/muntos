@@ -6,7 +6,8 @@
 #include <stdio.h>
 #include <limits.h>
 
-static struct rt_queue queue;
+static unsigned int queue_buf[16];
+static rt_queue_t queue = RT_QUEUE_ARRAY_INIT(queue, queue_buf);
 
 static void queue_send_fn(size_t argc, uintptr_t *argv)
 {
@@ -56,14 +57,6 @@ int main(void)
   static struct rt_task task0, task1;
   rt_task_init(&task0, &task0_cfg);
   rt_task_init(&task1, &task1_cfg);
-
-  static unsigned int queue_buf[16];
-  static const struct rt_queue_config queue_cfg = {
-      .buf = queue_buf,
-      .elem_size = sizeof(unsigned int),
-      .num_elems = 16,
-  };
-  rt_queue_init(&queue, &queue_cfg);
 
   rt_start();
 }
