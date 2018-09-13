@@ -44,7 +44,6 @@ bool rt_queue_send(struct rt_queue *queue, const void *elem,
     struct rt_task *waiting_task =
         list_item(list_front(&queue->recv_list), struct rt_task, event_list);
     list_remove(&waiting_task->event_list);
-    list_remove(&waiting_task->list);
     rt_resume(waiting_task);
   }
   rt_critical_end();
@@ -78,7 +77,6 @@ bool rt_queue_recv(struct rt_queue *queue, void *elem, rt_tick_t timeout)
     struct rt_task *waiting_task =
         list_item(list_front(&queue->send_list), struct rt_task, event_list);
     list_remove(&waiting_task->event_list);
-    list_remove(&waiting_task->list);
     rt_resume(waiting_task);
   }
   rt_critical_end();

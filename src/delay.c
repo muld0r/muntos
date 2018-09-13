@@ -52,7 +52,6 @@ void rt_delay_wake_tasks(void)
        current_tick == task->wake_tick;
        task = list_item(list_front(&delay_list), struct rt_task, list))
   {
-    list_remove(&task->list);
     list_remove(&task->event_list);
     rt_resume(task);
   }

@@ -101,6 +101,7 @@ void rt_resume(struct rt_task *task)
     return;
   }
   rt_critical_begin();
+  list_remove(&task->list);
   list_add_tail(&ready_list, &task->list);
   // TODO: deal with different priorities
   rt_critical_end();
