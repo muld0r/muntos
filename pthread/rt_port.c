@@ -8,8 +8,6 @@
 #include <semaphore.h>
 #include <signal.h>
 #include <stdlib.h>
-#include <fcntl.h>
-#include <sys/stat.h>
 #include <unistd.h>
 
 struct pthread_arg
@@ -17,10 +15,10 @@ struct pthread_arg
   void (*fn)(void *);
   void *arg;
   void **ctx;
+  void *parent_ctx;
 };
 
 static pthread_mutex_t thread_lock;
-static sem_t *thread_start_sem;
 
 void rt_disable_interrupts(void)
 {
@@ -39,16 +37,13 @@ void rt_enable_interrupts(void)
 
 static void *pthread_fn(void *arg)
 {
-  pthread_cond_t cond;
-  pthread_cond_init(&cond, NULL);
   struct pthread_arg *parg = arg;
   void (*cfn)(void *) = parg->fn;
   void *carg = parg->arg;
-  *parg->ctx = &cond;
-  free(parg);
+  void **ctx = parg->ctx;
+  void *parent_ctx = parg->parent_ctx;
   pthread_mutex_lock(&thread_lock);
-  sem_post(thread_start_sem);
-  pthread_cond_wait(&cond, &thread_lock);
+  rt_context_swap(ctx, parent_ctx);
   cfn(carg);
   pthread_mutex_unlock(&thread_lock);
   return NULL;
@@ -56,14 +51,15 @@ static void *pthread_fn(void *arg)
 
 static void thread_init(void)
 {
-  thread_start_sem = sem_open("thread_start_sem", O_CREAT, S_IRWXU, 0);
   pthread_mutex_init(&thread_lock, NULL);
+  pthread_mutex_lock(&thread_lock);
 }
+
+static pthread_once_t thread_init_once = PTHREAD_ONCE_INIT;
 
 void rt_context_init(void **ctx, void *stack, size_t stack_size,
                       void (*fn)(void *), void *arg)
 {
-  static pthread_once_t thread_init_once = PTHREAD_ONCE_INIT;
   pthread_once(&thread_init_once, thread_init);
 
   pthread_attr_t attr;
@@ -71,18 +67,22 @@ void rt_context_init(void **ctx, void *stack, size_t stack_size,
   pthread_attr_setstack(&attr, stack, stack_size);
   pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
   struct pthread_arg *parg = malloc(sizeof(*parg));
+  pthread_cond_t cond;
+  pthread_cond_init(&cond, NULL);
   parg->fn = fn;
   parg->arg = arg;
   parg->ctx = ctx;
+  parg->parent_ctx = &cond;
 
   // launch each thread with signals blocked so only the active
   // thread will be delivered the SIGALRM
   rt_critical_begin();
   pthread_t thread;
   pthread_create(&thread, &attr, pthread_fn, parg);
+  pthread_cond_wait(&cond, &thread_lock);
   rt_critical_end();
-  sem_wait(thread_start_sem);
 
+  free(parg);
   pthread_attr_destroy(&attr);
 }
 
@@ -103,7 +103,7 @@ static void tick_handler(int sig)
 
 void rt_port_start(void)
 {
-  pthread_mutex_lock(&thread_lock);
+  pthread_once(&thread_init_once, thread_init);
 
   struct sigaction tick_action = {.sa_handler = tick_handler};
   sigemptyset(&tick_action.sa_mask);
