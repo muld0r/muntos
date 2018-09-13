@@ -17,6 +17,8 @@ static void queue_send_fn(size_t argc, uintptr_t *argv)
   {
     rt_queue_send(&queue, &x, 10);
   }
+  rt_delay(10);
+  rt_stop();
 }
 
 static void queue_recv_fn(size_t argc, uintptr_t *argv)
