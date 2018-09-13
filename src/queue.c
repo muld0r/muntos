@@ -19,6 +19,7 @@ void rt_queue_init(struct rt_queue *queue, const struct rt_queue_config *cfg)
 bool rt_queue_send(struct rt_queue *queue, const void *elem,
                     rt_tick_t timeout)
 {
+  bool success = true;
   rt_critical_begin();
   if (queue->len == queue->capacity)
   {
@@ -26,7 +27,8 @@ bool rt_queue_send(struct rt_queue *queue, const void *elem,
     rt_delay(timeout);
     if (queue->len == queue->capacity)
     {
-      return false;
+      success = false;
+      goto end;
     }
   }
   if (elem && queue->buf)
@@ -46,12 +48,15 @@ bool rt_queue_send(struct rt_queue *queue, const void *elem,
     list_remove(&waiting_task->event_list);
     rt_resume(waiting_task);
   }
+
+end:
   rt_critical_end();
-  return true;
+  return success;
 }
 
 bool rt_queue_recv(struct rt_queue *queue, void *elem, rt_tick_t timeout)
 {
+  bool success = true;
   rt_critical_begin();
   if (queue->len == 0)
   {
@@ -59,7 +64,8 @@ bool rt_queue_recv(struct rt_queue *queue, void *elem, rt_tick_t timeout)
     rt_delay(timeout);
     if (queue->len == 0)
     {
-      return false;
+      success = false;
+      goto end;
     }
   }
   if (elem && queue->buf)
@@ -79,6 +85,8 @@ bool rt_queue_recv(struct rt_queue *queue, void *elem, rt_tick_t timeout)
     list_remove(&waiting_task->event_list);
     rt_resume(waiting_task);
   }
+
+end:
   rt_critical_end();
   return true;
 }

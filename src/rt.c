@@ -2,8 +2,8 @@
 
 #include <rt/context.h>
 #include <rt/critical.h>
-#include <rt/port.h>
 #include <rt/delay.h>
+#include <rt/port.h>
 
 static bool rt_request_exit = false;
 
@@ -53,7 +53,10 @@ static struct rt_task *active_task = &idle_task;
 
 struct rt_task *rt_self(void)
 {
-  return active_task;
+  rt_critical_begin();
+  struct rt_task *self = active_task;
+  rt_critical_end();
+  return self;
 }
 
 void rt_sched(void)
@@ -82,28 +85,27 @@ void rt_yield(void)
 
 void rt_suspend(struct rt_task *task)
 {
+  rt_critical_begin();
   if (task == active_task)
   {
     rt_sched();
   }
   else
   {
-    rt_critical_begin();
     list_remove(&task->list);
-    rt_critical_end();
   }
+  rt_critical_end();
 }
 
 void rt_resume(struct rt_task *task)
 {
-  if (task == active_task)
-  {
-    return;
-  }
   rt_critical_begin();
-  list_remove(&task->list);
-  list_add_tail(&ready_list, &task->list);
-  // TODO: deal with different priorities
+  if (task != active_task)
+  {
+    list_remove(&task->list);
+    list_add_tail(&ready_list, &task->list);
+    // TODO: deal with different priorities
+  }
   rt_critical_end();
 }
 
