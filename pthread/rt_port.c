@@ -76,11 +76,9 @@ void rt_context_init(void **ctx, void *stack, size_t stack_size,
 
   // launch each thread with signals blocked so only the active
   // thread will be delivered the SIGALRM
-  rt_critical_begin();
   pthread_t thread;
   pthread_create(&thread, &attr, pthread_fn, parg);
   pthread_cond_wait(&cond, &thread_lock);
-  rt_critical_end();
 
   free(parg);
   pthread_attr_destroy(&attr);

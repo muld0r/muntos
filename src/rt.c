@@ -123,7 +123,9 @@ void rt_task_init(struct rt_task *task, const struct rt_task_config *cfg)
   list_node_init(&task->list);
   list_node_init(&task->event_list);
   task->cfg = *cfg;
+  rt_critical_begin();
   rt_context_init(&task->ctx, cfg->stack, cfg->stack_size, run_task, task);
+  rt_critical_end();
   task->wake_tick = 0;
   rt_resume(task);
 }
