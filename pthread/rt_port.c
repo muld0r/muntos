@@ -2,6 +2,7 @@
 #include <rt/port.h>
 
 #include <rt/rt.h>
+#include <rt/critical.h>
 
 #include <pthread.h>
 #include <semaphore.h>
@@ -15,7 +16,7 @@ struct pthread_arg
 {
   void (*fn)(void *);
   void *arg;
-  rt_context_t *ctx;
+  void **ctx;
 };
 
 static pthread_mutex_t thread_lock;
@@ -40,15 +41,14 @@ static void *pthread_fn(void *arg)
 {
   pthread_cond_t cond;
   pthread_cond_init(&cond, NULL);
-  pthread_mutex_lock(&thread_lock);
   struct pthread_arg *parg = arg;
   void (*cfn)(void *) = parg->fn;
   void *carg = parg->arg;
-  parg->ctx->cond = &cond;
+  *parg->ctx = &cond;
   free(parg);
+  pthread_mutex_lock(&thread_lock);
   sem_post(thread_start_sem);
   pthread_cond_wait(&cond, &thread_lock);
-  rt_enable_interrupts();
   cfn(carg);
   pthread_mutex_unlock(&thread_lock);
   return NULL;
@@ -60,7 +60,7 @@ static void thread_init(void)
   pthread_mutex_init(&thread_lock, NULL);
 }
 
-void rt_context_init(rt_context_t *ctx, void *stack, size_t stack_size,
+void rt_context_init(void **ctx, void *stack, size_t stack_size,
                       void (*fn)(void *), void *arg)
 {
   static pthread_once_t thread_init_once = PTHREAD_ONCE_INIT;
@@ -77,24 +77,22 @@ void rt_context_init(rt_context_t *ctx, void *stack, size_t stack_size,
 
   // launch each thread with signals blocked so only the active
   // thread will be delivered the SIGALRM
-  rt_disable_interrupts();
+  rt_critical_begin();
   pthread_t thread;
   pthread_create(&thread, &attr, pthread_fn, parg);
-  ctx->thread = thread;
-  rt_enable_interrupts();
+  rt_critical_end();
   sem_wait(thread_start_sem);
 
   pthread_attr_destroy(&attr);
 }
 
-void rt_context_swap(rt_context_t *old_ctx, const rt_context_t *new_ctx)
+void rt_context_swap(void **old_ctx, void *new_ctx)
 {
   pthread_cond_t cond;
   pthread_cond_init(&cond, NULL);
-  old_ctx->thread = pthread_self();
-  old_ctx->cond = &cond;
-  pthread_cond_signal(new_ctx->cond);
-  pthread_cond_wait(old_ctx->cond, &thread_lock);
+  *old_ctx = &cond;
+  pthread_cond_signal(new_ctx);
+  pthread_cond_wait(&cond, &thread_lock);
 }
 
 static void tick_handler(int sig)

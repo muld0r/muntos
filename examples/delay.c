@@ -3,6 +3,7 @@
 #include <rt/rt.h>
 
 #include <stdio.h>
+#include <limits.h>
 
 static void delay_fn(size_t argc, uintptr_t *argv)
 {
@@ -29,7 +30,7 @@ static void delay_fn(size_t argc, uintptr_t *argv)
 int main(void)
 {
   static uintptr_t x = 10, y = 10;
-  static char task0_stack[RT_STACK_MIN], task1_stack[RT_STACK_MIN];
+  static char task0_stack[PTHREAD_STACK_MIN], task1_stack[PTHREAD_STACK_MIN];
   static const struct rt_task_config task0_cfg = {
       .fn = delay_fn,
       .argc = 1,

@@ -4,6 +4,7 @@
 #include <rt/rt.h>
 
 #include <stdio.h>
+#include <limits.h>
 
 static struct rt_queue queue;
 
@@ -33,7 +34,7 @@ static void queue_recv_fn(size_t argc, uintptr_t *argv)
 
 int main(void)
 {
-  static char task0_stack[RT_STACK_MIN], task1_stack[RT_STACK_MIN];
+  static char task0_stack[PTHREAD_STACK_MIN], task1_stack[PTHREAD_STACK_MIN];
   static const struct rt_task_config task0_cfg = {
       .fn = queue_send_fn,
       .argc = 0,

@@ -66,7 +66,7 @@ void rt_sched(void)
   if (old != active_task)
   {
     const uint_fast8_t saved_nesting = critical_nesting;
-    rt_context_swap(&old->ctx, &active_task->ctx);
+    rt_context_swap(&old->ctx, active_task->ctx);
     critical_nesting = saved_nesting;
   }
   rt_critical_end();
@@ -109,6 +109,7 @@ void rt_resume(struct rt_task *task)
 static void run_task(void *arg)
 {
   critical_nesting = 0;
+  rt_enable_interrupts();
   const struct rt_task *task = arg;
   task->cfg.fn(task->cfg.argc, task->cfg.argv);
   rt_sched();
