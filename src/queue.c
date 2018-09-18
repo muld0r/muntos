@@ -11,6 +11,7 @@ void rt_queue_init(struct rt_queue *queue, const struct rt_queue_config *cfg)
   list_head_init(&queue->send_list);
   queue->buf = cfg->buf;
   queue->len = 0;
+  queue->read_offset = 0;
   queue->write_offset = 0;
   queue->capacity = cfg->elem_size * cfg->num_elems;
   queue->elem_size = cfg->elem_size;
