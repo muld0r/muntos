@@ -3,7 +3,7 @@ import os
 env = Environment(
     CCFLAGS=[
         '-g',
-        '-Os',
+        '-Og',
         '-ffunction-sections',
         '-fdata-sections',
     ],
