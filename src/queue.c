@@ -89,5 +89,5 @@ bool rt_queue_recv(struct rt_queue *queue, void *elem, rt_tick_t timeout)
 
 end:
   rt_critical_end();
-  return true;
+  return success;
 }
