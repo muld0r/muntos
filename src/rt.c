@@ -4,18 +4,20 @@
 #include <rt/critical.h>
 #include <rt/delay.h>
 #include <rt/port.h>
+#include <rt/sem.h>
 
-static bool rt_request_exit = false;
+static rt_sem_t exit_sem = RT_SEM_INIT_BINARY(exit_sem, 0);
 
 static void idle_task_fn(size_t argc, uintptr_t *argv)
 {
   (void)argc;
   (void)argv;
 
-  while (!rt_request_exit)
+  while (!rt_sem_wait(&exit_sem, 0))
   {
     rt_yield();
   }
+  rt_stop();
 }
 
 static struct rt_task idle_task = {
@@ -123,9 +125,7 @@ void rt_task_init(struct rt_task *task, const struct rt_task_config *cfg)
   list_node_init(&task->list);
   list_node_init(&task->event_list);
   task->cfg = *cfg;
-  rt_critical_begin();
   rt_context_init(&task->ctx, cfg->stack, cfg->stack_size, run_task, task);
-  rt_critical_end();
   task->wake_tick = 0;
   rt_resume(task);
 }
@@ -156,5 +156,6 @@ void rt_stop(void)
 {
   // TODO: suspend all other tasks and switch to idle
   rt_port_stop();
-  rt_request_exit = true;
+  rt_sem_post(&exit_sem);
+  rt_sched();
 }

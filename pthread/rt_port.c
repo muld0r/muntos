@@ -1,8 +1,8 @@
 #include <rt/context.h>
 #include <rt/port.h>
 
-#include <rt/rt.h>
 #include <rt/critical.h>
+#include <rt/rt.h>
 
 #include <pthread.h>
 #include <semaphore.h>
@@ -44,6 +44,7 @@ static void *pthread_fn(void *arg)
   void *parent_ctx = parg->parent_ctx;
   pthread_mutex_lock(&thread_lock);
   rt_context_swap(ctx, parent_ctx);
+  rt_enable_interrupts();
   cfn(carg);
   pthread_mutex_unlock(&thread_lock);
   return NULL;
@@ -76,9 +77,11 @@ void rt_context_init(void **ctx, void *stack, size_t stack_size,
 
   // launch each thread with signals blocked so only the active
   // thread will be delivered the SIGALRM
+  rt_disable_interrupts();
   pthread_t thread;
   pthread_create(&thread, &attr, pthread_fn, parg);
   pthread_cond_wait(&cond, &thread_lock);
+  rt_enable_interrupts();
 
   free(parg);
   pthread_attr_destroy(&attr);
