@@ -44,7 +44,6 @@ static void *pthread_fn(void *arg)
   void *parent_ctx = parg->parent_ctx;
   pthread_mutex_lock(&thread_lock);
   rt_context_swap(ctx, parent_ctx);
-  rt_enable_interrupts();
   cfn(carg);
   pthread_mutex_unlock(&thread_lock);
   return NULL;

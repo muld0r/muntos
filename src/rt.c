@@ -149,7 +149,6 @@ void rt_start(void)
 {
   rt_port_start();
   rt_yield();
-  // TODO: use run_task here, make it so rt_stop still works
   idle_task.cfg.fn(idle_task.cfg.argc, idle_task.cfg.argv);
 }
 
