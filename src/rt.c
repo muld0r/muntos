@@ -156,6 +156,10 @@ void rt_stop(void)
 {
   // TODO: suspend all other tasks and switch to idle
   rt_port_stop();
+  rt_critical_begin();
+  list_head_init(&ready_list);
+  list_add_tail(&ready_list, &idle_task.list);
   rt_sem_post(&exit_sem);
   rt_sched();
+  rt_critical_end();
 }

@@ -20,12 +20,12 @@ bool rt_sem_wait(rt_sem_t *sem, rt_tick_t timeout);
   {                                                                            \
     .recv_list = LIST_HEAD_INIT(name.recv_list),                               \
     .send_list = LIST_HEAD_INIT(name.send_list), .buf = NULL, .len = count,    \
-    .read_offset = 0, .write_offset = 0, .capacity = SIZE_MAX, .elem_size = 0, \
+    .read_offset = 0, .write_offset = 0, .capacity = SIZE_MAX, .elem_size = 1, \
   }
 
 #define RT_SEM_INIT_BINARY(name, count)                                       \
   {                                                                            \
     .recv_list = LIST_HEAD_INIT(name.recv_list),                               \
     .send_list = LIST_HEAD_INIT(name.send_list), .buf = NULL, .len = count,    \
-    .read_offset = 0, .write_offset = 0, .capacity = 1, .elem_size = 0,        \
+    .read_offset = 0, .write_offset = 0, .capacity = 1, .elem_size = 1,        \
   }
