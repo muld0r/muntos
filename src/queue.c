@@ -24,6 +24,11 @@ bool rt_queue_send(struct rt_queue *queue, const void *elem,
   rt_critical_begin();
   if (queue->len == queue->capacity)
   {
+    if (timeout == 0)
+    {
+      success = false;
+      goto end;
+    }
     list_add_tail(&queue->send_list, &rt_self()->event_list);
     rt_delay(timeout);
     if (queue->len == queue->capacity)
@@ -60,6 +65,11 @@ bool rt_queue_recv(struct rt_queue *queue, void *elem, rt_tick_t timeout)
   rt_critical_begin();
   if (queue->len == 0)
   {
+    if (timeout == 0)
+    {
+      success = false;
+      goto end;
+    }
     list_add_tail(&queue->recv_list, &rt_self()->event_list);
     rt_delay(timeout);
     if (queue->len == 0)
