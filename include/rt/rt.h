@@ -15,9 +15,9 @@ typedef uint32_t rt_tick_t;
 
 struct rt_task_config
 {
-  void (*fn)(size_t argc, uintptr_t *argv);
+  void (*fn)(size_t argc, const uintptr_t *argv);
   size_t argc;
-  uintptr_t *argv;
+  const uintptr_t *argv;
   void *stack;
   size_t stack_size;
   const char *name;

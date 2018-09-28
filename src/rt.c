@@ -8,7 +8,7 @@
 
 static rt_sem_t exit_sem = RT_SEM_INIT_BINARY(exit_sem, 0);
 
-static void idle_task_fn(size_t argc, uintptr_t *argv)
+static void idle_task_fn(size_t argc, const uintptr_t *argv)
 {
   (void)argc;
   (void)argv;

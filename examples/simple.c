@@ -1,24 +1,24 @@
 #include <rt/critical.h>
 #include <rt/rt.h>
 
-#include <stdio.h>
 #include <limits.h>
+#include <stdio.h>
 
-static void simple_fn(size_t argc, uintptr_t *argv)
+static void simple_fn(size_t argc, const uintptr_t *argv)
 {
   if (argc < 1)
   {
     return;
   }
 
-  while (argv[0] > 0)
+  uintptr_t n = argv[0];
+  while (n > 0)
   {
     rt_critical_begin();
-    printf("%s %lu, tick %u\n", rt_self()->cfg.name, argv[0],
-           rt_tick_count());
+    printf("%s %lu, tick %u\n", rt_self()->cfg.name, n, rt_tick_count());
     fflush(stdout);
     rt_critical_end();
-    --argv[0];
+    --n;
   }
   rt_stop();
 }
