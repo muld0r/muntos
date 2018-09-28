@@ -105,6 +105,7 @@ void rt_resume(struct rt_task *task)
   if (task != active_task)
   {
     list_remove(&task->list);
+    list_remove(&task->event_list);
     list_add_tail(&ready_list, &task->list);
     // TODO: deal with different priorities
   }
