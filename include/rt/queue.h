@@ -20,12 +20,16 @@ bool rt_queue_send(rt_queue_t *queue, const void *elem, rt_tick_t timeout);
 
 bool rt_queue_recv(rt_queue_t *queue, void *elem, rt_tick_t timeout);
 
-#define RT_QUEUE_ARRAY_INIT(name, array)                                      \
-  {                                                                            \
-    .recv_list = LIST_HEAD_INIT(name.recv_list),                               \
-    .send_list = LIST_HEAD_INIT(name.send_list), .buf = (char *)(array),       \
-    .len = 0, .read_offset = 0, .write_offset = 0, .capacity = sizeof(array),  \
-    .elem_size = sizeof((array)[0]),                                           \
+#define RT_QUEUE_FROM_ARRAY(name, array)                                      \
+  rt_queue_t name = {                                                         \
+      .recv_list = LIST_HEAD_INIT(name.recv_list),                             \
+      .send_list = LIST_HEAD_INIT(name.send_list),                             \
+      .buf = (char *)(array),                                                  \
+      .len = 0,                                                                \
+      .read_offset = 0,                                                        \
+      .write_offset = 0,                                                       \
+      .capacity = sizeof(array),                                               \
+      .elem_size = sizeof((array)[0]),                                         \
   }
 
 struct rt_queue

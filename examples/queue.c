@@ -7,7 +7,7 @@
 #include <limits.h>
 
 static uintptr_t queue_buf[16];
-static rt_queue_t queue = RT_QUEUE_ARRAY_INIT(queue, queue_buf);
+static RT_QUEUE_FROM_ARRAY(queue, queue_buf);
 
 static void queue_send_fn(size_t argc, const uintptr_t *argv)
 {

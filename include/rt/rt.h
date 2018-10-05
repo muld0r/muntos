@@ -48,6 +48,16 @@ void rt_start(void);
  */
 void rt_stop(void);
 
+enum rt_syscall
+{
+  RT_SYSCALL_YIELD,
+  RT_SYSCALL_SCHED,
+};
+
+void rt_syscall(enum rt_syscall syscall);
+
+void rt_syscall_handler(enum rt_syscall syscall);
+
 /*
  * Yield control of the processor to another runnable task.
  */

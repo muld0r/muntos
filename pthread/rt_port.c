@@ -20,19 +20,26 @@ struct pthread_arg
 
 static pthread_mutex_t thread_lock;
 
+static void sig_interrupt_set(sigset_t *sigset)
+{
+  sigfillset(sigset);
+  sigdelset(sigset, SIGINT);
+  // syscalls still allowed while interrupts are disabled
+  sigdelset(sigset, SIGVTALRM);
+}
+
 void rt_disable_interrupts(void)
 {
   sigset_t sigset;
-  sigfillset(&sigset);
-  sigdelset(&sigset, SIGINT);
-  pthread_sigmask(SIG_SETMASK, &sigset, NULL);
+  sig_interrupt_set(&sigset);
+  pthread_sigmask(SIG_BLOCK, &sigset, NULL);
 }
 
 void rt_enable_interrupts(void)
 {
   sigset_t sigset;
-  sigemptyset(&sigset);
-  pthread_sigmask(SIG_SETMASK, &sigset, NULL);
+  sig_interrupt_set(&sigset);
+  pthread_sigmask(SIG_UNBLOCK, &sigset, NULL);
 }
 
 static void *pthread_fn(void *arg)
@@ -76,11 +83,11 @@ void rt_context_init(void **ctx, void *stack, size_t stack_size,
 
   // launch each thread with signals blocked so only the active
   // thread will be delivered the SIGALRM
-  rt_disable_interrupts();
+  rt_critical_begin();
   pthread_t thread;
   pthread_create(&thread, &attr, pthread_fn, parg);
   pthread_cond_wait(&cond, &thread_lock);
-  rt_enable_interrupts();
+  rt_critical_end();
 
   free(parg);
   pthread_attr_destroy(&attr);
@@ -101,18 +108,38 @@ static void tick_handler(int sig)
   rt_tick();
 }
 
-void rt_port_start(void)
+static enum rt_syscall pending_syscall;
+
+void rt_syscall(enum rt_syscall syscall)
+{
+  pending_syscall = syscall;
+  raise(SIGVTALRM);
+}
+
+static void sys_handler(int sig)
+{
+  (void)sig;
+  rt_syscall_handler(pending_syscall);
+}
+
+void rt_start(void)
 {
   pthread_once(&thread_init_once, thread_init);
 
   struct sigaction tick_action = {.sa_handler = tick_handler};
-  sigemptyset(&tick_action.sa_mask);
+  sigfillset(&tick_action.sa_mask);
+  sigdelset(&tick_action.sa_mask, SIGINT);
   sigaction(SIGALRM, &tick_action, NULL);
+
+  struct sigaction sys_action = {.sa_handler = sys_handler};
+  sigfillset(&sys_action.sa_mask);
+  sigdelset(&sys_action.sa_mask, SIGINT);
+  sigaction(SIGVTALRM, &sys_action, NULL);
 
   ualarm(1000, 1000);
 }
 
-void rt_port_stop(void)
+void rt_stop(void)
 {
   // prevent new SIGALRMs
   ualarm(0, 0);

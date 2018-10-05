@@ -6,7 +6,7 @@
 #include <rt/port.h>
 #include <rt/sem.h>
 
-static rt_sem_t exit_sem = RT_SEM_INIT_BINARY(exit_sem, 0);
+static RT_SEM_BINARY(exit_sem, 0);
 
 static void idle_task_fn(size_t argc, const uintptr_t *argv)
 {
@@ -63,26 +63,26 @@ struct rt_task *rt_self(void)
 
 void rt_sched(void)
 {
+  rt_syscall(RT_SYSCALL_SCHED);
+}
+
+static void sched(void)
+{
   // TODO: deal with different priorities
-  rt_critical_begin();
-  struct rt_task *old = active_task;
-  active_task = list_item(list_front(&ready_list), struct rt_task, list);
-  list_remove(&active_task->list);
-  if (old != active_task)
+  if (!list_empty(&ready_list))
   {
+    struct rt_task *old = active_task;
+    active_task = list_item(list_front(&ready_list), struct rt_task, list);
+    list_remove(&active_task->list);
     const uint_fast8_t saved_nesting = critical_nesting;
     rt_context_swap(&old->ctx, active_task->ctx);
     critical_nesting = saved_nesting;
   }
-  rt_critical_end();
 }
 
 void rt_yield(void)
 {
-  rt_critical_begin();
-  list_add_tail(&ready_list, &active_task->list);
-  rt_sched();
-  rt_critical_end();
+  rt_syscall(RT_SYSCALL_YIELD);
 }
 
 void rt_suspend(struct rt_task *task)
@@ -126,8 +126,8 @@ void rt_task_init(struct rt_task *task, const struct rt_task_config *cfg)
   list_node_init(&task->list);
   list_node_init(&task->event_list);
   task->cfg = *cfg;
-  rt_context_init(&task->ctx, cfg->stack, cfg->stack_size, run_task, task);
   task->wake_tick = 0;
+  rt_context_init(&task->ctx, cfg->stack, cfg->stack_size, run_task, task);
   rt_resume(task);
 }
 
@@ -162,4 +162,17 @@ void rt_stop(void)
   rt_sem_post(&exit_sem);
   rt_sched();
   rt_critical_end();
+}
+
+void rt_syscall_handler(enum rt_syscall syscall)
+{
+  switch (syscall)
+  {
+  case RT_SYSCALL_YIELD:
+    list_add_tail(&ready_list, &active_task->list);
+    // fallthrough
+  case RT_SYSCALL_SCHED:
+    sched();
+    break;
+  }
 }
