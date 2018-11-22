@@ -6,6 +6,8 @@
 #include <rt/port.h>
 #include <rt/sem.h>
 
+#include <stdio.h>
+
 static RT_SEM_BINARY(exit_sem, 0);
 
 static void idle_task_fn(size_t argc, const uintptr_t *argv)
@@ -75,6 +77,7 @@ static void sched(void)
     active_task = list_item(list_front(&ready_list), struct rt_task, list);
     list_remove(&active_task->list);
     const uint_fast8_t saved_nesting = critical_nesting;
+    printf("swapping %s for %s\n", old->cfg.name, active_task->cfg.name);
     rt_context_swap(&old->ctx, active_task->ctx);
     critical_nesting = saved_nesting;
   }
@@ -82,6 +85,9 @@ static void sched(void)
 
 void rt_yield(void)
 {
+  rt_critical_begin();
+  printf("yield from %s\n", active_task->cfg.name);
+  rt_critical_end();
   rt_syscall(RT_SYSCALL_YIELD);
 }
 

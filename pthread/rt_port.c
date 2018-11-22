@@ -122,7 +122,7 @@ static void sys_handler(int sig)
   rt_syscall_handler(pending_syscall);
 }
 
-void rt_start(void)
+void rt_port_start(void)
 {
   pthread_once(&thread_init_once, thread_init);
 
@@ -139,7 +139,7 @@ void rt_start(void)
   ualarm(1000, 1000);
 }
 
-void rt_stop(void)
+void rt_port_stop(void)
 {
   // prevent new SIGALRMs
   ualarm(0, 0);
