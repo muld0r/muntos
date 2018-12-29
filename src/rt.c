@@ -172,6 +172,10 @@ void rt_stop(void)
 
 void rt_syscall_handler(enum rt_syscall syscall)
 {
+  rt_critical_begin();
+  static int syscall_count = 0;
+  ++syscall_count;
+  printf("syscall count = %d\n", syscall_count);
   switch (syscall)
   {
   case RT_SYSCALL_YIELD:
@@ -181,4 +185,6 @@ void rt_syscall_handler(enum rt_syscall syscall)
     sched();
     break;
   }
+  --syscall_count;
+  rt_critical_end();
 }
