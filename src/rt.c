@@ -137,20 +137,6 @@ void rt_task_init(struct rt_task *task, const struct rt_task_config *cfg)
   rt_resume(task);
 }
 
-static rt_tick_t rt_ticks;
-
-void rt_tick(void)
-{
-  ++rt_ticks;
-  rt_delay_wake_tasks();
-  rt_yield();
-}
-
-rt_tick_t rt_tick_count(void)
-{
-  return rt_ticks;
-}
-
 void rt_start(void)
 {
   rt_port_start();

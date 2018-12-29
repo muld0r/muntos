@@ -17,7 +17,7 @@ static void delay_fn(size_t argc, const uintptr_t *argv)
   while (n > 0)
   {
     rt_critical_begin();
-    printf("%s %lu, tick %u\n", rt_self()->cfg.name, n, rt_tick_count());
+    printf("%s %zu, tick %lu\n", rt_self()->cfg.name, n, rt_tick_count());
     fflush(stdout);
     rt_critical_end();
     rt_delay(5);

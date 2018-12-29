@@ -1,6 +1,7 @@
 #pragma once
 
 #include <rt/context.h>
+#include <rt/tick.h>
 
 #include <rt/list.h>
 
@@ -9,9 +10,6 @@
 #include <stdint.h>
 
 typedef unsigned int rt_priority_t;
-
-typedef uint32_t rt_tick_t;
-#define RT_TICK_MAX ((rt_tick_t)UINT32_MAX)
 
 struct rt_task_config
 {
@@ -82,13 +80,3 @@ void rt_resume(struct rt_task *task);
  * Get a pointer to the current task.
  */
 struct rt_task *rt_self(void);
-
-/*
- * Run a tick. Should be called periodically.
- */
-void rt_tick(void);
-
-/*
- * Return the current tick number.
- */
-rt_tick_t rt_tick_count(void);

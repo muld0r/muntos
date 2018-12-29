@@ -27,7 +27,7 @@ elif env['PLATFORM'] in 'linux':
     env['CC'] = 'gcc'
     env.Append(LINKFLAGS=['--gc-sections'])
 
-librt = env.StaticLibrary(target='rt', source=['src/rt.c', 'src/delay.c', 'src/queue.c', 'src/sem.c'])
+librt = env.StaticLibrary(target='rt', source=['src/rt.c', 'src/tick.c', 'src/delay.c', 'src/queue.c', 'src/sem.c'])
 
 pthread_env = env.Clone()
 pthread_env.Append(
