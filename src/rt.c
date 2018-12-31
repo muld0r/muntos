@@ -66,9 +66,6 @@ static void sched(void)
 
 void rt_yield(void)
 {
-  rt_critical_begin();
-  printf("yield from %s\n", active_task->cfg.name);
-  rt_critical_end();
   rt_syscall(RT_SYSCALL_YIELD);
 }
 
