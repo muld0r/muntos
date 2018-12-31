@@ -35,23 +35,6 @@ static struct rt_task idle_task = {
         },
 };
 
-static uint_fast8_t critical_nesting = 0;
-
-void rt_critical_begin(void)
-{
-  rt_disable_interrupts();
-  ++critical_nesting;
-}
-
-void rt_critical_end(void)
-{
-  --critical_nesting;
-  if (critical_nesting == 0)
-  {
-    rt_enable_interrupts();
-  }
-}
-
 static LIST_HEAD(ready_list);
 static struct rt_task *active_task = &idle_task;
 
@@ -76,10 +59,8 @@ static void sched(void)
     struct rt_task *old = active_task;
     active_task = list_item(list_front(&ready_list), struct rt_task, list);
     list_remove(&active_task->list);
-    const uint_fast8_t saved_nesting = critical_nesting;
     printf("swapping %s for %s\n", old->cfg.name, active_task->cfg.name);
     rt_context_swap(&old->ctx, active_task->ctx);
-    critical_nesting = saved_nesting;
   }
 }
 
@@ -120,7 +101,6 @@ void rt_resume(struct rt_task *task)
 
 static void run_task(void *arg)
 {
-  critical_nesting = 0;
   rt_enable_interrupts();
   const struct rt_task *task = arg;
   task->cfg.fn(task->cfg.argc, task->cfg.argv);
