@@ -97,7 +97,9 @@ void rt_context_swap(void **old_ctx, void *new_ctx)
   pthread_cond_init(&cond, NULL);
   *old_ctx = &cond;
   pthread_cond_signal(new_ctx);
+  rt_disable_interrupts();
   pthread_cond_wait(&cond, &thread_lock);
+  rt_enable_interrupts();
 }
 
 static void tick_handler(int sig)
@@ -106,6 +108,7 @@ static void tick_handler(int sig)
   rt_tick();
 }
 
+// TODO: pass system call argument directly to signal
 static enum rt_syscall pending_syscall;
 
 void rt_syscall(enum rt_syscall syscall)
