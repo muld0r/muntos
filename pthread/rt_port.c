@@ -130,8 +130,7 @@ void rt_port_start(void)
   sigaction(SIGALRM, &tick_action, NULL);
 
   struct sigaction sys_action = {.sa_handler = sys_handler};
-  sigfillset(&sys_action.sa_mask);
-  sigdelset(&sys_action.sa_mask, SIGINT);
+  sigemptyset(&sys_action.sa_mask);
   sigaction(SIGVTALRM, &sys_action, NULL);
 
   ualarm(1000, 1000);
