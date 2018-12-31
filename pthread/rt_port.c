@@ -124,14 +124,26 @@ void rt_port_start(void)
 {
   pthread_once(&thread_init_once, thread_init);
 
-  struct sigaction tick_action = {.sa_handler = tick_handler};
-  sigfillset(&tick_action.sa_mask);
-  sigdelset(&tick_action.sa_mask, SIGINT);
-  sigaction(SIGALRM, &tick_action, NULL);
+  // list of signals in increasing priority order
+  // each signal masks all signals before it in the list when active
+  struct {
+    void (*sigfn)(int);
+    int sig;
+  } signals[] = {
+    {.sigfn = sys_handler, .sig = SIGVTALRM},
+    {.sigfn = tick_handler, .sig = SIGALRM},
+    {.sigfn = NULL, .sig = 0},
+  };
 
-  struct sigaction sys_action = {.sa_handler = sys_handler};
-  sigemptyset(&sys_action.sa_mask);
-  sigaction(SIGVTALRM, &sys_action, NULL);
+  struct sigaction action = {.sa_handler = NULL};
+  sigemptyset(&action.sa_mask);
+
+  for (size_t i = 0; signals[i].sigfn != NULL; ++i)
+  {
+    action.sa_handler = signals[i].sigfn;
+    sigaction(signals[i].sig, &action, NULL);
+    sigaddset(&action.sa_mask, signals[i].sig);
+  }
 
   ualarm(1000, 1000);
 }
