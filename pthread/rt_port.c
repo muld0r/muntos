@@ -24,8 +24,6 @@ static void sig_interrupt_set(sigset_t *sigset)
 {
   sigfillset(sigset);
   sigdelset(sigset, SIGINT);
-  // syscalls still allowed while interrupts are disabled
-  sigdelset(sigset, SIGVTALRM);
 }
 
 void rt_disable_interrupts(void)
