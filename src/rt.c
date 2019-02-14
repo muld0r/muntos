@@ -48,11 +48,7 @@ struct rt_task *rt_self(void)
 
 void rt_sched(void)
 {
-  rt_syscall(RT_SYSCALL_SCHED);
-}
-
-static void sched(void)
-{
+  rt_critical_begin();
   // TODO: deal with different priorities
   if (!list_empty(&ready_list))
   {
@@ -62,11 +58,13 @@ static void sched(void)
     printf("swapping %s for %s\n", old->cfg.name, active_task->cfg.name);
     rt_context_swap(&old->ctx, active_task->ctx);
   }
+  rt_critical_end();
 }
 
 void rt_yield(void)
 {
-  rt_syscall(RT_SYSCALL_YIELD);
+  list_add_tail(&ready_list, &active_task->list);
+  rt_sched();
 }
 
 void rt_suspend(struct rt_task *task)
@@ -131,17 +129,4 @@ void rt_stop(void)
   rt_sem_post(&exit_sem);
   rt_sched();
   rt_critical_end();
-}
-
-void rt_syscall_handler(enum rt_syscall syscall)
-{
-  switch (syscall)
-  {
-  case RT_SYSCALL_YIELD:
-    list_add_tail(&ready_list, &active_task->list);
-    // fallthrough
-  case RT_SYSCALL_SCHED:
-    sched();
-    break;
-  }
 }
