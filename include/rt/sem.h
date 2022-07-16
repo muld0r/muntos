@@ -17,25 +17,25 @@ void rt_sem_post(rt_sem_t *sem);
 bool rt_sem_wait(rt_sem_t *sem, rt_tick_t timeout);
 
 #define RT_SEM(name, count)                                                   \
-  rt_sem_t name = {                                                           \
-      .recv_list = LIST_HEAD_INIT(name.recv_list),                             \
-      .send_list = LIST_HEAD_INIT(name.send_list),                             \
-      .buf = NULL,                                                             \
-      .len = count,                                                            \
-      .read_offset = 0,                                                        \
-      .write_offset = 0,                                                       \
-      .capacity = SIZE_MAX,                                                    \
-      .elem_size = 1,                                                          \
-  }
+    rt_sem_t name = {                                                         \
+        .recv_list = LIST_HEAD_INIT(name.recv_list),                           \
+        .send_list = LIST_HEAD_INIT(name.send_list),                           \
+        .buf = NULL,                                                           \
+        .len = count,                                                          \
+        .read_offset = 0,                                                      \
+        .write_offset = 0,                                                     \
+        .capacity = SIZE_MAX,                                                  \
+        .elem_size = 1,                                                        \
+    }
 
 #define RT_SEM_BINARY(name, count)                                            \
-  rt_sem_t name = {                                                           \
-      .recv_list = LIST_HEAD_INIT(name.recv_list),                             \
-      .send_list = LIST_HEAD_INIT(name.send_list),                             \
-      .buf = NULL,                                                             \
-      .len = count,                                                            \
-      .read_offset = 0,                                                        \
-      .write_offset = 0,                                                       \
-      .capacity = 1,                                                           \
-      .elem_size = 1,                                                          \
-  }
+    rt_sem_t name = {                                                         \
+        .recv_list = LIST_HEAD_INIT(name.recv_list),                           \
+        .send_list = LIST_HEAD_INIT(name.send_list),                           \
+        .buf = NULL,                                                           \
+        .len = count,                                                          \
+        .read_offset = 0,                                                      \
+        .write_offset = 0,                                                     \
+        .capacity = 1,                                                         \
+        .elem_size = 1,                                                        \
+    }

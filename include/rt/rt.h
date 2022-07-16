@@ -9,26 +9,22 @@
 #include <stddef.h>
 #include <stdint.h>
 
-typedef unsigned int rt_priority_t;
-
 struct rt_task_config
 {
-  void (*fn)(size_t argc, const uintptr_t *argv);
-  size_t argc;
-  const uintptr_t *argv;
-  void *stack;
-  size_t stack_size;
-  const char *name;
-  rt_priority_t priority;
+    void (*fn)(void);
+    void *stack;
+    size_t stack_size;
+    const char *name;
+    unsigned priority;
 };
 
 struct rt_task
 {
-  struct list list;
-  struct list event_list;
-  struct rt_task_config cfg;
-  void *ctx;
-  rt_tick_t wake_tick;
+    struct list list;
+    struct list event_list;
+    struct rt_task_config cfg;
+    struct rt_context *ctx;
+    rt_tick_t wake_tick;
 };
 
 /*
@@ -46,37 +42,34 @@ void rt_start(void);
  */
 void rt_stop(void);
 
-enum rt_syscall
-{
-  RT_SYSCALL_YIELD,
-  RT_SYSCALL_SCHED,
-};
-
-void rt_syscall(enum rt_syscall syscall);
-
-void rt_syscall_handler(enum rt_syscall syscall);
-
 /*
  * Yield control of the processor to another runnable task.
  */
 void rt_yield(void);
 
 /*
- * Schedule the next task, suspending the current task.
+ * Select the next task to run and make it active. Used by arch-specific
+ * implementations after saving the active context and before loading the next
+ * context.
  */
 void rt_sched(void);
 
 /*
  * Suspend a task.
  */
-void rt_suspend(struct rt_task *task);
+void rt_task_suspend(struct rt_task *task);
 
 /*
  * Resume a task.
  */
-void rt_resume(struct rt_task *task);
+void rt_task_resume(struct rt_task *task);
 
 /*
- * Get a pointer to the current task.
+ * End a task.
  */
-struct rt_task *rt_self(void);
+void rt_task_exit(struct rt_task *task);
+
+/*
+ * Get a pointer to the currently executing task.
+ */
+struct rt_task *rt_task_self(void);

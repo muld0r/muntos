@@ -2,20 +2,20 @@
 
 void rt_sem_init(rt_sem_t *sem, size_t count)
 {
-  const struct rt_queue_config sem_cfg = {
-      .buf = NULL,
-      .elem_size = 1,
-      .num_elems = count,
-  };
-  rt_queue_init(sem, &sem_cfg);
+    const struct rt_queue_config sem_cfg = {
+        .buf = NULL,
+        .elem_size = 1,
+        .num_elems = count,
+    };
+    rt_queue_init(sem, &sem_cfg);
 }
 
 void rt_sem_post(rt_sem_t *sem)
 {
-  (void)rt_queue_send(sem, NULL, 0);
+    (void)rt_queue_send(sem, NULL, 0);
 }
 
 bool rt_sem_wait(rt_sem_t *sem, rt_tick_t timeout)
 {
-  return rt_queue_recv(sem, NULL, timeout);
+    return rt_queue_recv(sem, NULL, timeout);
 }

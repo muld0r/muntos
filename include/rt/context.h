@@ -2,15 +2,25 @@
 
 #include <stddef.h>
 
-/*
- * Store a new context into *ctx that will execute fn(arg) on the given stack.
- */
-void rt_context_init(void **ctx, void *stack, size_t stack_size,
-                      void (*fn)(void *), void *arg);
+struct rt_context;
 
 /*
- * Save the caller's context into *old_ctx, and begin executing new_ctx.
- * Swapping in old_ctx again will result in the original call to this function
- * returning, running the context that was originally saved into *old_ctx.
+ * Return a new context that will execute fn(arg) on the given stack.
  */
-void rt_context_swap(void **old_ctx, void *new_ctx);
+struct rt_context *rt_context_create(void *stack, size_t stack_size,
+                                       void (*fn)(void));
+
+/*
+ * Save the currently-executing context into ctx.
+ */
+void rt_context_save(struct rt_context *ctx);
+
+/*
+ * Load ctx as the current context.
+ */
+void rt_context_load(struct rt_context *ctx);
+
+/*
+ * Destroy the given context. (May be a no-op.)
+ */
+void rt_context_destroy(struct rt_context *ctx);
