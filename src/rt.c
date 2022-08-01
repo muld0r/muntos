@@ -34,8 +34,10 @@ struct rt_task *rt_task_self(void)
 
 void rt_yield(void)
 {
+#ifdef RT_LOG
     printf("rt_yield from %s\n", active_task->cfg.name);
     fflush(stdout);
+#endif
     rt_syscall(RT_SYSCALL_YIELD);
 }
 
@@ -44,30 +46,40 @@ void rt_sched(void)
     struct rt_task *next_task = ready_pop();
     if (!next_task)
     {
+#ifdef RT_LOG
         printf("no new task to schedule\n");
         fflush(stdout);
+#endif
         return;
     }
 
+#ifdef RT_LOG
     printf("next task is %s\n", next_task->cfg.name);
     fflush(stdout);
+#endif
 
     if (active_task)
     {
+#ifdef RT_LOG
         printf("saving context of %s\n", active_task->cfg.name);
         fflush(stdout);
+#endif
         rt_context_save(active_task->ctx);
         ready_push(active_task);
     }
     else
     {
+#ifdef RT_LOG
         printf("no active task\n");
         fflush(stdout);
+#endif
     }
 
     active_task = next_task;
+#ifdef RT_LOG
     printf("loading context of %s\n", active_task->cfg.name);
     fflush(stdout);
+#endif
     rt_context_load(active_task->ctx);
 }
 

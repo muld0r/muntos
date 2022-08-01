@@ -42,8 +42,10 @@ void rt_enable_interrupts(void)
 
 static void suspend_handler(int sig)
 {
+#ifdef RT_LOG
     printf("thread id %p suspended\n", (void *)pthread_self());
     fflush(stdout);
+#endif
     sigwait(&resume_sigset, &sig);
 }
 
@@ -124,8 +126,10 @@ void rt_syscall(enum rt_syscall syscall)
 
 static void syscall_handler(int sig)
 {
+#ifdef RT_LOG
     printf("syscall_handler %d\n", pending_syscall);
     fflush(stdout);
+#endif
     (void)sig;
     switch ((enum rt_syscall)pending_syscall)
     {

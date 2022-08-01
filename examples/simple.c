@@ -6,16 +6,14 @@
 
 static void simple_fn(void)
 {
-    int n = 10;
+    int n = 10000;
     while (n > 0)
     {
         printf("%s %d, tick %lu\n", rt_task_self()->cfg.name, n,
                rt_tick_count());
         fflush(stdout);
         --n;
-        rt_yield();
     }
-    rt_stop();
 }
 
 int main(void)
