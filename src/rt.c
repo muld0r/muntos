@@ -85,6 +85,7 @@ void rt_sched(void)
 
 void rt_task_suspend(struct rt_task *task)
 {
+    (void)task;
 #if 0
     rt_critical_begin();
     list_remove(&task->list);

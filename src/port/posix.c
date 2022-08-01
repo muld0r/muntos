@@ -15,7 +15,7 @@
 
 #define SIGSUSPEND SIGUSR1
 #define SIGRESUME SIGUSR2
-#define SIGSYSCALL (SIGUSR2 + 1) // TODO: does this work?
+#define SIGSYSCALL SIGVTALRM
 
 static sigset_t empty_sigset, resume_sigset, blocked_sigset;
 
