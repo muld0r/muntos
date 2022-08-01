@@ -151,9 +151,9 @@ static struct
     void (*sigfn)(int);
     int sig;
 } signal_table[] = {
+    {.sigfn = suspend_handler, .sig = SIGSUSPEND},
     {.sigfn = syscall_handler, .sig = SIGSYSCALL},
     {.sigfn = tick_handler, .sig = SIGALRM},
-    {.sigfn = suspend_handler, .sig = SIGSUSPEND},
     {.sigfn = NULL, .sig = 0},
 };
 
