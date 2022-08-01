@@ -6,37 +6,30 @@
 
 static void simple_fn(void)
 {
-    int n = 10000;
+    int n = 1000;
     while (n > 0)
     {
-        rt_critical_begin();
-        printf("%s %d, tick %lu\n", rt_task_self()->cfg.name, n, rt_tick_count());
+        printf("%s %d, tick %lu\n", rt_task_self()->cfg.name, n,
+               rt_tick_count());
         fflush(stdout);
-        rt_critical_end();
         --n;
+        rt_yield();
     }
+    rt_stop();
 }
 
 int main(void)
 {
-    static char task0_stack[PTHREAD_STACK_MIN], task1_stack[PTHREAD_STACK_MIN];
-    static const struct rt_task_config task0_cfg = {
+    static char task_stack[PTHREAD_STACK_MIN];
+    static const struct rt_task_config task_cfg = {
         .fn = simple_fn,
-        .stack = task0_stack,
-        .stack_size = sizeof(task0_stack),
-        .name = "task0",
+        .stack = task_stack,
+        .stack_size = sizeof(task_stack),
+        .name = "task",
         .priority = 1,
     };
-    static const struct rt_task_config task1_cfg = {
-        .fn = simple_fn,
-        .stack = task1_stack,
-        .stack_size = sizeof(task1_stack),
-        .name = "task1",
-        .priority = 1,
-    };
-    static struct rt_task task0, task1;
-    rt_task_init(&task0, &task0_cfg);
-    rt_task_init(&task1, &task1_cfg);
+    static struct rt_task task;
+    rt_task_init(&task, &task_cfg);
 
     rt_start();
 }

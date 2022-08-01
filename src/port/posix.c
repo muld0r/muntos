@@ -114,42 +114,28 @@ void rt_context_destroy(struct rt_context *ctx)
     free(ctx);
 }
 
+static volatile sig_atomic_t pending_syscall = 0;
+
 void rt_syscall(enum rt_syscall syscall)
 {
-    switch (syscall)
-    {
-    case RT_SYSCALL_NOP:
-        break;
-    case RT_SYSCALL_YIELD:
-        raise(SIGSYSCALL);
-        break;
-    }
+    pending_syscall = (sig_atomic_t)syscall;
+    raise(SIGSYSCALL);
 }
-
-static void swap(void)
-{
-    rt_disable_interrupts();
-    rt_context_save(rt_task_self()->ctx);
-    rt_sched();
-    rt_context_load(rt_task_self()->ctx);
-    rt_enable_interrupts();
-}
-
-static volatile sig_atomic_t syscall = 0;
 
 static void syscall_handler(int sig)
 {
+    printf("syscall_handler %d\n", pending_syscall);
+    fflush(stdout);
     (void)sig;
-    switch ((enum rt_syscall)syscall)
+    switch ((enum rt_syscall)pending_syscall)
     {
     case RT_SYSCALL_NOP:
         break;
     case RT_SYSCALL_YIELD:
-        swap();
+        rt_sched();
         break;
     }
-
-    syscall = 0;
+    pending_syscall = 0;
 }
 
 static void tick_handler(int sig)
@@ -178,13 +164,9 @@ void rt_port_start(void)
     // Block SIGRESUME always because it's used with sigwait.
     pthread_sigmask(SIG_SETMASK, &resume_sigset, NULL);
 
-    struct sigaction action = {.sa_handler = NULL};
-    sigemptyset(&action.sa_mask);
-    // SIGRESUME should be blocked in all handlers, to make sure it's delivered
-    // to sigwait
-    sigaddset(&action.sa_mask, SIGRESUME);
+    struct sigaction action = {.sa_handler = NULL, .sa_mask = empty_sigset};
 
-    for (size_t i = 0; signal_table[i].sigfn != NULL; ++i)
+    for (size_t i = 0; signal_table[i].sig != 0; ++i)
     {
         action.sa_handler = signal_table[i].sigfn;
         sigaction(signal_table[i].sig, &action, NULL);
@@ -204,10 +186,13 @@ void rt_port_start(void)
     main_thread = pthread_self();
 
     rt_sched();
-    rt_context_load(rt_task_self()->ctx);
 
     int sig;
-    sigwait(&resume_sigset, &sig);
+    sigset_t stop_sigset = resume_sigset;
+    // Allow sigint to stop the scheduler.
+    sigaddset(&stop_sigset, SIGINT);
+    pthread_sigmask(SIG_BLOCK, &stop_sigset, NULL);
+    sigwait(&stop_sigset, &sig);
 
     rt_disable_interrupts();
 

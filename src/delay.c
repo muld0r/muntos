@@ -44,7 +44,7 @@ void rt_delay_wake_tasks(void)
     rt_tick_t current_tick = rt_tick_count();
     for (struct rt_task *task =
              list_item(list_front(&delay_list), struct rt_task, list);
-         current_tick == task->wake_tick;
+         (task != NULL) && (current_tick == task->wake_tick);
          task = list_item(list_front(&delay_list), struct rt_task, list))
     {
         rt_task_resume(task);

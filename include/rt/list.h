@@ -71,7 +71,14 @@ static inline bool list_empty(struct list *head)
 
 static inline struct list *list_front(struct list *head)
 {
-    return head->next;
+    if (!list_empty(head))
+    {
+        return head->next;
+    }
+    else
+    {
+        return NULL;
+    }
 }
 
 #define list_for_each(node, head)                                              \

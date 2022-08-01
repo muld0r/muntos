@@ -6,6 +6,7 @@ llvm_flags = [
         "-Os",
         "-ffunction-sections",
         "-fdata-sections",
+        "-fsanitize=address,undefined",
         #"-flto",
     ]
 
