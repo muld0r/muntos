@@ -222,7 +222,7 @@ void rt_port_start(void)
 
     // change handler to SIG_IGN to drop any pending signals
     action.sa_handler = SIG_IGN;
-    sigemptyset(&action.sa_mask);
+    action.sa_mask = empty_sigset;
 
     for (size_t i = 0; signal_table[i].sig != 0; ++i)
     {
@@ -230,7 +230,7 @@ void rt_port_start(void)
     }
 
     // Re-enable all signals.
-    pthread_sigmask(SIG_SETMASK, &action.sa_mask, NULL);
+    pthread_sigmask(SIG_SETMASK, &empty_sigset, NULL);
 
     // Restore the default handlers.
     action.sa_handler = SIG_DFL;
