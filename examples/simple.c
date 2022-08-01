@@ -14,6 +14,7 @@ static void simple_fn(void)
         fflush(stdout);
         --n;
     }
+    rt_stop();
 }
 
 int main(void)

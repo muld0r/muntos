@@ -6,8 +6,7 @@ llvm_flags = [
         "-Os",
         "-ffunction-sections",
         "-fdata-sections",
-        "-fsanitize=address,undefined",
-        #"-flto",
+        "-flto",
     ]
 
 env = Environment(
@@ -20,8 +19,6 @@ env = Environment(
 # for color terminal output when available
 if "TERM" in os.environ:
     env["ENV"]["TERM"] = os.environ["TERM"]
-
-env.Append(CPPDEFINES=["RT_LOG"])
 
 if "darwin" in sys.platform:
     env["CC"] = "clang"
