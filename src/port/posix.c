@@ -103,11 +103,19 @@ struct rt_context *rt_context_create(void *stack, size_t stack_size,
 
 void rt_context_save(struct rt_context *ctx)
 {
+#ifdef RT_LOG
+    printf("delivering SIGSUSPEND to %p\n", (void *)ctx->thread);
+    fflush(stdout);
+#endif
     pthread_kill(ctx->thread, SIGSUSPEND);
 }
 
 void rt_context_load(struct rt_context *ctx)
 {
+#ifdef RT_LOG
+    printf("delivering SIGRESUME to %p\n", (void *)ctx->thread);
+    fflush(stdout);
+#endif
     pthread_kill(ctx->thread, SIGRESUME);
 }
 
@@ -121,7 +129,7 @@ static volatile sig_atomic_t pending_syscall = 0;
 void rt_syscall(enum rt_syscall syscall)
 {
     pending_syscall = (sig_atomic_t)syscall;
-    raise(SIGSYSCALL);
+    pthread_kill(pthread_self(), SIGSYSCALL);
 }
 
 static void syscall_handler(int sig)
@@ -165,8 +173,7 @@ static pthread_t main_thread;
 
 void rt_port_start(void)
 {
-    // Block SIGRESUME always because it's used with sigwait.
-    pthread_sigmask(SIG_SETMASK, &resume_sigset, NULL);
+    rt_disable_interrupts();
 
     struct sigaction action = {.sa_handler = NULL, .sa_mask = empty_sigset};
 

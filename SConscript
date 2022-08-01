@@ -21,6 +21,8 @@ env = Environment(
 if "TERM" in os.environ:
     env["ENV"]["TERM"] = os.environ["TERM"]
 
+env.Append(CPPDEFINES=["RT_LOG"])
+
 if "darwin" in sys.platform:
     env["CC"] = "clang"
     env.Append(
