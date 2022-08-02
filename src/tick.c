@@ -9,7 +9,7 @@ static rt_tick_t rt_ticks;
 void rt_tick(void)
 {
     ++rt_ticks;
-#if RT_LOG
+#ifdef RT_LOG
     printf("tick %lu\n", rt_ticks);
     fflush(stdout);
 #endif

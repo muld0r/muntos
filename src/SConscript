@@ -1,0 +1,15 @@
+Import("env")
+
+librt = env.StaticLibrary(
+    target="rt",
+    source=[
+        "rt.c",
+        "tick.c",
+        "critical.c",
+        "delay.c",
+        "queue.c",
+        "sem.c",
+    ],
+)
+
+Return("librt")
