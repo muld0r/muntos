@@ -3,14 +3,16 @@ import sys
 
 llvm_flags = [
     "-g",
-    "-Os",
+    "-Og",
     "-ffunction-sections",
     "-fdata-sections",
+    "-fsanitize=address,undefined",
     "-flto",
 ]
 
 env = Environment(
     CPPPATH=[Dir("include").srcnode()],
+    #CPPDEFINES={"RT_LOG": 1},
     CCFLAGS=llvm_flags,
     CFLAGS=["-std=c99"],
     LINKFLAGS=llvm_flags,
@@ -37,6 +39,9 @@ if "darwin" in sys.platform:
         LINKFLAGS=["-dead_strip"],
     )
 elif "linux" in sys.platform:
+    env["RANLIB"] = "llvm-ranlib"
+    env["AR"] = "llvm-ar"
+    env["LINKCOM"] = env["LINKCOM"].replace("$_LIBFLAGS", "-Wl,--start-group $_LIBFLAGS -Wl,--end-group")
     env.Append(
         CPPDEFINES={"_POSIX_C_SOURCE": "200809L"}, LINKFLAGS=["-Wl,--gc-sections"]
     )

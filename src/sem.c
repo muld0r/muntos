@@ -12,10 +12,10 @@ void rt_sem_init(rt_sem_t *sem, size_t count)
 
 void rt_sem_post(rt_sem_t *sem)
 {
-    (void)rt_queue_send(sem, NULL, 0);
+    (void)rt_queue_send(sem, NULL);
 }
 
-bool rt_sem_wait(rt_sem_t *sem, rt_tick_t timeout)
+void rt_sem_wait(rt_sem_t *sem)
 {
-    return rt_queue_recv(sem, NULL, timeout);
+    rt_queue_recv(sem, NULL);
 }

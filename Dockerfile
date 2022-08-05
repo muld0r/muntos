@@ -5,8 +5,10 @@ ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update \
     && apt-get install -y \
         clang \
+        less \
         llvm \
         scons
 
-RUN useradd rt
-USER rt
+ARG username
+RUN useradd $username
+USER $username

@@ -1,16 +1,11 @@
 #pragma once
 
-#include <limits.h>
-
-typedef unsigned long rt_tick_t;
-#define RT_TICK_MAX ((rt_tick_t)ULONG_MAX)
+/*
+ * Advance to the next tick. Should be called periodically.
+ */
+void rt_tick_advance(void);
 
 /*
- * Run a tick. Should be called periodically.
+ * Return the current tick.
  */
-void rt_tick(void);
-
-/*
- * Return the current tick number.
- */
-rt_tick_t rt_tick_count(void);
+unsigned long rt_tick(void);

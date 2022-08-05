@@ -6,7 +6,7 @@ librt = env.StaticLibrary(
         "rt.c",
         "tick.c",
         "critical.c",
-        "delay.c",
+        "sleep.c",
         "queue.c",
         "sem.c",
     ],

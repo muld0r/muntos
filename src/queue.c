@@ -1,14 +1,14 @@
 #include <rt/queue.h>
 
 #include <rt/critical.h>
-#include <rt/delay.h>
+#include <rt/sleep.h>
 
 #include <string.h>
 
 void rt_queue_init(struct rt_queue *queue, const struct rt_queue_config *cfg)
 {
-    list_head_init(&queue->recv_list);
-    list_head_init(&queue->send_list);
+    list_init(&queue->recv_list);
+    list_init(&queue->send_list);
     queue->buf = cfg->buf;
     queue->len = 0;
     queue->read_offset = 0;
@@ -17,9 +17,12 @@ void rt_queue_init(struct rt_queue *queue, const struct rt_queue_config *cfg)
     queue->elem_size = cfg->elem_size;
 }
 
-bool rt_queue_send(struct rt_queue *queue, const void *elem,
-                    rt_tick_t timeout)
+bool rt_queue_send(struct rt_queue *queue, const void *elem)
 {
+    (void)queue;
+    (void)elem;
+    return false;
+#if 0
     bool success = true;
     rt_critical_begin();
     if (queue->len == queue->capacity)
@@ -29,8 +32,8 @@ bool rt_queue_send(struct rt_queue *queue, const void *elem,
             success = false;
             goto end;
         }
-        list_add_tail(&queue->send_list, &rt_task_self()->event_list);
-        rt_delay(timeout);
+        list_push_back(&queue->send_list, &rt_task_self()->event_list);
+        rt_sleep(timeout);
         if (queue->len == queue->capacity)
         {
             success = false;
@@ -47,7 +50,7 @@ bool rt_queue_send(struct rt_queue *queue, const void *elem,
     {
         queue->write_offset = 0;
     }
-    if (!list_empty(&queue->recv_list))
+    if (list_front(&queue->recv_list))
     {
         struct rt_task *waiting_task = list_item(list_front(&queue->recv_list),
                                                   struct rt_task, event_list);
@@ -57,10 +60,15 @@ bool rt_queue_send(struct rt_queue *queue, const void *elem,
 end:
     rt_critical_end();
     return success;
+#endif
 }
 
-bool rt_queue_recv(struct rt_queue *queue, void *elem, rt_tick_t timeout)
+bool rt_queue_recv(struct rt_queue *queue, void *elem)
 {
+    (void)queue;
+    (void)elem;
+    return false;
+#if 0
     bool success = true;
     rt_critical_begin();
     if (queue->len == 0)
@@ -70,8 +78,8 @@ bool rt_queue_recv(struct rt_queue *queue, void *elem, rt_tick_t timeout)
             success = false;
             goto end;
         }
-        list_add_tail(&queue->recv_list, &rt_task_self()->event_list);
-        rt_delay(timeout);
+        list_push_back(&queue->recv_list, &rt_task_self()->event_list);
+        rt_sleep(timeout);
         if (queue->len == 0)
         {
             success = false;
@@ -88,7 +96,7 @@ bool rt_queue_recv(struct rt_queue *queue, void *elem, rt_tick_t timeout)
     {
         queue->read_offset = 0;
     }
-    if (!list_empty(&queue->send_list))
+    if (list_front(&queue->send_list))
     {
         struct rt_task *waiting_task = list_item(list_front(&queue->send_list),
                                                   struct rt_task, event_list);
@@ -98,4 +106,5 @@ bool rt_queue_recv(struct rt_queue *queue, void *elem, rt_tick_t timeout)
 end:
     rt_critical_end();
     return success;
+#endif
 }

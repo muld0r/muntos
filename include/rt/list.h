@@ -9,92 +9,67 @@ struct list
     struct list *prev, *next;
 };
 
-#define LIST_HEAD_INIT(name)                                                   \
-    {                                                                          \
-        .prev = &(name), .next = &(name),                                      \
-    }
-
-#define LIST_NODE_INIT                                                         \
-    {                                                                          \
-        .prev = NULL, .next = NULL,                                            \
-    }
-
-#define LIST_HEAD(name) struct list name = LIST_HEAD_INIT(name)
-
-static inline void list_head_init(struct list *head)
+static inline void list_init(struct list *list)
 {
-    head->prev = head;
-    head->next = head;
+    list->prev = list;
+    list->next = list;
 }
 
-static inline void list_node_init(struct list *node)
-{
-    node->prev = NULL;
-    node->next = NULL;
-}
+#define LIST_INIT(name)                                                        \
+    {                                                                          \
+        .prev = &name, .next = &name                                           \
+    }
+
+#define LIST(name) struct list name = LIST_INIT(name)
 
 #define list_item container_item
 
-static inline void list_insert(struct list *node, struct list *prev,
-                               struct list *next)
+static inline void list_insert_before(struct list *node, struct list *next)
 {
-    next->prev = node;
     node->next = next;
-    node->prev = prev;
-    prev->next = node;
+    node->prev = next->prev;
+    next->prev->next = node;
+    next->prev = node;
 }
 
-static inline void list_add(struct list *head, struct list *node)
+static inline void list_push_front(struct list *list, struct list *node)
 {
-    list_insert(node, head, head->next);
+    list_insert_before(node, list->next);
 }
 
-static inline void list_add_tail(struct list *head, struct list *node)
+static inline void list_push_back(struct list *list, struct list *node)
 {
-    list_insert(node, head->prev, head);
+    list_insert_before(node, list);
 }
 
 static inline void list_remove(struct list *node)
 {
-    if (node->next && node->prev)
-    {
-        node->next->prev = node->prev;
-        node->prev->next = node->next;
-        node->next = node->prev = NULL;
-    }
+    struct list *const next = node->next, *const prev = node->prev;
+    next->prev = prev;
+    prev->next = next;
+    node->prev = node;
+    node->next = node;
 }
 
-static inline bool list_empty(struct list *head)
+static inline bool list_is_empty(struct list *list)
 {
-    return head == head->next;
+    return list->next == list;
 }
 
-static inline struct list *list_front(struct list *head)
+static inline struct list *list_front(struct list *list)
 {
-    if (!list_empty(head))
-    {
-        return head->next;
-    }
-    else
-    {
-        return NULL;
-    }
+    return list->next;
 }
 
-#define list_for_each(node, head)                                              \
-    for (struct list *node = (head)->next; node != (head); node = node->next)
-
-#define list_for_each_item(item, head, type, member)                           \
-    for (type *item = list_item(list_front(head), type, member);               \
-         &item->member != (head);                                              \
-         item = list_item(item->member.next, type, member))
-
-static inline size_t list_len(struct list *head)
+static inline struct list *list_pop_front(struct list *list)
 {
-    size_t i = 0;
-    list_for_each(node, head)
+    struct list *front = list_front(list);
+    if (front)
     {
-        ++i;
+        list_remove(front);
     }
-    return i;
+    return front;
 }
+
+#define list_for_each(node, listp)                                             \
+    for (node = list_front((listp)); node != (listp); node = node->next)

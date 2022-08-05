@@ -1,5 +1,6 @@
 Import("env")
 
 env.Program("simple.c")
-env.Program("delay.c")
+env.Program("sleep.c")
 env.Program("queue.c")
+env.Program("list.c")

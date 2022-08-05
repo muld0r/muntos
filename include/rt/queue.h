@@ -16,14 +16,14 @@ typedef struct rt_queue rt_queue_t;
 
 void rt_queue_init(rt_queue_t *queue, const struct rt_queue_config *cfg);
 
-bool rt_queue_send(rt_queue_t *queue, const void *elem, rt_tick_t timeout);
+bool rt_queue_send(rt_queue_t *queue, const void *elem);
 
-bool rt_queue_recv(rt_queue_t *queue, void *elem, rt_tick_t timeout);
+bool rt_queue_recv(rt_queue_t *queue, void *elem);
 
 #define RT_QUEUE_FROM_ARRAY(name, array)                                      \
     rt_queue_t name = {                                                       \
-        .recv_list = LIST_HEAD_INIT(name.recv_list),                           \
-        .send_list = LIST_HEAD_INIT(name.send_list),                           \
+        .recv_list = LIST_INIT(name.recv_list),                                \
+        .send_list = LIST_INIT(name.send_list),                                \
         .buf = (char *)(array),                                                \
         .len = 0,                                                              \
         .read_offset = 0,                                                      \

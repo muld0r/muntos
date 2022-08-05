@@ -1,5 +1,5 @@
 #include <rt/critical.h>
-#include <rt/delay.h>
+#include <rt/sleep.h>
 #include <rt/queue.h>
 #include <rt/rt.h>
 
@@ -14,7 +14,7 @@ static void queue_send_fn(void)
     int n = 100;
     for (int x = 0; x < n; ++x)
     {
-        rt_queue_send(&queue, &x, RT_TICK_MAX);
+        rt_queue_send(&queue, &x);
     }
 }
 
@@ -24,7 +24,7 @@ static void queue_recv_fn(void)
     int x;
     for (int i = 0; i < n; ++i)
     {
-        rt_queue_recv(&queue, &x, RT_TICK_MAX);
+        rt_queue_recv(&queue, &x);
         rt_critical_begin();
         printf("received %d\n", x);
         fflush(stdout);

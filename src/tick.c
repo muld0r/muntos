@@ -1,26 +1,26 @@
 #include <rt/critical.h>
-#include <rt/delay.h>
+#include <rt/sleep.h>
 #include <rt/tick.h>
 
 #include <stdio.h>
 
-static rt_tick_t rt_ticks;
+static unsigned long rt_ticks;
 
-void rt_tick(void)
+void rt_tick_advance(void)
 {
     ++rt_ticks;
 #ifdef RT_LOG
     printf("tick %lu\n", rt_ticks);
     fflush(stdout);
 #endif
-    rt_delay_wake_tasks();
+    rt_sleep_check();
     rt_yield();
 }
 
-rt_tick_t rt_tick_count(void)
+unsigned long rt_tick(void)
 {
     rt_critical_begin();
-    rt_tick_t count = rt_ticks;
+    unsigned long count = rt_ticks;
     rt_critical_end();
     return count;
 }

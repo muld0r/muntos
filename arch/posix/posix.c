@@ -3,6 +3,7 @@
 
 #include <rt/critical.h>
 #include <rt/syscall.h>
+#include <rt/tick.h>
 #include <rt/rt.h>
 
 #include <pthread.h>
@@ -43,10 +44,14 @@ void rt_enable_interrupts(void)
 static void suspend_handler(int sig)
 {
 #ifdef RT_LOG
-    printf("thread id %p suspended\n", (void *)pthread_self());
+    printf("thread id %lu suspended\n", pthread_self());
     fflush(stdout);
 #endif
     sigwait(&resume_sigset, &sig);
+#ifdef RT_LOG
+    printf("thread id %lu resumed\n", pthread_self());
+    fflush(stdout);
+#endif
 }
 
 static void setup_sigsets(void)
@@ -104,7 +109,7 @@ struct rt_context *rt_context_create(void *stack, size_t stack_size,
 void rt_context_save(struct rt_context *ctx)
 {
 #ifdef RT_LOG
-    printf("delivering SIGSUSPEND to %p\n", (void *)ctx->thread);
+    printf("delivering SIGSUSPEND to %lu\n", ctx->thread);
     fflush(stdout);
 #endif
     pthread_kill(ctx->thread, SIGSUSPEND);
@@ -113,7 +118,7 @@ void rt_context_save(struct rt_context *ctx)
 void rt_context_load(struct rt_context *ctx)
 {
 #ifdef RT_LOG
-    printf("delivering SIGRESUME to %p\n", (void *)ctx->thread);
+    printf("delivering SIGRESUME to %lu\n", ctx->thread);
     fflush(stdout);
 #endif
     pthread_kill(ctx->thread, SIGRESUME);
@@ -134,26 +139,15 @@ void rt_syscall(enum rt_syscall syscall)
 
 static void syscall_handler(int sig)
 {
-#ifdef RT_LOG
-    printf("syscall_handler %d\n", pending_syscall);
-    fflush(stdout);
-#endif
     (void)sig;
-    switch ((enum rt_syscall)pending_syscall)
-    {
-    case RT_SYSCALL_NOP:
-        break;
-    case RT_SYSCALL_YIELD:
-        rt_sched();
-        break;
-    }
+    rt_syscall_run((enum rt_syscall)pending_syscall);
     pending_syscall = 0;
 }
 
 static void tick_handler(int sig)
 {
     (void)sig;
-    rt_tick();
+    rt_tick_advance();
 }
 
 // list of signals in increasing priority order
@@ -196,7 +190,8 @@ void rt_port_start(void)
 
     main_thread = pthread_self();
 
-    rt_sched();
+    rt_yield();
+    rt_enable_interrupts();
 
     int sig;
     sigset_t stop_sigset = resume_sigset;

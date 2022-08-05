@@ -24,7 +24,7 @@ struct rt_task
     struct list event_list;
     struct rt_task_config cfg;
     struct rt_context *ctx;
-    rt_tick_t wake_tick;
+    unsigned long wake_tick;
 };
 
 /*
@@ -46,13 +46,6 @@ void rt_stop(void);
  * Yield control of the processor to another runnable task.
  */
 void rt_yield(void);
-
-/*
- * Select the next task to run and make it active. Used by arch-specific
- * implementations after saving the active context and before loading the next
- * context.
- */
-void rt_sched(void);
 
 /*
  * Suspend a task.

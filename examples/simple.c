@@ -10,7 +10,7 @@ static void simple_fn(void)
     while (n > 0)
     {
         printf("%s %d, tick %lu\n", rt_task_self()->cfg.name, n,
-               rt_tick_count());
+               rt_tick());
         fflush(stdout);
         --n;
     }
