@@ -48,19 +48,14 @@ void rt_stop(void);
 void rt_yield(void);
 
 /*
- * Suspend a task.
- */
-void rt_task_suspend(struct rt_task *task);
-
-/*
  * Resume a task.
  */
 void rt_task_resume(struct rt_task *task);
 
 /*
- * End a task.
+ * End all tasks. Called from rt_stop.
  */
-void rt_task_exit(struct rt_task *task);
+void rt_end_all_tasks(void);
 
 /*
  * Get a pointer to the currently executing task.

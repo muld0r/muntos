@@ -14,10 +14,8 @@ void rt_tick_advance(void)
     printf("tick %lu\n", rt_ticks);
     fflush(stdout);
 #endif
-    rt_critical_begin();
     rt_sleep_check();
     rt_yield();
-    rt_critical_end();
 }
 
 unsigned long rt_tick(void)

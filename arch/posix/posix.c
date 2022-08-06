@@ -1,11 +1,10 @@
 #include <rt/context.h>
-#include <rt/port.h>
+#include <rt/interrupt.h>
+#include <rt/rt.h>
 
 #include <rt/critical.h>
-#include <rt/interrupt.h>
 #include <rt/syscall.h>
 #include <rt/tick.h>
-#include <rt/rt.h>
 
 #include <pthread.h>
 #include <semaphore.h>
@@ -93,7 +92,7 @@ struct rt_context *rt_context_create(void *stack, size_t stack_size,
 void rt_context_save(struct rt_context *ctx)
 {
 #ifdef RT_LOG
-    printf("delivering SIGSUSPEND to %lu\n", ctx->thread);
+    printf("delivering SIGSUSPEND to %lu\n", (unsigned long)ctx->thread);
     fflush(stdout);
 #endif
     pthread_kill(ctx->thread, SIGSUSPEND);
@@ -102,7 +101,7 @@ void rt_context_save(struct rt_context *ctx)
 void rt_context_load(struct rt_context *ctx)
 {
 #ifdef RT_LOG
-    printf("delivering SIGRESUME to %lu\n", ctx->thread);
+    printf("delivering SIGRESUME to %lu\n", (unsigned long)ctx->thread);
     fflush(stdout);
 #endif
     pthread_kill(ctx->thread, SIGRESUME);
@@ -110,6 +109,7 @@ void rt_context_load(struct rt_context *ctx)
 
 void rt_context_destroy(struct rt_context *ctx)
 {
+    pthread_cancel(ctx->thread);
     free(ctx);
 }
 
@@ -126,7 +126,7 @@ __attribute__((noreturn)) static void resume_handler(int sig)
     (void)sig;
 #ifdef RT_LOG
     printf("thread id %lu received a resume but was not suspended\n",
-           pthread_self());
+           (unsigned long)pthread_self());
     fflush(stdout);
 #endif
     exit(1);
@@ -135,7 +135,7 @@ __attribute__((noreturn)) static void resume_handler(int sig)
 static void suspend_handler(int sig)
 {
 #ifdef RT_LOG
-    printf("thread id %lu suspended\n", pthread_self());
+    printf("thread id %lu suspended\n", (unsigned long)pthread_self());
     fflush(stdout);
 #endif
     sigset_t resume_sigset;
@@ -143,7 +143,7 @@ static void suspend_handler(int sig)
     sigaddset(&resume_sigset, SIGRESUME);
     sigwait(&resume_sigset, &sig);
 #ifdef RT_LOG
-    printf("thread id %lu resumed\n", pthread_self());
+    printf("thread id %lu resumed\n", (unsigned long)pthread_self());
     fflush(stdout);
 #endif
 }
@@ -163,7 +163,7 @@ static void tick_handler(int sig)
 
 static pthread_t main_thread;
 
-void rt_port_start(void)
+void rt_start(void)
 {
     rt_interrupt_disable();
 
@@ -230,6 +230,8 @@ void rt_port_start(void)
 
     rt_interrupt_disable();
 
+    rt_end_all_tasks();
+
     // Prevent new SIGTICKs
     static const struct timeval zero = {
         .tv_sec = 0,
@@ -259,7 +261,7 @@ void rt_port_start(void)
     sigaction(SIGTICK, &action, NULL);
 }
 
-void rt_port_stop(void)
+void rt_stop(void)
 {
     pthread_kill(main_thread, SIGRESUME);
 }

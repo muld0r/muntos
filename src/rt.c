@@ -2,7 +2,6 @@
 
 #include <rt/context.h>
 #include <rt/critical.h>
-#include <rt/port.h>
 #include <rt/sem.h>
 #include <rt/sleep.h>
 #include <rt/syscall.h>
@@ -37,7 +36,8 @@ struct rt_task *rt_task_self(void)
 void rt_yield(void)
 {
 #ifdef RT_LOG
-    printf("rt_yield, active_task is %s\n", active_task ? active_task->cfg.name : "(null)");
+    printf("rt_yield, active_task is %s\n",
+           active_task ? active_task->cfg.name : "(null)");
     fflush(stdout);
 #endif
     rt_syscall(RT_SYSCALL_YIELD);
@@ -45,8 +45,6 @@ void rt_yield(void)
 
 static void yield(void)
 {
-    struct rt_task *next_task = ready_pop();
-
     if (active_task)
     {
         rt_context_save(active_task->ctx);
@@ -60,7 +58,7 @@ static void yield(void)
         }
     }
 
-    active_task = next_task;
+    active_task = ready_pop();
 
     if (active_task)
     {
@@ -78,35 +76,6 @@ void rt_syscall_run(enum rt_syscall syscall)
         yield();
         break;
     }
-}
-
-void rt_task_suspend(struct rt_task *task)
-{
-    (void)task;
-#if 0
-    rt_critical_begin();
-    list_remove(&task->list);
-    if ((task == active_task) && !list_empty(&ready_list))
-    {
-        // TODO: deal with different priorities
-        active_task = list_item(list_front(&ready_list), struct rt_task, list);
-        list_remove(&active_task->list);
-        printf("suspending %s, resuming %s\n", task->cfg.name, active_task->cfg.name);
-        fflush(stdout);
-        rt_context_save(task->ctx);
-        rt_context_load(active_task->ctx);
-    }
-    rt_critical_end();
-#endif
-}
-
-void rt_task_exit(struct rt_task *task)
-{
-    (void)task;
-#if 0
-    rt_task_suspend(task);
-    rt_context_destroy(task->ctx);
-#endif
 }
 
 void rt_task_resume(struct rt_task *task)
@@ -129,12 +98,20 @@ void rt_task_init(struct rt_task *task, const struct rt_task_config *cfg)
     ready_push(task);
 }
 
-void rt_start(void)
+void rt_end_all_tasks(void)
 {
-    rt_port_start();
-}
+    rt_critical_begin();
+    while (!list_is_empty(&ready_list))
+    {
+        struct list *node = list_front(&ready_list);
+        struct rt_task *const task = list_item(node, struct rt_task, list);
+        list_remove(&task->list);
+        rt_context_destroy(task->ctx);
+    }
 
-void rt_stop(void)
-{
-    rt_port_stop();
+    if (active_task)
+    {
+        rt_context_destroy(active_task->ctx);
+    }
+    rt_critical_end();
 }

@@ -31,6 +31,7 @@ env.Append(
         "-Wno-poison-system-directories",
         "-Wno-declaration-after-statement",
         "-Wno-disabled-macro-expansion",
+        "-Wno-bad-function-cast",
     ],
 )
 
