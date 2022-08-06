@@ -2,6 +2,7 @@
 #include <rt/port.h>
 
 #include <rt/critical.h>
+#include <rt/interrupt.h>
 #include <rt/syscall.h>
 #include <rt/tick.h>
 #include <rt/rt.h>
@@ -17,8 +18,7 @@
 #define SIGSUSPEND SIGUSR1
 #define SIGRESUME SIGUSR2
 #define SIGSYSCALL SIGVTALRM
-
-static sigset_t empty_sigset, resume_sigset, blocked_sigset;
+#define SIGTICK SIGALRM
 
 struct rt_context
 {
@@ -30,41 +30,20 @@ struct pthread_arg
     void (*fn)(void);
 };
 
-void rt_disable_interrupts(void)
-{
-    pthread_sigmask(SIG_SETMASK, &blocked_sigset, NULL);
-}
-
-void rt_enable_interrupts(void)
-{
-    // SIGRESUME stays blocked
-    pthread_sigmask(SIG_SETMASK, &resume_sigset, NULL);
-}
-
-static void suspend_handler(int sig)
-{
-#ifdef RT_LOG
-    printf("thread id %lu suspended\n", pthread_self());
-    fflush(stdout);
-#endif
-    sigwait(&resume_sigset, &sig);
-#ifdef RT_LOG
-    printf("thread id %lu resumed\n", pthread_self());
-    fflush(stdout);
-#endif
-}
-
-static void setup_sigsets(void)
+void rt_interrupt_disable(void)
 {
     // SIGINT must always be unblocked for debugging and ctrl-C.
+    sigset_t blocked_sigset;
     sigfillset(&blocked_sigset);
     sigdelset(&blocked_sigset, SIGINT);
+    pthread_sigmask(SIG_BLOCK, &blocked_sigset, NULL);
+}
 
-    // SIGRESUME stays blocked so that we can always sigwait on it.
-    sigemptyset(&resume_sigset);
-    sigaddset(&resume_sigset, SIGRESUME);
-
-    sigemptyset(&empty_sigset);
+void rt_interrupt_enable(void)
+{
+    sigset_t full_sigset;
+    sigfillset(&full_sigset);
+    pthread_sigmask(SIG_UNBLOCK, &full_sigset, NULL);
 }
 
 static void *pthread_fn(void *arg)
@@ -73,8 +52,11 @@ static void *pthread_fn(void *arg)
     void (*fn)(void) = parg->fn;
     free(parg);
     int sig;
+    sigset_t resume_sigset;
+    sigemptyset(&resume_sigset);
+    sigaddset(&resume_sigset, SIGRESUME);
     sigwait(&resume_sigset, &sig);
-    rt_enable_interrupts();
+    rt_interrupt_enable();
     fn();
     return NULL;
 }
@@ -82,9 +64,6 @@ static void *pthread_fn(void *arg)
 struct rt_context *rt_context_create(void *stack, size_t stack_size,
                                        void (*fn)(void))
 {
-    static pthread_once_t sigset_setup_once = PTHREAD_ONCE_INIT;
-    pthread_once(&sigset_setup_once, setup_sigsets);
-
     pthread_attr_t attr;
     pthread_attr_init(&attr);
     pthread_attr_setstack(&attr, stack, stack_size);
@@ -93,12 +72,17 @@ struct rt_context *rt_context_create(void *stack, size_t stack_size,
     struct rt_context *ctx = malloc(sizeof *ctx);
     parg->fn = fn;
 
-    // launch each thread with all signals blocked
-    sigset_t old_sigset;
-    pthread_sigmask(SIG_SETMASK, &blocked_sigset, &old_sigset);
+    /*
+     * Launch each thread interrupts blocked so only the active thread will
+     * receive interrupts.
+     */
+    sigset_t blocked_sigset, old_sigset;
+    sigfillset(&blocked_sigset);
+    sigdelset(&blocked_sigset, SIGINT);
+    pthread_sigmask(SIG_BLOCK, &blocked_sigset, &old_sigset);
+
     pthread_create(&ctx->thread, &attr, pthread_fn, parg);
 
-    // restore the original mask
     pthread_sigmask(SIG_SETMASK, &old_sigset, NULL);
 
     pthread_attr_destroy(&attr);
@@ -137,6 +121,33 @@ void rt_syscall(enum rt_syscall syscall)
     pthread_kill(pthread_self(), SIGSYSCALL);
 }
 
+__attribute__((noreturn)) static void resume_handler(int sig)
+{
+    (void)sig;
+#ifdef RT_LOG
+    printf("thread id %lu received a resume but was not suspended\n",
+           pthread_self());
+    fflush(stdout);
+#endif
+    exit(1);
+}
+
+static void suspend_handler(int sig)
+{
+#ifdef RT_LOG
+    printf("thread id %lu suspended\n", pthread_self());
+    fflush(stdout);
+#endif
+    sigset_t resume_sigset;
+    sigemptyset(&resume_sigset);
+    sigaddset(&resume_sigset, SIGRESUME);
+    sigwait(&resume_sigset, &sig);
+#ifdef RT_LOG
+    printf("thread id %lu resumed\n", pthread_self());
+    fflush(stdout);
+#endif
+}
+
 static void syscall_handler(int sig)
 {
     (void)sig;
@@ -150,33 +161,47 @@ static void tick_handler(int sig)
     rt_tick_advance();
 }
 
-// list of signals in increasing priority order
-// each signal handler masks all signals before it in the list when active
-static struct
-{
-    void (*sigfn)(int);
-    int sig;
-} signal_table[] = {
-    {.sigfn = suspend_handler, .sig = SIGSUSPEND},
-    {.sigfn = syscall_handler, .sig = SIGSYSCALL},
-    {.sigfn = tick_handler, .sig = SIGALRM},
-    {.sigfn = NULL, .sig = 0},
-};
-
 static pthread_t main_thread;
 
 void rt_port_start(void)
 {
-    rt_disable_interrupts();
+    rt_interrupt_disable();
 
-    struct sigaction action = {.sa_handler = NULL, .sa_mask = empty_sigset};
+    /* The handler for SIGRESUME is just to catch spurious resumes and error
+     * out. Threads expecting a SIGRESUME must block it and sigwait on it. This
+     * should be treated as fatal, so block all signals other than SIGINT. */
+    struct sigaction resume_action = {
+        .sa_handler = resume_handler,
+    };
+    sigfillset(&resume_action.sa_mask);
+    sigdelset(&resume_action.sa_mask, SIGINT);
+    sigaction(SIGRESUME, &resume_action, NULL);
 
-    for (size_t i = 0; signal_table[i].sig != 0; ++i)
-    {
-        action.sa_handler = signal_table[i].sigfn;
-        sigaction(signal_table[i].sig, &action, NULL);
-        sigaddset(&action.sa_mask, signal_table[i].sig);
-    }
+    /* The suspend handler must block all signals so that other signals are
+     * only delivered to the active thread. */
+    struct sigaction suspend_action = {
+        .sa_handler = suspend_handler,
+    };
+    sigfillset(&suspend_action.sa_mask);
+    sigdelset(&suspend_action.sa_mask, SIGINT);
+    sigaction(SIGSUSPEND, &suspend_action, NULL);
+
+    /* The syscall handler must block SIGSUSPEND so that it can suspend the
+     * current thread and then resume the next one. This way when the syscall
+     * handler returns the thread will actually become suspended. */
+    struct sigaction syscall_action = {
+        .sa_handler = syscall_handler,
+    };
+    sigemptyset(&syscall_action.sa_mask);
+    sigaddset(&syscall_action.sa_mask, SIGSUSPEND);
+    sigaction(SIGSYSCALL, &syscall_action, NULL);
+
+    /* The tick action need not block any signals. */
+    struct sigaction tick_action = {
+        .sa_handler = tick_handler,
+    };
+    sigemptyset(&tick_action.sa_mask);
+    sigaction(SIGTICK, &tick_action, NULL);
 
     static const struct timeval milli = {
         .tv_sec = 0,
@@ -191,18 +216,21 @@ void rt_port_start(void)
     main_thread = pthread_self();
 
     rt_yield();
-    rt_enable_interrupts();
+
+    sigset_t stop_sigset;
+    sigemptyset(&stop_sigset);
+    sigaddset(&stop_sigset, SIGINT);
+    sigaddset(&stop_sigset, SIGRESUME);
+
+    // This will unblock other interrupts, so the yield takes effect here.
+    pthread_sigmask(SIG_SETMASK, &stop_sigset, NULL);
 
     int sig;
-    sigset_t stop_sigset = resume_sigset;
-    // Allow sigint to stop the scheduler.
-    sigaddset(&stop_sigset, SIGINT);
-    pthread_sigmask(SIG_BLOCK, &stop_sigset, NULL);
     sigwait(&stop_sigset, &sig);
 
-    rt_disable_interrupts();
+    rt_interrupt_disable();
 
-    // prevent new SIGALRMs
+    // Prevent new SIGTICKs
     static const struct timeval zero = {
         .tv_sec = 0,
         .tv_usec = 0,
@@ -211,24 +239,24 @@ void rt_port_start(void)
     timer.it_value = zero;
     setitimer(ITIMER_REAL, &timer, NULL);
 
-    // change handler to SIG_IGN to drop any pending signals
-    action.sa_handler = SIG_IGN;
-    action.sa_mask = empty_sigset;
+    // Change handler to SIG_IGN to drop any pending signals.
+    struct sigaction action = {.sa_handler = SIG_IGN};
+    sigemptyset(&action.sa_mask);
 
-    for (size_t i = 0; signal_table[i].sig != 0; ++i)
-    {
-        sigaction(signal_table[i].sig, &action, NULL);
-    }
+    sigaction(SIGRESUME, &action, NULL);
+    sigaction(SIGSUSPEND, &action, NULL);
+    sigaction(SIGSYSCALL, &action, NULL);
+    sigaction(SIGTICK, &action, NULL);
 
     // Re-enable all signals.
-    pthread_sigmask(SIG_SETMASK, &empty_sigset, NULL);
+    rt_interrupt_enable();
 
     // Restore the default handlers.
     action.sa_handler = SIG_DFL;
-    for (size_t i = 0; signal_table[i].sig != 0; ++i)
-    {
-        sigaction(signal_table[i].sig, &action, NULL);
-    }
+    sigaction(SIGRESUME, &action, NULL);
+    sigaction(SIGSUSPEND, &action, NULL);
+    sigaction(SIGSYSCALL, &action, NULL);
+    sigaction(SIGTICK, &action, NULL);
 }
 
 void rt_port_stop(void)

@@ -8,14 +8,13 @@
 static void sleep_fn(void)
 {
     int n = 5;
+    unsigned long last_wake_tick = 0;
     while (n > 0)
     {
-        rt_critical_begin();
         printf("%s %d, tick %lu\n", rt_task_self()->cfg.name, n,
                rt_tick());
         fflush(stdout);
-        rt_critical_end();
-        rt_sleep(1000);
+        rt_sleep_periodic(&last_wake_tick, 1000);
         --n;
     }
     rt_stop();

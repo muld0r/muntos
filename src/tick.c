@@ -8,19 +8,20 @@ static unsigned long rt_ticks;
 
 void rt_tick_advance(void)
 {
+    //__atomic_add_fetch(&rt_ticks, 1, __ATOMIC_RELEASE);
     ++rt_ticks;
 #ifdef RT_LOG
     printf("tick %lu\n", rt_ticks);
     fflush(stdout);
 #endif
+    rt_critical_begin();
     rt_sleep_check();
     rt_yield();
+    rt_critical_end();
 }
 
 unsigned long rt_tick(void)
 {
-    rt_critical_begin();
-    unsigned long count = rt_ticks;
-    rt_critical_end();
-    return count;
+    return rt_ticks;
+    //return __atomic_load_n(&rt_ticks, __ATOMIC_ACQUIRE);
 }
