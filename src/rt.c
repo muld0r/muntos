@@ -64,6 +64,7 @@ static void yield(void)
     {
         rt_context_load(active_task->ctx);
     }
+    // TODO: explicitly handle waiting with no task
 }
 
 void rt_syscall_run(enum rt_syscall syscall)

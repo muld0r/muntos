@@ -72,8 +72,8 @@ struct rt_context *rt_context_create(void *stack, size_t stack_size,
     parg->fn = fn;
 
     /*
-     * Launch each thread interrupts blocked so only the active thread will
-     * receive interrupts.
+     * Launch each thread with interrupts disabled so only the active thread
+     * will receive interrupts.
      */
     sigset_t blocked_sigset, old_sigset;
     sigfillset(&blocked_sigset);
