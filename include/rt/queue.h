@@ -12,19 +12,20 @@ struct rt_queue_config
     size_t num_elems;
 };
 
-typedef struct rt_queue rt_queue_t;
+struct rt_queue;
 
-void rt_queue_init(rt_queue_t *queue, const struct rt_queue_config *cfg);
+void rt_queue_init(struct rt_queue *queue,
+                    const struct rt_queue_config *cfg);
 
-bool rt_queue_send(rt_queue_t *queue, const void *elem);
+bool rt_queue_send(struct rt_queue *queue, const void *elem);
 
-bool rt_queue_recv(rt_queue_t *queue, void *elem);
+bool rt_queue_recv(struct rt_queue *queue, void *elem);
 
 #define RT_QUEUE_FROM_ARRAY(name, array)                                      \
-    rt_queue_t name = {                                                       \
-        .recv_list = LIST_INIT(name.recv_list),                                \
-        .send_list = LIST_INIT(name.send_list),                                \
-        .buf = (char *)(array),                                                \
+    struct rt_queue name = {                                                  \
+        .recv_list = RT_LIST_INIT(name.recv_list),                            \
+        .send_list = RT_LIST_INIT(name.send_list),                            \
+        .buf = array,                                                          \
         .len = 0,                                                              \
         .read_offset = 0,                                                      \
         .write_offset = 0,                                                     \
@@ -34,9 +35,9 @@ bool rt_queue_recv(rt_queue_t *queue, void *elem);
 
 struct rt_queue
 {
-    struct list recv_list;
-    struct list send_list;
-    char *buf;
+    struct rt_list recv_list;
+    struct rt_list send_list;
+    void *buf;
     size_t len;
     size_t read_offset;
     size_t write_offset;

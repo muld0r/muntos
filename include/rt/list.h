@@ -1,75 +1,42 @@
-#pragma once
-
-#include "container.h"
+#ifndef RT_LIST_H
+#define RT_LIST_H
 
 #include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
 
-struct list
+struct rt_list
 {
-    struct list *prev, *next;
+    struct rt_list *prev, *next;
 };
 
-static inline void list_init(struct list *list)
-{
-    list->prev = list;
-    list->next = list;
-}
+void rt_list_init(struct rt_list *list);
 
-#define LIST_INIT(name)                                                        \
+#define RT_LIST_INIT(name)                                                    \
     {                                                                          \
         .prev = &name, .next = &name                                           \
     }
 
-#define LIST(name) struct list name = LIST_INIT(name)
+#define RT_LIST(name) struct rt_list name = RT_LIST_INIT(name)
 
-#define list_item container_item
+#define rt_list_item(ptr, type, member)                                       \
+    ((type *)((uintptr_t)(ptr)-offsetof(type, member)))
 
-static inline void list_insert_before(struct list *node, struct list *next)
-{
-    node->next = next;
-    node->prev = next->prev;
-    next->prev->next = node;
-    next->prev = node;
-}
+void rt_list_insert_before(struct rt_list *node, struct rt_list *next);
 
-static inline void list_push_front(struct list *list, struct list *node)
-{
-    list_insert_before(node, list->next);
-}
+void rt_list_push_front(struct rt_list *list, struct rt_list *node);
 
-static inline void list_push_back(struct list *list, struct list *node)
-{
-    list_insert_before(node, list);
-}
+void rt_list_push_back(struct rt_list *list, struct rt_list *node);
 
-static inline void list_remove(struct list *node)
-{
-    struct list *const next = node->next, *const prev = node->prev;
-    next->prev = prev;
-    prev->next = next;
-    node->prev = node;
-    node->next = node;
-}
+void rt_list_remove(struct rt_list *node);
 
-static inline bool list_is_empty(struct list *list)
-{
-    return list->next == list;
-}
+bool rt_list_is_empty(struct rt_list *list);
 
-static inline struct list *list_front(struct list *list)
-{
-    return list->next;
-}
+struct rt_list *rt_list_front(struct rt_list *list);
 
-static inline struct list *list_pop_front(struct list *list)
-{
-    struct list *front = list_front(list);
-    if (front)
-    {
-        list_remove(front);
-    }
-    return front;
-}
+struct rt_list *rt_list_pop_front(struct rt_list *list);
 
-#define list_for_each(node, listp)                                             \
-    for (node = list_front((listp)); node != (listp); node = node->next)
+#define rt_list_for_each(node, listp)                                         \
+    for (node = rt_list_front((listp)); node != (listp); node = node->next)
+
+#endif /* RT_LIST_H */

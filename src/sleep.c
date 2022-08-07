@@ -5,7 +5,7 @@
 
 #include <stdio.h>
 
-static LIST(sleep_list);
+static RT_LIST(sleep_list);
 
 void rt_sleep(unsigned long ticks)
 {
@@ -34,11 +34,11 @@ void rt_sleep_until(unsigned long wake_tick)
     const unsigned long current_tick = rt_tick();
     const unsigned long ticks_until_wake = wake_tick - current_tick;
 
-    struct list *node;
-    list_for_each(node, &sleep_list)
+    struct rt_list *node;
+    rt_list_for_each(node, &sleep_list)
     {
         const struct rt_task *const sleeping_task =
-            list_item(node, struct rt_task, list);
+            rt_list_item(node, struct rt_task, list);
         if (ticks_until_wake < (sleeping_task->wake_tick - current_tick))
         {
             break;
@@ -50,7 +50,7 @@ void rt_sleep_until(unsigned long wake_tick)
            wake_tick);
     fflush(stdout);
 #endif
-    list_insert_before(&rt_task_self()->list, node);
+    rt_list_insert_before(&rt_task_self()->list, node);
     rt_task_self()->wake_tick = wake_tick;
     rt_yield();
     rt_critical_end();
@@ -58,13 +58,14 @@ void rt_sleep_until(unsigned long wake_tick)
 
 void rt_sleep_check(void)
 {
-    // TODO: store and check the first wake tick without looking at the list if not needed
+    // TODO: store and check the first wake tick without looking at the list if
+    // not needed
     const unsigned long current_tick = rt_tick();
-    while (!list_is_empty(&sleep_list))
+    while (!rt_list_is_empty(&sleep_list))
     {
-        struct list *node = list_front(&sleep_list);
+        struct rt_list *node = rt_list_front(&sleep_list);
         struct rt_task *const sleeping_task =
-            list_item(node, struct rt_task, list);
+            rt_list_item(node, struct rt_task, list);
         if (sleeping_task->wake_tick != current_tick)
         {
             /*

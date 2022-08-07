@@ -8,6 +8,7 @@ librt = env.StaticLibrary(
         "critical.c",
         "sleep.c",
         "queue.c",
+        "list.c",
         "sem.c",
     ],
 )

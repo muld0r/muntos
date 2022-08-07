@@ -8,24 +8,33 @@
 
 #include <stdio.h>
 
-static LIST(ready_list);
+static RT_LIST(ready_list);
 static struct rt_task *active_task;
+
+static struct rt_task *task_from_list(struct rt_list *list)
+{
+    return rt_list_item(list, struct rt_task, list);
+}
+
+static struct rt_task *next_ready_task(void)
+{
+    return task_from_list(rt_list_front(&ready_list));
+}
 
 static struct rt_task *ready_pop(void)
 {
-    if (list_is_empty(&ready_list))
+    if (rt_list_is_empty(&ready_list))
     {
         return NULL;
     }
     struct rt_task *next_task =
-        list_item(list_front(&ready_list), struct rt_task, list);
-    list_remove(&next_task->list);
+        task_from_list(rt_list_pop_front(&ready_list));
     return next_task;
 }
 
 static void ready_push(struct rt_task *task)
 {
-    list_push_back(&ready_list, &task->list);
+    rt_list_push_back(&ready_list, &task->list);
 }
 
 struct rt_task *rt_task_self(void)
@@ -52,7 +61,7 @@ static void yield(void)
          * If the yielding task is not already on a different list,
          * push it onto the ready list.
          */
-        if (list_is_empty(&active_task->list))
+        if (rt_list_is_empty(&active_task->list))
         {
             ready_push(active_task);
         }
@@ -82,8 +91,8 @@ void rt_syscall_run(enum rt_syscall syscall)
 void rt_task_resume(struct rt_task *task)
 {
     rt_critical_begin();
-    list_remove(&task->list);
-    list_remove(&task->event_list);
+    rt_list_remove(&task->list);
+    rt_list_remove(&task->event_list);
     ready_push(task);
     // TODO: deal with different priorities
     rt_critical_end();
@@ -91,8 +100,8 @@ void rt_task_resume(struct rt_task *task)
 
 void rt_task_init(struct rt_task *task, const struct rt_task_config *cfg)
 {
-    list_init(&task->list);
-    list_init(&task->event_list);
+    rt_list_init(&task->list);
+    rt_list_init(&task->event_list);
     task->cfg = *cfg;
     task->wake_tick = 0;
     task->ctx = rt_context_create(cfg->stack, cfg->stack_size, task->cfg.fn);
@@ -102,11 +111,10 @@ void rt_task_init(struct rt_task *task, const struct rt_task_config *cfg)
 void rt_end_all_tasks(void)
 {
     rt_critical_begin();
-    while (!list_is_empty(&ready_list))
+    while (!rt_list_is_empty(&ready_list))
     {
-        struct list *node = list_front(&ready_list);
-        struct rt_task *const task = list_item(node, struct rt_task, list);
-        list_remove(&task->list);
+        struct rt_task *task = next_ready_task();
+        rt_list_remove(&task->list);
         rt_context_destroy(task->ctx);
     }
 

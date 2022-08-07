@@ -7,8 +7,8 @@
 
 void rt_queue_init(struct rt_queue *queue, const struct rt_queue_config *cfg)
 {
-    list_init(&queue->recv_list);
-    list_init(&queue->send_list);
+    rt_list_init(&queue->recv_list);
+    rt_list_init(&queue->send_list);
     queue->buf = cfg->buf;
     queue->len = 0;
     queue->read_offset = 0;
