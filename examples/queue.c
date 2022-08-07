@@ -6,12 +6,12 @@
 #include <limits.h>
 #include <stdio.h>
 
-static uintptr_t queue_buf[16];
+static const int n = 1000;
+static int queue_buf[16];
 static RT_QUEUE_FROM_ARRAY(queue, queue_buf);
 
 static void queue_send_fn(void)
 {
-    int n = 100;
     for (int x = 0; x < n; ++x)
     {
         rt_queue_send(&queue, &x);
@@ -20,7 +20,6 @@ static void queue_send_fn(void)
 
 static void queue_recv_fn(void)
 {
-    int n = 100;
     int x;
     for (int i = 0; i < n; ++i)
     {

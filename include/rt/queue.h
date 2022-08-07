@@ -17,9 +17,9 @@ struct rt_queue;
 void rt_queue_init(struct rt_queue *queue,
                     const struct rt_queue_config *cfg);
 
-bool rt_queue_send(struct rt_queue *queue, const void *elem);
+void rt_queue_send(struct rt_queue *queue, const void *elem);
 
-bool rt_queue_recv(struct rt_queue *queue, void *elem);
+void rt_queue_recv(struct rt_queue *queue, void *elem);
 
 #define RT_QUEUE_FROM_ARRAY(name, array)                                      \
     struct rt_queue name = {                                                  \

@@ -92,7 +92,6 @@ void rt_task_resume(struct rt_task *task)
 {
     rt_critical_begin();
     rt_list_remove(&task->list);
-    rt_list_remove(&task->event_list);
     ready_push(task);
     // TODO: deal with different priorities
     rt_critical_end();
@@ -101,7 +100,6 @@ void rt_task_resume(struct rt_task *task)
 void rt_task_init(struct rt_task *task, const struct rt_task_config *cfg)
 {
     rt_list_init(&task->list);
-    rt_list_init(&task->event_list);
     task->cfg = *cfg;
     task->wake_tick = 0;
     task->ctx = rt_context_create(cfg->stack, cfg->stack_size, task->cfg.fn);

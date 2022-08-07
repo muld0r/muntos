@@ -21,7 +21,6 @@ struct rt_task_config
 struct rt_task
 {
     struct rt_list list;
-    struct rt_list event_list;
     struct rt_task_config cfg;
     struct rt_context *ctx;
     unsigned long wake_tick;
