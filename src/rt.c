@@ -108,7 +108,6 @@ void rt_task_init(struct rt_task *task, const struct rt_task_config *cfg)
 
 void rt_end_all_tasks(void)
 {
-    rt_critical_begin();
     while (!rt_list_is_empty(&ready_list))
     {
         struct rt_task *task = next_ready_task();
@@ -120,5 +119,4 @@ void rt_end_all_tasks(void)
     {
         rt_context_destroy(active_task->ctx);
     }
-    rt_critical_end();
 }
