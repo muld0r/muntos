@@ -10,10 +10,6 @@ void rt_tick_advance(void)
 {
     //__atomic_add_fetch(&rt_ticks, 1, __ATOMIC_RELEASE);
     ++rt_ticks;
-#ifdef RT_LOG
-    printf("tick %lu\n", rt_ticks);
-    fflush(stdout);
-#endif
     rt_sleep_check();
     rt_yield();
 }

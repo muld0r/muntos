@@ -12,7 +12,6 @@ llvm_flags = [
 
 env = Environment(
     CPPPATH=[Dir("include").srcnode()],
-    #CPPDEFINES={"RT_LOG": 1},
     CCFLAGS=llvm_flags,
     CFLAGS=["-std=c99"],
     LINKFLAGS=llvm_flags,

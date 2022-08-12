@@ -45,11 +45,6 @@ void rt_sleep_until(unsigned long wake_tick)
         }
     }
 
-#ifdef RT_LOG
-    printf("sleeping %s until tick %lu\n", rt_task_self()->cfg.name,
-           wake_tick);
-    fflush(stdout);
-#endif
     rt_list_insert_before(&rt_task_self()->list, node);
     rt_task_self()->wake_tick = wake_tick;
     rt_yield();

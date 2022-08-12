@@ -39,11 +39,6 @@ struct rt_task *rt_task_self(void)
 
 void rt_yield(void)
 {
-#ifdef RT_LOG
-    printf("rt_yield, active_task is %s\n",
-           active_task ? active_task->cfg.name : "(null)");
-    fflush(stdout);
-#endif
     rt_syscall(RT_SYSCALL_YIELD);
 }
 

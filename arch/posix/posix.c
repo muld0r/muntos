@@ -91,19 +91,11 @@ struct rt_context *rt_context_create(void *stack, size_t stack_size,
 
 void rt_context_save(struct rt_context *ctx)
 {
-#ifdef RT_LOG
-    printf("delivering SIGSUSPEND to %lu\n", (unsigned long)ctx->thread);
-    fflush(stdout);
-#endif
     pthread_kill(ctx->thread, SIGSUSPEND);
 }
 
 void rt_context_load(struct rt_context *ctx)
 {
-#ifdef RT_LOG
-    printf("delivering SIGRESUME to %lu\n", (unsigned long)ctx->thread);
-    fflush(stdout);
-#endif
     pthread_kill(ctx->thread, SIGRESUME);
 }
 
@@ -124,28 +116,18 @@ void rt_syscall(enum rt_syscall syscall)
 __attribute__((noreturn)) static void resume_handler(int sig)
 {
     (void)sig;
-#ifdef RT_LOG
-    printf("thread id %lu received a resume but was not suspended\n",
-           (unsigned long)pthread_self());
-    fflush(stdout);
-#endif
+    fprintf(stderr, "thread id %lu received a resume but was not suspended\n",
+            (unsigned long)pthread_self());
+    fflush(stderr);
     exit(1);
 }
 
 static void suspend_handler(int sig)
 {
-#ifdef RT_LOG
-    printf("thread id %lu suspended\n", (unsigned long)pthread_self());
-    fflush(stdout);
-#endif
     sigset_t resume_sigset;
     sigemptyset(&resume_sigset);
     sigaddset(&resume_sigset, SIGRESUME);
     sigwait(&resume_sigset, &sig);
-#ifdef RT_LOG
-    printf("thread id %lu resumed\n", (unsigned long)pthread_self());
-    fflush(stdout);
-#endif
 }
 
 static void syscall_handler(int sig)
