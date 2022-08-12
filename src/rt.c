@@ -16,11 +16,6 @@ static struct rt_task *task_from_list(struct rt_list *list)
     return rt_list_item(list, struct rt_task, list);
 }
 
-static struct rt_task *next_ready_task(void)
-{
-    return task_from_list(rt_list_front(&ready_list));
-}
-
 static struct rt_task *ready_pop(void)
 {
     if (rt_list_is_empty(&ready_list))
@@ -54,6 +49,8 @@ void rt_yield(void)
 
 static void yield(void)
 {
+    struct rt_task *next_task = ready_pop();
+
     if (active_task)
     {
         rt_context_save(active_task->ctx);
@@ -67,7 +64,7 @@ static void yield(void)
         }
     }
 
-    active_task = ready_pop();
+    active_task = next_task;
 
     if (active_task)
     {
@@ -108,10 +105,9 @@ void rt_task_init(struct rt_task *task, const struct rt_task_config *cfg)
 
 void rt_end_all_tasks(void)
 {
-    while (!rt_list_is_empty(&ready_list))
+    struct rt_task *task;
+    while ((task = ready_pop()))
     {
-        struct rt_task *task = next_ready_task();
-        rt_list_remove(&task->list);
         rt_context_destroy(task->ctx);
     }
 

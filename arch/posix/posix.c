@@ -217,20 +217,21 @@ void rt_start(void)
 
     rt_yield();
 
+    // Unblock syscalls so the yield can run here.
+    sigset_t syscall_sigset;
+    sigemptyset(&syscall_sigset);
+    sigaddset(&syscall_sigset, SIGSYSCALL);
+    pthread_sigmask(SIG_UNBLOCK, &syscall_sigset, NULL);
+    pthread_sigmask(SIG_BLOCK, &syscall_sigset, NULL);
+
+    // Allos SIGINT or SIGRESUME to stop the scheduler.
     sigset_t stop_sigset;
     sigemptyset(&stop_sigset);
     sigaddset(&stop_sigset, SIGINT);
     sigaddset(&stop_sigset, SIGRESUME);
 
-    // This will unblock other interrupts, so the yield takes effect here.
-    pthread_sigmask(SIG_SETMASK, &stop_sigset, NULL);
-
     int sig;
     sigwait(&stop_sigset, &sig);
-
-    rt_interrupt_disable();
-
-    rt_end_all_tasks();
 
     // Prevent new SIGTICKs
     static const struct timeval zero = {
@@ -263,5 +264,7 @@ void rt_start(void)
 
 void rt_stop(void)
 {
+    rt_interrupt_disable();
     pthread_kill(main_thread, SIGRESUME);
+    rt_end_all_tasks();
 }
