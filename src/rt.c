@@ -43,11 +43,18 @@ void rt_yield(void)
     rt_syscall(RT_SYSCALL_YIELD);
 }
 
+void rt_task_exit(void)
+{
+    rt_task_self()->exiting = true;
+    rt_yield();
+}
+
 static void yield(void)
 {
     struct rt_task *const prev_task = active_task;
     struct rt_task *const next_task = ready_pop();
-    const bool still_ready = prev_task && rt_list_is_empty(&prev_task->list);
+    const bool still_ready =
+        prev_task && !prev_task->exiting && rt_list_is_empty(&prev_task->list);
 
     /*
      * If there is no new task to schedule and the current task is still ready
@@ -106,6 +113,7 @@ void rt_task_init(struct rt_task *task, const struct rt_task_config *cfg)
     rt_list_init(&task->list);
     task->cfg = *cfg;
     task->wake_tick = 0;
+    task->exiting = false;
     task->ctx = rt_context_create(cfg->stack, cfg->stack_size, task->cfg.fn);
     ready_push(task);
 }

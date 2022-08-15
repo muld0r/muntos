@@ -24,6 +24,7 @@ struct rt_task
     struct rt_task_config cfg;
     struct rt_context *ctx;
     unsigned long wake_tick;
+    bool exiting;
 };
 
 /*
@@ -45,6 +46,11 @@ void rt_stop(void);
  * Yield control of the processor to another runnable task.
  */
 void rt_yield(void);
+
+/*
+ * Terminate the currently running task.
+ */
+void rt_task_exit(void);
 
 /*
  * Resume a task.

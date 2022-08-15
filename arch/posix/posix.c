@@ -70,13 +70,13 @@ static void wait_handler(int sig)
      * Used to temporarily allow the main thread to handle interrupts because
      * all other threads are suspended.
      */
-    log_event("thread %lu waiting for interrupt\n",
+    log_event("thread %lx waiting for signal\n",
               (unsigned long)pthread_self());
     sigset_t wait_sigset, old_sigset;
     sigfillset(&wait_sigset);
     sigdelset(&wait_sigset, SIGINT);
     sigwait(&wait_sigset, &sig);
-    log_event("thread %lu received signal %d while waiting\n",
+    log_event("thread %lx received signal %d while waiting\n",
               (unsigned long)pthread_self(), sig);
     /* After receiving an interrupt via sigwait, re-trigger it, then temporarily
      * unblock that signal then restore the main thread's signal mask so the
@@ -98,7 +98,7 @@ void rt_interrupt_wait(void)
 
 static void *pthread_fn(void *arg)
 {
-    log_event("thread %lu created\n", (unsigned long)pthread_self());
+    log_event("thread %lx created\n", (unsigned long)pthread_self());
     struct pthread_arg *parg = arg;
     void (*fn)(void) = parg->fn;
     free(parg);
@@ -107,9 +107,11 @@ static void *pthread_fn(void *arg)
     sigemptyset(&resume_sigset);
     sigaddset(&resume_sigset, SIGRESUME);
     sigwait(&resume_sigset, &sig);
-    log_event("thread %lu starting\n", (unsigned long)pthread_self());
+    log_event("thread %lx starting\n", (unsigned long)pthread_self());
     rt_interrupt_enable();
     fn();
+    log_event("thread %lx exiting\n", (unsigned long)pthread_self());
+    rt_task_exit();
     return NULL;
 }
 
@@ -159,13 +161,11 @@ void rt_context_save(struct rt_context *ctx)
     sigdelset(&blocked_sigset, SIGSUSPEND);
     pthread_sigmask(SIG_BLOCK, &blocked_sigset, NULL);
     pthread_kill(ctx->thread, SIGSUSPEND);
-    log_event("thread %lu told to suspend\n", (unsigned long)ctx->thread);
 }
 
 void rt_context_load(struct rt_context *ctx)
 {
     pthread_kill(ctx->thread, SIGRESUME);
-    log_event("thread %lu told to resume\n", (unsigned long)ctx->thread);
 }
 
 void rt_context_destroy(struct rt_context *ctx)
@@ -185,25 +185,25 @@ void rt_syscall(enum rt_syscall syscall)
 __attribute__((noreturn)) static void resume_handler(int sig)
 {
     (void)sig;
-    log_event("thread %lu received a resume but was not suspended\n",
+    log_event("thread %lx received a resume but was not suspended\n",
               (unsigned long)pthread_self());
     exit(1);
 }
 
 static void suspend_handler(int sig)
 {
-    log_event("thread %lu suspending\n", (unsigned long)pthread_self());
+    log_event("thread %lx suspending\n", (unsigned long)pthread_self());
     sigset_t resume_sigset;
     sigemptyset(&resume_sigset);
     sigaddset(&resume_sigset, SIGRESUME);
     sigwait(&resume_sigset, &sig);
-    log_event("thread %lu resuming\n", (unsigned long)pthread_self());
+    log_event("thread %lx resuming\n", (unsigned long)pthread_self());
     rt_interrupt_enable();
 }
 
 static void syscall_handler(int sig)
 {
-    log_event("thread %lu running syscall\n", (unsigned long)pthread_self());
+    log_event("thread %lx running syscall\n", (unsigned long)pthread_self());
     (void)sig;
     rt_syscall_run((enum rt_syscall)pending_syscall);
     pending_syscall = 0;
@@ -211,7 +211,7 @@ static void syscall_handler(int sig)
 
 static void tick_handler(int sig)
 {
-    log_event("thread %lu received a tick\n", (unsigned long)pthread_self());
+    log_event("thread %lx received a tick\n", (unsigned long)pthread_self());
     (void)sig;
     rt_tick_advance();
 }
