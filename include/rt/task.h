@@ -18,17 +18,17 @@ struct rt_task
     bool exiting;
 };
 
-#define RT_TASK(name_, fn_, stack_, priority_) \
-    struct rt_task name_ = { \
-        .list = RT_LIST_INIT(name_.list),\
-        .ctx = NULL, \
-        .fn = fn_, \
-        .stack = stack_, \
-        .stack_size = sizeof stack_, \
-        .name = #name_, \
-        .wake_tick = 0, \
-        .priority = priority_, \
-        .exiting = false, \
+#define RT_TASK(name_, fn_, stack_, priority_)                                \
+    struct rt_task name_ = {                                                  \
+        .list = RT_LIST_INIT(name_.list),                                     \
+        .ctx = NULL,                                                           \
+        .fn = fn_,                                                             \
+        .stack = stack_,                                                       \
+        .stack_size = sizeof stack_,                                           \
+        .name = #name_,                                                        \
+        .wake_tick = 0,                                                        \
+        .priority = priority_,                                                 \
+        .exiting = false,                                                      \
     }
 
 /*

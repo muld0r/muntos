@@ -1,10 +1,7 @@
 #include <rt/rt.h>
 
 #include <rt/context.h>
-#include <rt/critical.h>
 #include <rt/interrupt.h>
-#include <rt/sem.h>
-#include <rt/sleep.h>
 #include <rt/syscall.h>
 
 #include <stdio.h>
@@ -30,6 +27,7 @@ static struct rt_task *ready_pop(void)
 
 static void ready_push(struct rt_task *task)
 {
+    // TODO: deal with different priorities
     rt_list_push_back(&ready_list, &task->list);
 }
 
@@ -101,11 +99,8 @@ void rt_syscall_run(enum rt_syscall syscall)
 
 void rt_task_resume(struct rt_task *task)
 {
-    rt_critical_begin();
     rt_list_remove(&task->list);
     ready_push(task);
-    // TODO: deal with different priorities
-    rt_critical_end();
 }
 
 void rt_task_launch(struct rt_task *task)

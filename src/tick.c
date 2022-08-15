@@ -17,5 +17,5 @@ void rt_tick_advance(void)
 unsigned long rt_tick(void)
 {
     return rt_ticks;
-    //return __atomic_load_n(&rt_ticks, __ATOMIC_ACQUIRE);
+    // return __atomic_load_n(&rt_ticks, __ATOMIC_ACQUIRE);
 }

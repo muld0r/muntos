@@ -70,8 +70,7 @@ static void wait_handler(int sig)
      * Used to temporarily allow the main thread to handle interrupts because
      * all other threads are suspended.
      */
-    log_event("thread %lx waiting for signal\n",
-              (unsigned long)pthread_self());
+    log_event("thread %lx waiting for signal\n", (unsigned long)pthread_self());
     sigset_t wait_sigset, old_sigset;
     sigfillset(&wait_sigset);
     sigdelset(&wait_sigset, SIGINT);
