@@ -2,6 +2,7 @@
 
 #include <rt/context.h>
 #include <rt/critical.h>
+#include <rt/interrupt.h>
 #include <rt/sem.h>
 #include <rt/sleep.h>
 #include <rt/syscall.h>
@@ -44,28 +45,40 @@ void rt_yield(void)
 
 static void yield(void)
 {
-    struct rt_task *next_task = ready_pop();
+    struct rt_task *const prev_task = active_task;
+    struct rt_task *const next_task = ready_pop();
+    const bool still_ready = prev_task && rt_list_is_empty(&prev_task->list);
 
-    if (active_task)
+    /*
+     * If there is a new task to schedule, or the current task is trying to
+     * sleep, then change the active task. If only the latter is true, then
+     * active_task will become NULL.
+     */
+    if (next_task || !still_ready)
     {
-        rt_context_save(active_task->ctx);
-        /*
-         * If the yielding task is not already on a different list,
-         * push it onto the ready list.
-         */
-        if (rt_list_is_empty(&active_task->list))
+        active_task = next_task;
+        if (prev_task)
         {
-            ready_push(active_task);
+            rt_context_save(prev_task->ctx);
+            /*
+             * If the yielding task is not already on a different list,
+             * push it onto the ready list.
+             */
+            if (still_ready)
+            {
+                ready_push(prev_task);
+            }
         }
     }
-
-    active_task = next_task;
 
     if (active_task)
     {
         rt_context_load(active_task->ctx);
     }
-    // TODO: explicitly handle waiting with no task
+    else
+    {
+        rt_interrupt_wait();
+    }
 }
 
 void rt_syscall_run(enum rt_syscall syscall)

@@ -14,10 +14,27 @@
 
 #include <stdio.h>
 
-#define SIGSUSPEND SIGUSR1
-#define SIGRESUME SIGUSR2
-#define SIGSYSCALL SIGVTALRM
 #define SIGTICK SIGALRM
+#define SIGSUSPEND SIGRTMIN
+#define SIGRESUME (SIGRTMIN + 1)
+#define SIGSYSCALL (SIGRTMIN + 2)
+#define SIGWAIT (SIGRTMIN + 3)
+#define SIGRTSTOP (SIGRTMIN + 4)
+
+#ifndef RT_LOG
+#define RT_LOG 0
+#endif
+
+#if RT_LOG
+#define log_event(...)                                                         \
+    do                                                                         \
+    {                                                                          \
+        fprintf(stderr, __VA_ARGS__);                                          \
+        fflush(stderr);                                                        \
+    } while (0)
+#else
+#define log_event(...)
+#endif
 
 struct rt_context
 {
@@ -28,6 +45,8 @@ struct pthread_arg
 {
     void (*fn)(void);
 };
+
+static pthread_t main_thread;
 
 void rt_interrupt_disable(void)
 {
@@ -45,8 +64,41 @@ void rt_interrupt_enable(void)
     pthread_sigmask(SIG_UNBLOCK, &full_sigset, NULL);
 }
 
+static void wait_handler(int sig)
+{
+    /*
+     * Used to temporarily allow the main thread to handle interrupts because
+     * all other threads are suspended.
+     */
+    log_event("thread %lu waiting for interrupt\n",
+              (unsigned long)pthread_self());
+    sigset_t wait_sigset, old_sigset;
+    sigfillset(&wait_sigset);
+    sigdelset(&wait_sigset, SIGINT);
+    sigwait(&wait_sigset, &sig);
+    log_event("thread %lu received signal %d while waiting\n",
+              (unsigned long)pthread_self(), sig);
+    /* After receiving an interrupt via sigwait, re-trigger it, then temporarily
+     * unblock that signal then restore the main thread's signal mask so the
+     * main thread can handle this interrupt. Block SIGWAIT so that wait_handler
+     * can't run again until the new signal handler returns. */
+    sigemptyset(&wait_sigset);
+    sigaddset(&wait_sigset, SIGWAIT);
+    pthread_kill(pthread_self(), sig);
+    pthread_sigmask(SIG_SETMASK, &wait_sigset, &old_sigset);
+    pthread_sigmask(SIG_SETMASK, &old_sigset, NULL);
+}
+
+void rt_interrupt_wait(void)
+{
+    // This is called in the syscall handler when there's no active thread to
+    // schedule.
+    pthread_kill(main_thread, SIGWAIT);
+}
+
 static void *pthread_fn(void *arg)
 {
+    log_event("thread %lu created\n", (unsigned long)pthread_self());
     struct pthread_arg *parg = arg;
     void (*fn)(void) = parg->fn;
     free(parg);
@@ -55,6 +107,7 @@ static void *pthread_fn(void *arg)
     sigemptyset(&resume_sigset);
     sigaddset(&resume_sigset, SIGRESUME);
     sigwait(&resume_sigset, &sig);
+    log_event("thread %lu starting\n", (unsigned long)pthread_self());
     rt_interrupt_enable();
     fn();
     return NULL;
@@ -91,12 +144,28 @@ struct rt_context *rt_context_create(void *stack, size_t stack_size,
 
 void rt_context_save(struct rt_context *ctx)
 {
+    /*
+     * Prevent the thread thread that's being suspended from receiving further
+     * interrupts, even before it has taken its suspend handler. The suspend
+     * handler also masks these, but during a context switch, momentarily two
+     * different threads could have signals unmasked unless we mask the
+     * suspending thread here first. Otherwise, two threads couldpotentially
+     * both run the same signal handler, and the signal handlers are not
+     * written to be re-entrant.
+     */
+    sigset_t blocked_sigset;
+    sigfillset(&blocked_sigset);
+    sigdelset(&blocked_sigset, SIGINT);
+    sigdelset(&blocked_sigset, SIGSUSPEND);
+    pthread_sigmask(SIG_BLOCK, &blocked_sigset, NULL);
     pthread_kill(ctx->thread, SIGSUSPEND);
+    log_event("thread %lu told to suspend\n", (unsigned long)ctx->thread);
 }
 
 void rt_context_load(struct rt_context *ctx)
 {
     pthread_kill(ctx->thread, SIGRESUME);
+    log_event("thread %lu told to resume\n", (unsigned long)ctx->thread);
 }
 
 void rt_context_destroy(struct rt_context *ctx)
@@ -116,22 +185,25 @@ void rt_syscall(enum rt_syscall syscall)
 __attribute__((noreturn)) static void resume_handler(int sig)
 {
     (void)sig;
-    fprintf(stderr, "thread id %lu received a resume but was not suspended\n",
-            (unsigned long)pthread_self());
-    fflush(stderr);
+    log_event("thread %lu received a resume but was not suspended\n",
+              (unsigned long)pthread_self());
     exit(1);
 }
 
 static void suspend_handler(int sig)
 {
+    log_event("thread %lu suspending\n", (unsigned long)pthread_self());
     sigset_t resume_sigset;
     sigemptyset(&resume_sigset);
     sigaddset(&resume_sigset, SIGRESUME);
     sigwait(&resume_sigset, &sig);
+    log_event("thread %lu resuming\n", (unsigned long)pthread_self());
+    rt_interrupt_enable();
 }
 
 static void syscall_handler(int sig)
 {
+    log_event("thread %lu running syscall\n", (unsigned long)pthread_self());
     (void)sig;
     rt_syscall_run((enum rt_syscall)pending_syscall);
     pending_syscall = 0;
@@ -139,15 +211,24 @@ static void syscall_handler(int sig)
 
 static void tick_handler(int sig)
 {
+    log_event("thread %lu received a tick\n", (unsigned long)pthread_self());
     (void)sig;
     rt_tick_advance();
 }
 
-static pthread_t main_thread;
-
 void rt_start(void)
 {
     rt_interrupt_disable();
+
+    /* The tick handler must block SIGSYSCALL and SIGSUSPEND. */
+    struct sigaction tick_action = {
+        .sa_handler = tick_handler,
+    };
+    sigemptyset(&tick_action.sa_mask);
+    sigaddset(&tick_action.sa_mask, SIGSYSCALL);
+    sigaddset(&tick_action.sa_mask, SIGSUSPEND);
+    sigaddset(&tick_action.sa_mask, SIGWAIT);
+    sigaction(SIGTICK, &tick_action, NULL);
 
     /* The handler for SIGRESUME is just to catch spurious resumes and error
      * out. Threads expecting a SIGRESUME must block it and sigwait on it. This
@@ -176,14 +257,17 @@ void rt_start(void)
     };
     sigemptyset(&syscall_action.sa_mask);
     sigaddset(&syscall_action.sa_mask, SIGSUSPEND);
+    sigaddset(&syscall_action.sa_mask, SIGWAIT);
     sigaction(SIGSYSCALL, &syscall_action, NULL);
 
-    /* The tick action need not block any signals. */
-    struct sigaction tick_action = {
-        .sa_handler = tick_handler,
+    /* The wait handler signal mask must not block signals because it needs to
+     * re-enable then disable interrupts within the wait handler itself. The
+     * wait handler will re-block signals itself before returning. */
+    struct sigaction wait_action = {
+        .sa_handler = wait_handler,
     };
-    sigemptyset(&tick_action.sa_mask);
-    sigaction(SIGTICK, &tick_action, NULL);
+    sigemptyset(&wait_action.sa_mask);
+    sigaction(SIGWAIT, &wait_action, NULL);
 
     static const struct timeval milli = {
         .tv_sec = 0,
@@ -206,11 +290,20 @@ void rt_start(void)
     pthread_sigmask(SIG_UNBLOCK, &syscall_sigset, NULL);
     pthread_sigmask(SIG_BLOCK, &syscall_sigset, NULL);
 
-    // Allos SIGINT or SIGRESUME to stop the scheduler.
+    // Unblock the wait signal to the main thread can wait for interrupts
+    // when all other tasks become idle.
+    sigset_t wait_sigset;
+    sigemptyset(&wait_sigset);
+    sigaddset(&wait_sigset, SIGWAIT);
+    pthread_sigmask(SIG_UNBLOCK, &wait_sigset, NULL);
+
+    // Allow SIGINT or SIGRTSTOP to stop the scheduler.
+    // TODO: do we need to wait on SIGINT here for ctrl-C to work?
+    // It should be always unblocked.
     sigset_t stop_sigset;
     sigemptyset(&stop_sigset);
     sigaddset(&stop_sigset, SIGINT);
-    sigaddset(&stop_sigset, SIGRESUME);
+    sigaddset(&stop_sigset, SIGRTSTOP);
 
     int sig;
     sigwait(&stop_sigset, &sig);
@@ -228,25 +321,27 @@ void rt_start(void)
     struct sigaction action = {.sa_handler = SIG_IGN};
     sigemptyset(&action.sa_mask);
 
+    sigaction(SIGTICK, &action, NULL);
     sigaction(SIGRESUME, &action, NULL);
     sigaction(SIGSUSPEND, &action, NULL);
     sigaction(SIGSYSCALL, &action, NULL);
-    sigaction(SIGTICK, &action, NULL);
+    sigaction(SIGWAIT, &action, NULL);
 
     // Re-enable all signals.
     rt_interrupt_enable();
 
     // Restore the default handlers.
     action.sa_handler = SIG_DFL;
+    sigaction(SIGTICK, &action, NULL);
     sigaction(SIGRESUME, &action, NULL);
     sigaction(SIGSUSPEND, &action, NULL);
     sigaction(SIGSYSCALL, &action, NULL);
-    sigaction(SIGTICK, &action, NULL);
+    sigaction(SIGWAIT, &action, NULL);
 }
 
 void rt_stop(void)
 {
     rt_interrupt_disable();
-    pthread_kill(main_thread, SIGRESUME);
+    pthread_kill(main_thread, SIGRTSTOP);
     rt_end_all_tasks();
 }

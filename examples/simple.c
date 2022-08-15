@@ -9,9 +9,11 @@ static void simple_fn(void)
     int n = 10000;
     while (n > 0)
     {
+        rt_critical_begin();
         printf("%s %d, tick %lu\n", rt_task_self()->cfg.name, n,
                rt_tick());
         fflush(stdout);
+        rt_critical_end();
         --n;
     }
     rt_stop();
