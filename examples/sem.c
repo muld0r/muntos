@@ -1,6 +1,6 @@
 #include <rt/critical.h>
-#include <rt/sem.h>
 #include <rt/rt.h>
+#include <rt/sem.h>
 
 #include <limits.h>
 #include <stdio.h>
@@ -31,24 +31,12 @@ static void wait_fn(void)
 
 int main(void)
 {
-    static char poster_stack[PTHREAD_STACK_MIN], waiter_stack[PTHREAD_STACK_MIN];
-    static const struct rt_task_config poster_cfg = {
-        .fn = post_fn,
-        .stack = poster_stack,
-        .stack_size = sizeof(poster_stack),
-        .name = "poster",
-        .priority = 1,
-    };
-    static const struct rt_task_config waiter_cfg = {
-        .fn = wait_fn,
-        .stack = waiter_stack,
-        .stack_size = sizeof(waiter_stack),
-        .name = "waiter",
-        .priority = 1,
-    };
-    static struct rt_task poster, waiter;
-    rt_task_init(&poster, &poster_cfg);
-    rt_task_init(&waiter, &waiter_cfg);
+    static char poster_stack[PTHREAD_STACK_MIN],
+        waiter_stack[PTHREAD_STACK_MIN];
+    static RT_TASK(poster, post_fn, poster_stack, 1);
+    static RT_TASK(waiter, wait_fn, waiter_stack, 1);
+    rt_task_launch(&poster);
+    rt_task_launch(&waiter);
 
     rt_start();
 }

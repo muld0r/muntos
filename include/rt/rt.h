@@ -1,36 +1,7 @@
-#pragma once
+#ifndef RT_H
+#define RT_H
 
-#include <rt/context.h>
-#include <rt/tick.h>
-
-#include <rt/list.h>
-
-#include <stdbool.h>
-#include <stddef.h>
-#include <stdint.h>
-
-struct rt_task_config
-{
-    void (*fn)(void);
-    void *stack;
-    size_t stack_size;
-    const char *name;
-    unsigned priority;
-};
-
-struct rt_task
-{
-    struct rt_list list;
-    struct rt_task_config cfg;
-    struct rt_context *ctx;
-    unsigned long wake_tick;
-    bool exiting;
-};
-
-/*
- * Initialize a task.
- */
-void rt_task_init(struct rt_task *task, const struct rt_task_config *cfg);
+#include <rt/task.h>
 
 /*
  * Start the rt scheduler.
@@ -66,3 +37,5 @@ void rt_end_all_tasks(void);
  * Get a pointer to the currently executing task.
  */
 struct rt_task *rt_task_self(void);
+
+#endif /* RT_H */

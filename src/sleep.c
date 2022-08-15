@@ -1,7 +1,7 @@
 #include <rt/sleep.h>
 
 #include <rt/critical.h>
-#include <rt/rt.h>
+#include <rt/tick.h>
 
 #include <stdio.h>
 

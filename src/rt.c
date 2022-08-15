@@ -108,13 +108,9 @@ void rt_task_resume(struct rt_task *task)
     rt_critical_end();
 }
 
-void rt_task_init(struct rt_task *task, const struct rt_task_config *cfg)
+void rt_task_launch(struct rt_task *task)
 {
-    rt_list_init(&task->list);
-    task->cfg = *cfg;
-    task->wake_tick = 0;
-    task->exiting = false;
-    task->ctx = rt_context_create(cfg->stack, cfg->stack_size, task->cfg.fn);
+    task->ctx = rt_context_create(task->stack, task->stack_size, task->fn);
     ready_push(task);
 }
 
