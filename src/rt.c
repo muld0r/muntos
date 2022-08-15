@@ -50,27 +50,26 @@ static void yield(void)
     const bool still_ready = prev_task && rt_list_is_empty(&prev_task->list);
 
     /*
-     * If there is a new task to schedule, or the current task is trying to
-     * sleep, then change the active task. If only the latter is true, then
-     * active_task will become NULL.
+     * If there is no new task to schedule and the current task is still ready
+     * there's nothing to do.
      */
-    if (next_task || !still_ready)
+    if (!next_task && still_ready)
     {
-        active_task = next_task;
-        if (prev_task)
-        {
-            rt_context_save(prev_task->ctx);
-            /*
-             * If the yielding task is not already on a different list,
-             * push it onto the ready list.
-             */
-            if (still_ready)
-            {
-                ready_push(prev_task);
-            }
-        }
+        return;
     }
 
+    active_task = next_task;
+    if (prev_task)
+    {
+        rt_context_save(prev_task->ctx);
+        /*
+         * If the yielding task is still ready, re-add it to the ready list.
+         */
+        if (still_ready)
+        {
+            ready_push(prev_task);
+        }
+    }
     if (active_task)
     {
         rt_context_load(active_task->ctx);
