@@ -1,4 +1,5 @@
-#pragma once
+#ifndef RT_QUEUE_H
+#define RT_QUEUE_H
 
 #include <rt/rt.h>
 
@@ -44,3 +45,5 @@ struct rt_queue
     size_t capacity;
     size_t elem_size;
 };
+
+#endif /* RT_QUEUE_H */

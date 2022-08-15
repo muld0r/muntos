@@ -1,41 +1,39 @@
-#pragma once
+#ifndef RT_SEM_H
+#define RT_SEM_H
 
 #include <rt/rt.h>
+#include <rt/list.h>
 
-#include <rt/queue.h>
-
-#include <stdbool.h>
-#include <stddef.h>
 #include <stdint.h>
+#include <limits.h>
 
-typedef struct rt_queue rt_sem_t;
+struct rt_sem
+{
+    struct rt_list wait_list;
+    unsigned int value;
+    unsigned int max_value;
+};
 
-void rt_sem_init(rt_sem_t *sem, size_t count);
+void rt_sem_init(struct rt_sem *sem, unsigned int initial_value);
 
-void rt_sem_post(rt_sem_t *sem);
+void rt_sem_binary_init(struct rt_sem *sem, unsigned int initial_value);
 
-void rt_sem_wait(rt_sem_t *sem);
+void rt_sem_post(struct rt_sem *sem);
 
-#define RT_SEM(name, count)                                                   \
-    rt_sem_t name = {                                                         \
-        .recv_list = LIST_HEAD_INIT(name.recv_list),                           \
-        .send_list = LIST_HEAD_INIT(name.send_list),                           \
-        .buf = NULL,                                                           \
-        .len = count,                                                          \
-        .read_offset = 0,                                                      \
-        .write_offset = 0,                                                     \
-        .capacity = SIZE_MAX,                                                  \
-        .elem_size = 1,                                                        \
+void rt_sem_wait(struct rt_sem *sem);
+
+#define RT_SEM(name, initial_value)                                           \
+    struct rt_sem name = {                                                    \
+        .wait_list = RT_LIST_INIT(name.wait_list),                           \
+        .value = initial_value,                                                \
+        .max_value = UINT_MAX,                                                 \
     }
 
-#define RT_SEM_BINARY(name, count)                                            \
-    rt_sem_t name = {                                                         \
-        .recv_list = LIST_HEAD_INIT(name.recv_list),                           \
-        .send_list = LIST_HEAD_INIT(name.send_list),                           \
-        .buf = NULL,                                                           \
-        .len = count,                                                          \
-        .read_offset = 0,                                                      \
-        .write_offset = 0,                                                     \
-        .capacity = 1,                                                         \
-        .elem_size = 1,                                                        \
+#define RT_SEM_BINARY(name, initial_value)                                    \
+    struct rt_sem name = {                                                    \
+        .wait_list = RT_LIST_INIT(name.wait_list),                           \
+        .value = initial_value,                                                \
+        .max_value = 1,                                                        \
     }
+
+#endif /* RT_SEM_H */
