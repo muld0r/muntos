@@ -33,10 +33,4 @@ void rt_end_all_tasks(void);
  */
 struct rt_task *rt_task_self(void);
 
-/*
- * Resume a task. Used internally to make a task that was previously blocked
- * runnable again. Must be called within a critical section.
- */
-void rt_task_resume(struct rt_task *task);
-
 #endif /* RT_H */

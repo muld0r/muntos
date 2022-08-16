@@ -38,7 +38,7 @@ int main(void)
         receiver_stack[PTHREAD_STACK_MIN];
     static RT_TASK(sender, send_fn, sender_stack, 1);
     static RT_TASK(receiver, recv_fn, receiver_stack, 1);
-    rt_task_launch(&sender);
-    rt_task_launch(&receiver);
+    rt_task_start(&sender);
+    rt_task_start(&receiver);
     rt_start();
 }

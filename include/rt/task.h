@@ -32,8 +32,13 @@ struct rt_task
     }
 
 /*
- * Create the task's context and cause it to be runnable.
+ * Launch a newly created task.
  */
-void rt_task_launch(struct rt_task *task);
+void rt_task_start(struct rt_task *task);
+
+/*
+ * Make a task runnable.
+ */
+void rt_task_ready(struct rt_task *task);
 
 #endif /* RT_TASK_H */

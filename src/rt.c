@@ -97,15 +97,14 @@ void rt_syscall_run(enum rt_syscall syscall)
     }
 }
 
-void rt_task_resume(struct rt_task *task)
-{
-    rt_list_remove(&task->list);
-    ready_push(task);
-}
-
-void rt_task_launch(struct rt_task *task)
+void rt_task_start(struct rt_task *task)
 {
     task->ctx = rt_context_create(task->stack, task->stack_size, task->fn);
+    rt_task_ready(task);
+}
+
+void rt_task_ready(struct rt_task *task)
+{
     ready_push(task);
 }
 

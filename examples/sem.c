@@ -35,7 +35,7 @@ int main(void)
         waiter_stack[PTHREAD_STACK_MIN];
     static RT_TASK(poster, post_fn, poster_stack, 1);
     static RT_TASK(waiter, wait_fn, waiter_stack, 1);
-    rt_task_launch(&poster);
-    rt_task_launch(&waiter);
+    rt_task_start(&poster);
+    rt_task_start(&waiter);
     rt_start();
 }

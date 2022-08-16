@@ -31,7 +31,7 @@ int main(void)
     static char stack0[PTHREAD_STACK_MIN], stack1[PTHREAD_STACK_MIN];
     static RT_TASK(task0, simple_fn, stack0, 1);
     static RT_TASK(task1, simple_fn, stack1, 1);
-    rt_task_launch(&task0);
-    rt_task_launch(&task1);
+    rt_task_start(&task0);
+    rt_task_start(&task1);
     rt_start();
 }

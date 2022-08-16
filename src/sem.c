@@ -26,10 +26,10 @@ void rt_sem_post(struct rt_sem *sem)
     }
     if (!rt_list_is_empty(&sem->wait_list))
     {
-        struct rt_list *const node = rt_list_front(&sem->wait_list);
+        struct rt_list *const node = rt_list_pop_front(&sem->wait_list);
         struct rt_task *const waiting_task =
             rt_list_item(node, struct rt_task, list);
-        rt_task_resume(waiting_task);
+        rt_task_ready(waiting_task);
     }
     rt_critical_end();
 }

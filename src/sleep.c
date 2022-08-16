@@ -72,6 +72,7 @@ void rt_sleep_check(void)
         /* TODO: other system calls need to block the tick handler from running
          * this function manipulates the ready list, and a tick interrupt can
          * interrupt a system call */
-        rt_task_resume(sleeping_task);
+        rt_list_remove(node);
+        rt_task_ready(sleeping_task);
     }
 }

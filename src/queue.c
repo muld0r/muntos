@@ -42,10 +42,10 @@ void rt_queue_send(struct rt_queue *queue, const void *elem)
     }
     if (!rt_list_is_empty(&queue->recv_list))
     {
-        struct rt_list *const node = rt_list_front(&queue->recv_list);
+        struct rt_list *const node = rt_list_pop_front(&queue->recv_list);
         struct rt_task *const waiting_task =
             rt_list_item(node, struct rt_task, list);
-        rt_task_resume(waiting_task);
+        rt_task_ready(waiting_task);
     }
     rt_critical_end();
 }
@@ -74,10 +74,10 @@ void rt_queue_recv(struct rt_queue *queue, void *elem)
     }
     if (!rt_list_is_empty(&queue->send_list))
     {
-        struct rt_list *const node = rt_list_front(&queue->send_list);
+        struct rt_list *const node = rt_list_pop_front(&queue->send_list);
         struct rt_task *const waiting_task =
             rt_list_item(node, struct rt_task, list);
-        rt_task_resume(waiting_task);
+        rt_task_ready(waiting_task);
     }
     rt_critical_end();
 }
