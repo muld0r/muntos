@@ -5,7 +5,7 @@
 #include <limits.h>
 #include <stdio.h>
 
-static const int n = 1000;
+static const int n = 10;
 static RT_SEM(sem, 0);
 
 static void post_fn(void)
@@ -37,6 +37,5 @@ int main(void)
     static RT_TASK(waiter, wait_fn, waiter_stack, 1);
     rt_task_launch(&poster);
     rt_task_launch(&waiter);
-
     rt_start();
 }

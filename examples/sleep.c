@@ -16,7 +16,7 @@ static void sleep_fn(void)
         printf("%s %d, tick %lu\n", rt_task_self()->name, n, rt_tick());
         fflush(stdout);
         rt_critical_end();
-        rt_sleep_periodic(&last_wake_tick, 1000);
+        rt_sleep_periodic(&last_wake_tick, 100);
         --n;
     }
     rt_stop();
@@ -29,6 +29,5 @@ int main(void)
     static RT_TASK(task1, sleep_fn, task1_stack, 1);
     rt_task_launch(&task0);
     rt_task_launch(&task1);
-
     rt_start();
 }

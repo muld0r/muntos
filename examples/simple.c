@@ -1,22 +1,29 @@
 #include <rt/critical.h>
 #include <rt/tick.h>
 #include <rt/rt.h>
+#include <rt/sleep.h>
 
 #include <limits.h>
 #include <stdio.h>
+#include <string.h>
 
 static void simple_fn(void)
 {
-    int n = 10000;
+    int n = 100;
     while (n > 0)
     {
-        rt_critical_begin();
-        printf("%s %d, tick %lu\n", rt_task_self()->name, n, rt_tick());
-        fflush(stdout);
-        rt_critical_end();
+        rt_yield();
         --n;
     }
-    rt_stop();
+    rt_critical_begin();
+    printf("%s finished\n", rt_task_self()->name);
+    fflush(stdout);
+    rt_critical_end();
+    if (strcmp(rt_task_self()->name, "task0") == 0)
+    {
+        rt_sleep(100);
+        rt_stop();
+    }
 }
 
 int main(void)
@@ -26,6 +33,5 @@ int main(void)
     static RT_TASK(task1, simple_fn, stack1, 1);
     rt_task_launch(&task0);
     rt_task_launch(&task1);
-
     rt_start();
 }

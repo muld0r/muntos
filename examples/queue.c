@@ -6,8 +6,8 @@
 #include <limits.h>
 #include <stdio.h>
 
-static const int n = 1000;
-static int queue_buf[16];
+static const int n = 10;
+static int queue_buf[2];
 static RT_QUEUE_FROM_ARRAY(queue, queue_buf);
 
 static void send_fn(void)
@@ -40,6 +40,5 @@ int main(void)
     static RT_TASK(receiver, recv_fn, receiver_stack, 1);
     rt_task_launch(&sender);
     rt_task_launch(&receiver);
-
     rt_start();
 }
