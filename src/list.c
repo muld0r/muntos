@@ -8,9 +8,10 @@ void rt_list_init(struct rt_list *list)
 
 void rt_list_insert_before(struct rt_list *node, struct rt_list *next)
 {
+    struct rt_list *const prev = next->prev;
     node->next = next;
-    node->prev = next->prev;
-    next->prev->next = node;
+    node->prev = prev;
+    prev->next = node;
     next->prev = node;
 }
 
