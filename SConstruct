@@ -13,7 +13,7 @@ llvm_flags = [
 env = Environment(
     CPPPATH=[Dir("include").srcnode()],
     CCFLAGS=llvm_flags,
-    CFLAGS=["-std=c99"],
+    CFLAGS=["-std=c17"],
     LINKFLAGS=llvm_flags,
 )
 

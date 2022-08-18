@@ -2,20 +2,18 @@
 #include <rt/sleep.h>
 #include <rt/tick.h>
 
-#include <stdio.h>
+#include <stdatomic.h>
 
-static unsigned long rt_ticks;
+static atomic_ulong rt_ticks;
 
 void rt_tick_advance(void)
 {
-    //__atomic_add_fetch(&rt_ticks, 1, __ATOMIC_RELEASE);
-    ++rt_ticks;
+    atomic_fetch_add_explicit(&rt_ticks, 1, memory_order_release);
     rt_sleep_check();
     rt_yield();
 }
 
 unsigned long rt_tick(void)
 {
-    return rt_ticks;
-    // return __atomic_load_n(&rt_ticks, __ATOMIC_ACQUIRE);
+    return atomic_load_explicit(&rt_ticks, memory_order_consume);
 }
