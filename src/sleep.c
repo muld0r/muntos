@@ -49,6 +49,9 @@ void rt_sleep_until(unsigned long wake_tick)
     rt_task_self()->wake_tick = wake_tick;
     rt_yield();
     rt_critical_end();
+    // TODO: run sleep_check with the tick this was inserted at, in case the
+    // tick advanced past the intended wake tick before the sleeping task could be
+    // inserted
 }
 
 void rt_sleep_check(void)
