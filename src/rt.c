@@ -50,9 +50,7 @@ static void yield(void)
 {
     struct rt_task *const prev_task = active_task;
     struct rt_task *const next_task = ready_pop();
-    const bool still_ready = prev_task &&
-                             (prev_task->syscall != RT_SYSCALL_EXIT) &&
-                             rt_list_is_empty(&prev_task->list);
+    const bool still_ready = prev_task && rt_list_is_empty(&prev_task->list);
 
     /*
      * If there is no new task to schedule and the current task is still ready
@@ -106,12 +104,17 @@ void rt_syscall_handler(void)
     switch (syscall)
     {
     case RT_SYSCALL_YIELD:
+        break;
     case RT_SYSCALL_SLEEP:
         // TODO: put the sleeping task onto the sleep list
+        break;
     case RT_SYSCALL_EXIT:
-        yield();
+        rt_context_destroy(active_task->ctx);
+        active_task = NULL;
         break;
     }
+
+    yield();
 }
 
 void rt_task_start(struct rt_task *task)
