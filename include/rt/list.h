@@ -1,9 +1,9 @@
 #ifndef RT_LIST_H
 #define RT_LIST_H
 
+#include <rt/container.h>
+
 #include <stdbool.h>
-#include <stddef.h>
-#include <stdint.h>
 
 struct rt_list
 {
@@ -19,8 +19,7 @@ void rt_list_init(struct rt_list *list);
 
 #define RT_LIST(name) struct rt_list name = RT_LIST_INIT(name)
 
-#define rt_list_item(ptr, type, member)                                       \
-    ((type *)((uintptr_t)(ptr)-offsetof(type, member)))
+#define rt_list_item rt_container_of
 
 void rt_list_insert_before(struct rt_list *node, struct rt_list *next);
 
