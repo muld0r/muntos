@@ -39,7 +39,7 @@ void rt_sem_wait(struct rt_sem *sem)
     rt_critical_begin();
     if (sem->value == 0)
     {
-        rt_list_push_back(&sem->wait_list, &rt_task_self()->list);
+        rt_list_push_back(&sem->wait_list, &rt_self()->list);
         rt_yield();
         rt_critical_end();
         rt_critical_begin();

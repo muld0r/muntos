@@ -110,7 +110,7 @@ static void *pthread_fn(void *arg)
     rt_interrupt_enable();
     fn();
     log_event("thread %lx exiting\n", (unsigned long)pthread_self());
-    rt_task_exit();
+    rt_exit();
     return NULL;
 }
 
@@ -342,5 +342,5 @@ void rt_stop(void)
 {
     rt_interrupt_disable();
     pthread_kill(main_thread, SIGRTSTOP);
-    rt_end_all_tasks();
+    rt_exit_all();
 }

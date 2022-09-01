@@ -31,7 +31,7 @@ static void ready_push(struct rt_task *task)
     rt_list_push_back(&ready_list, &task->list);
 }
 
-struct rt_task *rt_task_self(void)
+struct rt_task *rt_self(void)
 {
     return active_task;
 }
@@ -41,9 +41,9 @@ void rt_yield(void)
     rt_syscall(RT_SYSCALL_YIELD);
 }
 
-void rt_task_exit(void)
+void rt_exit(void)
 {
-    rt_task_self()->exiting = true;
+    rt_self()->exiting = true;
     rt_yield();
 }
 
@@ -108,7 +108,7 @@ void rt_task_ready(struct rt_task *task)
     ready_push(task);
 }
 
-void rt_end_all_tasks(void)
+void rt_exit_all(void)
 {
     struct rt_task *task;
     while ((task = ready_pop()))

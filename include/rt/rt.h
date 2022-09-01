@@ -21,16 +21,16 @@ void rt_yield(void);
 /*
  * Terminate the currently running task.
  */
-void rt_task_exit(void);
-
-/*
- * End all tasks. Called from rt_stop.
- */
-void rt_end_all_tasks(void);
+void rt_exit(void);
 
 /*
  * Get a pointer to the currently executing task.
  */
-struct rt_task *rt_task_self(void);
+struct rt_task *rt_self(void);
+
+/*
+ * End all tasks. Called from rt_stop.
+ */
+void rt_exit_all(void);
 
 #endif /* RT_H */

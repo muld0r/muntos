@@ -45,8 +45,8 @@ void rt_sleep_until(unsigned long wake_tick)
         }
     }
 
-    rt_list_insert_before(&rt_task_self()->list, node);
-    rt_task_self()->wake_tick = wake_tick;
+    rt_list_insert_before(&rt_self()->list, node);
+    rt_self()->wake_tick = wake_tick;
     rt_yield();
     rt_critical_end();
     // TODO: run sleep_check with the tick this was inserted at, in case the

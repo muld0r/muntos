@@ -16,10 +16,10 @@ static void simple_fn(void)
         --n;
     }
     rt_critical_begin();
-    printf("%s finished\n", rt_task_self()->name);
+    printf("%s finished\n", rt_self()->name);
     fflush(stdout);
     rt_critical_end();
-    if (strcmp(rt_task_self()->name, "task0") == 0)
+    if (strcmp(rt_self()->name, "task0") == 0)
     {
         rt_sleep(100);
         rt_stop();

@@ -23,7 +23,7 @@ void rt_queue_send(struct rt_queue *queue, const void *elem)
     rt_critical_begin();
     if (queue->len == queue->capacity)
     {
-        rt_list_push_back(&queue->send_list, &rt_task_self()->list);
+        rt_list_push_back(&queue->send_list, &rt_self()->list);
         rt_yield();
         rt_critical_end();
         rt_critical_begin();
@@ -55,7 +55,7 @@ void rt_queue_recv(struct rt_queue *queue, void *elem)
     rt_critical_begin();
     if (queue->len == 0)
     {
-        rt_list_push_back(&queue->recv_list, &rt_task_self()->list);
+        rt_list_push_back(&queue->recv_list, &rt_self()->list);
         rt_yield();
         rt_critical_end();
         rt_critical_begin();

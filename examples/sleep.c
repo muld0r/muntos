@@ -13,7 +13,7 @@ static void sleep_fn(void)
     while (n > 0)
     {
         rt_critical_begin();
-        printf("%s %d, tick %lu\n", rt_task_self()->name, n, rt_tick());
+        printf("%s %d, tick %lu\n", rt_self()->name, n, rt_tick());
         fflush(stdout);
         rt_critical_end();
         rt_sleep_periodic(&last_wake_tick, 100);
