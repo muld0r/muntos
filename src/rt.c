@@ -99,6 +99,7 @@ void rt_syscall_handler(void)
     if (active_task)
     {
         syscall = active_task->syscall;
+        active_task->syscall = RT_SYSCALL_YIELD;
     }
 
     switch (syscall)
