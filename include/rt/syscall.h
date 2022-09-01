@@ -3,18 +3,24 @@
 
 enum rt_syscall
 {
-    RT_SYSCALL_NOP,
     RT_SYSCALL_YIELD,
+    RT_SYSCALL_EXIT,
+    RT_SYSCALL_SLEEP,
 };
 
 /*
- * Invoke a syscall.
+ * Invoke a given syscall.
  */
 void rt_syscall(enum rt_syscall syscall);
 
 /*
- * Perform the syscall. Should be called by the syscall handler.
+ * Trigger the syscall handler. (architecture-specific)
  */
-void rt_syscall_run(enum rt_syscall syscall);
+void rt_syscall_post(void);
+
+/*
+ * Perform the syscall.
+ */
+void rt_syscall_handler(void);
 
 #endif // RT_SYSCALL_H

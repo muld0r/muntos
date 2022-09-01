@@ -173,11 +173,8 @@ void rt_context_destroy(struct rt_context *ctx)
     free(ctx);
 }
 
-static volatile sig_atomic_t pending_syscall = 0;
-
-void rt_syscall(enum rt_syscall syscall)
+void rt_syscall_post(void)
 {
-    pending_syscall = (sig_atomic_t)syscall;
     pthread_kill(pthread_self(), SIGSYSCALL);
 }
 
@@ -204,8 +201,7 @@ static void syscall_handler(int sig)
 {
     log_event("thread %lx running syscall\n", (unsigned long)pthread_self());
     (void)sig;
-    rt_syscall_run((enum rt_syscall)pending_syscall);
-    pending_syscall = 0;
+    rt_syscall_handler();
 }
 
 static void tick_handler(int sig)

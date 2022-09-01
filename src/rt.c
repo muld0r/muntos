@@ -43,16 +43,16 @@ void rt_yield(void)
 
 void rt_exit(void)
 {
-    rt_self()->exiting = true;
-    rt_yield();
+    rt_syscall(RT_SYSCALL_EXIT);
 }
 
 static void yield(void)
 {
     struct rt_task *const prev_task = active_task;
     struct rt_task *const next_task = ready_pop();
-    const bool still_ready =
-        prev_task && !prev_task->exiting && rt_list_is_empty(&prev_task->list);
+    const bool still_ready = prev_task &&
+                             (prev_task->syscall != RT_SYSCALL_EXIT) &&
+                             rt_list_is_empty(&prev_task->list);
 
     /*
      * If there is no new task to schedule and the current task is still ready
@@ -85,13 +85,30 @@ static void yield(void)
     }
 }
 
-void rt_syscall_run(enum rt_syscall syscall)
+void rt_syscall(enum rt_syscall syscall)
 {
+    if (active_task)
+    {
+        active_task->syscall = syscall;
+    }
+    rt_syscall_post();
+}
+
+void rt_syscall_handler(void)
+{
+    enum rt_syscall syscall = RT_SYSCALL_YIELD;
+
+    if (active_task)
+    {
+        syscall = active_task->syscall;
+    }
+
     switch (syscall)
     {
-    case RT_SYSCALL_NOP:
-        break;
     case RT_SYSCALL_YIELD:
+    case RT_SYSCALL_SLEEP:
+        // TODO: put the sleeping task onto the sleep list
+    case RT_SYSCALL_EXIT:
         yield();
         break;
     }

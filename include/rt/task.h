@@ -2,6 +2,7 @@
 #define RT_TASK_H
 
 #include <rt/list.h>
+#include <rt/syscall.h>
 
 #include <stdbool.h>
 
@@ -15,7 +16,7 @@ struct rt_task
     const char *name;
     unsigned long wake_tick;
     unsigned priority;
-    bool exiting;
+    enum rt_syscall syscall;
 };
 
 #define RT_TASK(name_, fn_, stack_, priority_)                                \
@@ -28,7 +29,7 @@ struct rt_task
         .name = #name_,                                                        \
         .wake_tick = 0,                                                        \
         .priority = priority_,                                                 \
-        .exiting = false,                                                      \
+        .syscall = RT_SYSCALL_YIELD,                                          \
     }
 
 /*
