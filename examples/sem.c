@@ -1,4 +1,3 @@
-#include <rt/critical.h>
 #include <rt/rt.h>
 #include <rt/sem.h>
 
@@ -21,10 +20,8 @@ static void wait_fn(void)
     for (int i = 1; i <= n; ++i)
     {
         rt_sem_wait(&sem);
-        rt_critical_begin();
         printf("sem wait #%d\n", i);
         fflush(stdout);
-        rt_critical_end();
     }
     rt_stop();
 }

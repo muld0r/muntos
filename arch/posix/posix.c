@@ -77,10 +77,12 @@ static void wait_handler(int sig)
     sigwait(&wait_sigset, &sig);
     log_event("thread %lx received signal %d while waiting\n",
               (unsigned long)pthread_self(), sig);
-    /* After receiving an interrupt via sigwait, re-trigger it, then temporarily
-     * unblock that signal then restore the main thread's signal mask so the
-     * main thread can handle this interrupt. Block SIGWAIT so that wait_handler
-     * can't run again until the new signal handler returns. */
+    /*
+     * After receiving an interrupt via sigwait, re-trigger it, temporarily
+     * unblock that signal, then restore the main thread's signal mask so the
+     * main thread can handle this interrupt. Block SIGWAIT at the same time so
+     * that wait_handler can't run again until the new signal handler returns.
+     */
     sigemptyset(&wait_sigset);
     sigaddset(&wait_sigset, SIGWAIT);
     pthread_kill(pthread_self(), sig);
@@ -90,8 +92,10 @@ static void wait_handler(int sig)
 
 void rt_interrupt_wait(void)
 {
-    // This is called in the syscall handler when there's no active thread to
-    // schedule.
+    /*
+     * This is called in the syscall handler when there's no active thread to
+     * schedule.
+     */
     pthread_kill(main_thread, SIGWAIT);
 }
 

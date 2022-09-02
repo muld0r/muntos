@@ -1,4 +1,3 @@
-#include <rt/critical.h>
 #include <rt/queue.h>
 #include <rt/sleep.h>
 #include <rt/rt.h>
@@ -24,10 +23,8 @@ static void recv_fn(void)
     for (int i = 1; i <= n; ++i)
     {
         rt_queue_recv(&queue, &x);
-        rt_critical_begin();
         printf("received %d\n", x);
         fflush(stdout);
-        rt_critical_end();
     }
     rt_stop();
 }

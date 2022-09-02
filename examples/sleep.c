@@ -1,4 +1,3 @@
-#include <rt/critical.h>
 #include <rt/sleep.h>
 #include <rt/tick.h>
 #include <rt/rt.h>
@@ -12,10 +11,8 @@ static void sleep_fn(void)
     unsigned long last_wake_tick = 0;
     while (n > 0)
     {
-        rt_critical_begin();
         printf("%s %d, tick %lu\n", rt_self()->name, n, rt_tick());
         fflush(stdout);
-        rt_critical_end();
         rt_sleep_periodic(&last_wake_tick, 100);
         --n;
     }
