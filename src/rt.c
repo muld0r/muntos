@@ -2,9 +2,8 @@
 
 #include <rt/context.h>
 #include <rt/interrupt.h>
+#include <rt/sleep.h>
 #include <rt/syscall.h>
-
-#include <stdio.h>
 
 static RT_LIST(ready_list);
 static struct rt_task *active_task;
@@ -107,7 +106,10 @@ void rt_syscall_handler(void)
     case RT_SYSCALL_YIELD:
         break;
     case RT_SYSCALL_SLEEP:
-        // TODO: put the sleeping task onto the sleep list
+        rt_sleep_syscall();
+        break;
+    case RT_SYSCALL_SLEEP_PERIODIC:
+        rt_sleep_periodic_syscall();
         break;
     case RT_SYSCALL_EXIT:
         rt_context_destroy(active_task->ctx);
@@ -115,6 +117,7 @@ void rt_syscall_handler(void)
         break;
     }
 
+    rt_sleep_check();
     yield();
 }
 

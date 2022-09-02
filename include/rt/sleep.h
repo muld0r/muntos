@@ -8,17 +8,23 @@
 void rt_sleep(unsigned long ticks);
 
 /*
- * Put the current task to sleep until the given tick.
- */
-void rt_sleep_until(unsigned long tick);
-
-/*
  * Sleep the current task until *last_wake_tick + period.
  * *last_wake_tick will be set to the next wakeup tick.
  */
 void rt_sleep_periodic(unsigned long *last_wake_tick, unsigned long period);
 
 /*
- * Wake up sleeping tasks whose sleep timers have expired.
+ * Syscall implementation of rt_sleep.
+ */
+void rt_sleep_syscall(void);
+
+/*
+ * Syscall implementation of rt_sleep_periodic.
+ */
+void rt_sleep_periodic_syscall(void);
+
+/*
+ * Wake up sleeping tasks whose sleep timers have expired. Also runs from the
+ * syscall handler.
  */
 void rt_sleep_check(void);

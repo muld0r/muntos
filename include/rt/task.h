@@ -14,7 +14,7 @@ struct rt_task
     void *stack;
     size_t stack_size;
     const char *name;
-    unsigned long wake_tick;
+    unsigned long syscall_args[2];
     unsigned priority;
     enum rt_syscall syscall;
 };
@@ -27,7 +27,7 @@ struct rt_task
         .stack = stack_,                                                       \
         .stack_size = sizeof stack_,                                           \
         .name = #name_,                                                        \
-        .wake_tick = 0,                                                        \
+        .syscall_args = {0},                                                   \
         .priority = priority_,                                                 \
         .syscall = RT_SYSCALL_YIELD,                                          \
     }

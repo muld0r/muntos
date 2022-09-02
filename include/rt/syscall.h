@@ -6,6 +6,7 @@ enum rt_syscall
     RT_SYSCALL_YIELD,
     RT_SYSCALL_EXIT,
     RT_SYSCALL_SLEEP,
+    RT_SYSCALL_SLEEP_PERIODIC,
 };
 
 /*
