@@ -2,7 +2,6 @@
 #include <rt/interrupt.h>
 #include <rt/rt.h>
 
-#include <rt/critical.h>
 #include <rt/syscall.h>
 #include <rt/tick.h>
 
