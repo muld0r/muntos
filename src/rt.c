@@ -1,6 +1,7 @@
 #include <rt/rt.h>
 
 #include <rt/context.h>
+#include <rt/critical.h>
 #include <rt/interrupt.h>
 #include <rt/sleep.h>
 #include <rt/syscall.h>
@@ -72,6 +73,7 @@ static void yield(void)
             ready_push(prev_task);
         }
     }
+
     if (active_task)
     {
         rt_context_load(active_task->ctx);
@@ -129,7 +131,10 @@ void rt_task_start(struct rt_task *task)
 
 void rt_task_ready(struct rt_task *task)
 {
+    // TODO: do this without a critical section
+    rt_critical_begin();
     ready_push(task);
+    rt_critical_end();
 }
 
 void rt_exit_all(void)
