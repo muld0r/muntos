@@ -12,6 +12,7 @@
 #include <stdlib.h>
 #include <sys/time.h>
 
+#include <stdatomic.h>
 #include <stdio.h>
 
 #define SIGTICK SIGALRM
@@ -179,6 +180,7 @@ void rt_context_destroy(struct rt_context *ctx)
 
 void rt_syscall_post(void)
 {
+    atomic_signal_fence(memory_order_release);
     pthread_kill(pthread_self(), SIGSYSCALL);
 }
 
@@ -205,6 +207,7 @@ static void syscall_handler(int sig)
 {
     log_event("thread %lx running syscall\n", (unsigned long)pthread_self());
     (void)sig;
+    atomic_signal_fence(memory_order_acquire);
     rt_syscall_handler();
 }
 
