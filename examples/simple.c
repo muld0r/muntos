@@ -18,7 +18,7 @@ static void simple_fn(void)
     fflush(stdout);
     if (strcmp(rt_self()->name, "task0") == 0)
     {
-        rt_sleep(100);
+        rt_sleep(500);
         rt_stop();
     }
 }
