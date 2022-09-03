@@ -1,12 +1,14 @@
 #include <rt/rt.h>
 
 #include <rt/context.h>
-#include <rt/critical.h>
 #include <rt/interrupt.h>
 #include <rt/sleep.h>
 #include <rt/syscall.h>
 
+#include <stdatomic.h>
+
 static RT_LIST(ready_list);
+static struct rt_task *_Atomic ready_stack;
 static struct rt_task *active_task;
 
 static struct rt_task *task_from_list(struct rt_list *list)
@@ -14,21 +16,46 @@ static struct rt_task *task_from_list(struct rt_list *list)
     return rt_list_item(list, struct rt_task, list);
 }
 
+static void ready_push(struct rt_task *task)
+{
+    task->ready_next = atomic_load_explicit(&ready_stack, memory_order_relaxed);
+    while (!atomic_compare_exchange_weak_explicit(&ready_stack,
+                                                  &task->ready_next, task,
+                                                  memory_order_release,
+                                                  memory_order_relaxed))
+    {
+    }
+}
+
 static struct rt_task *ready_pop(void)
 {
+    /*
+     * Take all elements on the ready stack at once. Tasks added after this step
+     * will be on a new stack. This is done to preserve the ordering of tasks
+     * added to the ready list. Otherwise, tasks that are added to the stack
+     * while the stack is being flushed will be inserted before tasks that were
+     * pushed earlier.
+     */
+    struct rt_task *task =
+        atomic_exchange_explicit(&ready_stack, NULL, memory_order_relaxed);
+    struct rt_list *next = &ready_list;
+    while (task)
+    {
+        /*
+         * Add elements to the ready list in the reverse order that they were
+         * popped from the stack.
+         */
+        rt_list_insert_before(&task->list, next);
+        next = &task->list;
+        task = task->ready_next;
+    }
+
+    // TODO: deal with different priorities
     if (rt_list_is_empty(&ready_list))
     {
         return NULL;
     }
-    struct rt_task *next_task =
-        task_from_list(rt_list_pop_front(&ready_list));
-    return next_task;
-}
-
-static void ready_push(struct rt_task *task)
-{
-    // TODO: deal with different priorities
-    rt_list_push_back(&ready_list, &task->list);
+    return task_from_list(rt_list_pop_front(&ready_list));
 }
 
 struct rt_task *rt_self(void)
@@ -131,10 +158,7 @@ void rt_task_start(struct rt_task *task)
 
 void rt_task_ready(struct rt_task *task)
 {
-    // TODO: do this without a critical section
-    rt_critical_begin();
     ready_push(task);
-    rt_critical_end();
 }
 
 void rt_exit_all(void)

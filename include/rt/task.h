@@ -9,6 +9,7 @@
 struct rt_task
 {
     struct rt_list list;
+    struct rt_task *ready_next;
     struct rt_context *ctx;
     void (*fn)(void);
     void *stack;
@@ -22,6 +23,7 @@ struct rt_task
 #define RT_TASK(name_, fn_, stack_, priority_)                                \
     struct rt_task name_ = {                                                  \
         .list = RT_LIST_INIT(name_.list),                                     \
+        .ready_next = NULL,                                                    \
         .ctx = NULL,                                                           \
         .fn = fn_,                                                             \
         .stack = stack_,                                                       \
