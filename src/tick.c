@@ -14,5 +14,5 @@ void rt_tick_advance(void)
 
 unsigned long rt_tick(void)
 {
-    return atomic_load_explicit(&rt_ticks, memory_order_consume);
+    return atomic_load_explicit(&rt_ticks, memory_order_acquire);
 }

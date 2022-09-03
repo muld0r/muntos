@@ -37,7 +37,7 @@ static struct rt_task *ready_pop(void)
      * pushed earlier.
      */
     struct rt_task *task =
-        atomic_exchange_explicit(&ready_stack, NULL, memory_order_relaxed);
+        atomic_exchange_explicit(&ready_stack, NULL, memory_order_acquire);
     struct rt_list *next = &ready_list;
     while (task)
     {
