@@ -113,6 +113,9 @@ static void yield(void)
 
 void rt_syscall(enum rt_syscall syscall)
 {
+    /*
+     * If there's no active task, the only valid syscall is yield.
+     */
     if (active_task)
     {
         active_task->syscall = syscall;
