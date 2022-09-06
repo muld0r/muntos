@@ -71,9 +71,12 @@ static void wait_handler(int sig)
      * all other threads are suspended.
      */
     log_event("thread %lx waiting for signal\n", (unsigned long)pthread_self());
-    sigset_t wait_sigset, old_sigset;
+    sigset_t wait_sigset;
     sigfillset(&wait_sigset);
+    /* Don't consume SIGINT or SIGRTSTOP here, as those should be received in
+     * the main thread to allow it to clean up. */
     sigdelset(&wait_sigset, SIGINT);
+    sigdelset(&wait_sigset, SIGRTSTOP);
     sigwait(&wait_sigset, &sig);
     log_event("thread %lx received signal %d while waiting\n",
               (unsigned long)pthread_self(), sig);
@@ -86,6 +89,7 @@ static void wait_handler(int sig)
     sigemptyset(&wait_sigset);
     sigaddset(&wait_sigset, SIGWAIT);
     pthread_kill(pthread_self(), sig);
+    sigset_t old_sigset;
     pthread_sigmask(SIG_SETMASK, &wait_sigset, &old_sigset);
     pthread_sigmask(SIG_SETMASK, &old_sigset, NULL);
 }
@@ -262,8 +266,8 @@ void rt_start(void)
     sigaction(SIGSYSCALL, &syscall_action, NULL);
 
     /* The wait handler signal mask must not block signals because it needs to
-     * re-enable then disable interrupts within the wait handler itself. The
-     * wait handler will re-block signals itself before returning. */
+     * temporarily unmask whatever signal it receives. The wait handler will
+     * re-block signals itself before returning. */
     struct sigaction wait_action = {
         .sa_handler = wait_handler,
     };
