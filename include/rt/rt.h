@@ -19,6 +19,11 @@ void rt_stop(void);
 void rt_yield(void);
 
 /*
+ * Schedule a new task to run. May be called outside of a task.
+ */
+void rt_sched(void);
+
+/*
  * Terminate the currently running task.
  */
 void rt_exit(void);

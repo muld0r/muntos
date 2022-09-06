@@ -282,7 +282,7 @@ void rt_start(void)
 
     main_thread = pthread_self();
 
-    rt_yield();
+    rt_sched();
 
     // Unblock syscalls so the yield can run here.
     sigset_t syscall_sigset;

@@ -9,29 +9,35 @@
 struct rt_task
 {
     struct rt_list list;
-    struct rt_task *ready_next;
+    struct rt_syscall_record syscall_record;
+    union
+    {
+        unsigned long wake_tick;
+        unsigned long sleep_ticks;
+        struct
+        {
+            unsigned long last_wake_tick;
+            unsigned long period;
+        } sleep_periodic;
+    } syscall_args;
     struct rt_context *ctx;
     void (*fn)(void);
     void *stack;
     size_t stack_size;
     const char *name;
-    unsigned long syscall_args[2];
     unsigned priority;
-    enum rt_syscall syscall;
 };
 
 #define RT_TASK(name_, fn_, stack_, priority_)                                \
     struct rt_task name_ = {                                                  \
         .list = RT_LIST_INIT(name_.list),                                     \
-        .ready_next = NULL,                                                    \
+        .syscall_record = {.next = NULL, .syscall = RT_SYSCALL_NONE},         \
         .ctx = NULL,                                                           \
         .fn = fn_,                                                             \
         .stack = stack_,                                                       \
         .stack_size = sizeof stack_,                                           \
         .name = #name_,                                                        \
-        .syscall_args = {0},                                                   \
         .priority = priority_,                                                 \
-        .syscall = RT_SYSCALL_YIELD,                                          \
     }
 
 /*

@@ -3,24 +3,37 @@
 
 enum rt_syscall
 {
+    RT_SYSCALL_NONE,
+
+    /* Invokes a reschedule. */
+    RT_SYSCALL_SCHED,
+
+    /* Processes a tick. */
+    RT_SYSCALL_TICK,
+
+    /* syscalls invoked on tasks */
+    RT_SYSCALL_READY,
     RT_SYSCALL_YIELD,
     RT_SYSCALL_EXIT,
     RT_SYSCALL_SLEEP,
     RT_SYSCALL_SLEEP_PERIODIC,
 };
 
-/*
- * Invoke a given syscall.
- */
-void rt_syscall(enum rt_syscall syscall);
+struct rt_syscall_record
+{
+    struct rt_syscall_record *next;
+    enum rt_syscall syscall;
+};
+
+void rt_syscall_push(struct rt_syscall_record *syscall);
 
 /*
- * Trigger the syscall handler. (architecture-specific)
+ * Trigger the syscall handler.
  */
 void rt_syscall_post(void);
 
 /*
- * Perform the syscall.
+ * Perform all pending system calls.
  */
 void rt_syscall_handler(void);
 
