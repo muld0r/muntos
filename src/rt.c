@@ -73,6 +73,7 @@ void rt_task_ready(struct rt_task *task)
     task_syscall(task, RT_SYSCALL_READY);
 }
 
+/* TODO: simplify this based on what syscall actually occurred */
 static void sched(void)
 {
     struct rt_task *const prev_task = active_task;
@@ -93,7 +94,7 @@ static void sched(void)
     {
         rt_context_save(prev_task->ctx);
         /*
-         * If the yielding task is still ready, re-add it to the ready list.
+         * If the previous task is still ready, re-add it to the ready list.
          */
         if (still_ready)
         {
@@ -134,9 +135,9 @@ static void go_to_sleep(unsigned long wake_tick)
         }
     }
 
-    rt_self()->syscall_args.wake_tick = wake_tick;
-    rt_list_insert_before(&rt_self()->list, node);
-    if (rt_list_front(&sleep_list) == &rt_self()->list)
+    active_task->syscall_args.wake_tick = wake_tick;
+    rt_list_insert_before(&active_task->list, node);
+    if (rt_list_front(&sleep_list) == &active_task->list)
     {
         next_wake_tick = wake_tick;
     }
@@ -144,7 +145,7 @@ static void go_to_sleep(unsigned long wake_tick)
 
 static void sleep_syscall(void)
 {
-    const unsigned long ticks = rt_self()->syscall_args.sleep_ticks;
+    const unsigned long ticks = active_task->syscall_args.sleep_ticks;
     /* Only check for 0 ticks in the syscall so that rt_sleep(0) becomes a
      * synonym for rt_yield(). */
     if (ticks > 0)
@@ -155,7 +156,7 @@ static void sleep_syscall(void)
 
 static void sleep_periodic_syscall(void)
 {
-    struct rt_task *self = rt_self();
+    struct rt_task *self = active_task;
     const unsigned long last_wake_tick =
         self->syscall_args.sleep_periodic.last_wake_tick;
     const unsigned long period = self->syscall_args.sleep_periodic.period;
