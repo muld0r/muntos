@@ -257,6 +257,10 @@ void rt_syscall_handler(void)
      * stack while the stack is being flushed will be handled before tasks that
      * were pushed earlier.
      */
+    /* TODO: need to make sure that a syscall post after this swap has occurred
+     * results in the syscall handler being called again, otherwise we should
+     * just keep handling system calls from the same stack, even if they're out
+     * of order. */
     struct rt_syscall_record *syscall_record =
         atomic_exchange_explicit(&pending_syscalls, NULL, memory_order_acquire);
     struct rt_list *ready_next = &ready_list;
