@@ -21,7 +21,7 @@ static struct rt_task *task_from_list(struct rt_list *list)
 
 static struct rt_task *ready_pop(void)
 {
-    // TODO: deal with different priorities
+    /* TODO: deal with different priorities */
     if (rt_list_is_empty(&ready_list))
     {
         return NULL;
@@ -119,7 +119,7 @@ static RT_LIST(sleep_list);
 static unsigned long woken_tick;
 static unsigned long next_wake_tick;
 
-static void go_to_sleep(unsigned long wake_tick)
+static void sleep_until(unsigned long wake_tick)
 {
     const unsigned long ticks_until_wake = wake_tick - woken_tick;
 
@@ -150,7 +150,7 @@ static void sleep_syscall(void)
      * synonym for rt_yield(). */
     if (ticks > 0)
     {
-        go_to_sleep(woken_tick + ticks);
+        sleep_until(woken_tick + ticks);
     }
 }
 
@@ -165,14 +165,14 @@ static void sleep_periodic_syscall(void)
      * wake, then the desired wake up tick has already occurred. */
     if (ticks_since_last_wake < period)
     {
-        go_to_sleep(last_wake_tick + period);
+        sleep_until(last_wake_tick + period);
     }
 }
 
 static void tick_syscall(void)
 {
     /*
-     * The tick counter moves independently of tick syscall, so process all
+     * The tick counter moves independently of the tick syscall, so process all
      * ticks until caught up.
      */
     while (woken_tick < rt_tick())
