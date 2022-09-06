@@ -33,9 +33,4 @@ void rt_exit(void);
  */
 struct rt_task *rt_self(void);
 
-/*
- * End all tasks. Called from rt_stop.
- */
-void rt_exit_all(void);
-
 #endif /* RT_H */

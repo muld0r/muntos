@@ -309,17 +309,3 @@ void rt_task_start(struct rt_task *task)
     task->ctx = rt_context_create(task->stack, task->stack_size, task->fn);
     rt_list_push_back(&ready_list, &task->list);
 }
-
-void rt_exit_all(void)
-{
-    struct rt_task *task;
-    while ((task = ready_pop()))
-    {
-        rt_context_destroy(task->ctx);
-    }
-
-    if (active_task)
-    {
-        rt_context_destroy(active_task->ctx);
-    }
-}

@@ -344,5 +344,4 @@ void rt_stop(void)
 {
     rt_interrupt_disable();
     pthread_kill(main_thread, SIGRTSTOP);
-    rt_exit_all();
 }
