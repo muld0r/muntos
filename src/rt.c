@@ -248,6 +248,17 @@ task_from_syscall_record(struct rt_syscall_record *record)
     return rt_container_of(record, struct rt_task, syscall_record);
 }
 
+static void wake_sem_waiters(struct rt_sem *sem)
+{
+    int waiters = -atomic_load_explicit(&sem->value, memory_order_acquire);
+    while ((sem->num_waiters > 0) && (sem->num_waiters > waiters))
+    {
+        struct rt_list *node = rt_list_pop_front(&sem->wait_list);
+        rt_list_push_back(&ready_list, node);
+        --sem->num_waiters;
+    }
+}
+
 void rt_syscall_handler(void)
 {
     /*
@@ -301,6 +312,28 @@ void rt_syscall_handler(void)
             rt_context_destroy(active_task->ctx);
             active_task = NULL;
             break;
+        case RT_SYSCALL_SEM_WAIT:
+        {
+            struct rt_sem *sem = active_task->syscall_args.sem;
+            rt_list_push_back(&sem->wait_list, &active_task->list);
+            ++sem->num_waiters;
+            /* Evaluate semaphore wakes here as well in case a post occurred
+             * before the wait syscall was handled. */
+            wake_sem_waiters(sem);
+            break;
+        }
+        case RT_SYSCALL_SEM_POST:
+        {
+            struct rt_sem *sem =
+                rt_container_of(syscall_record, struct rt_sem,
+                                 syscall_record);
+            /* Allow another post syscall to occur while wakes are evaluated so that
+             * no posts are missed. */
+            atomic_flag_clear_explicit(&sem->post_pending,
+                                       memory_order_release);
+            wake_sem_waiters(sem);
+            break;
+        }
         }
         syscall_record = syscall_record->next;
     }

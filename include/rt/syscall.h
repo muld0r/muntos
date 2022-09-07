@@ -17,6 +17,10 @@ enum rt_syscall
     RT_SYSCALL_EXIT,
     RT_SYSCALL_SLEEP,
     RT_SYSCALL_SLEEP_PERIODIC,
+    RT_SYSCALL_SEM_WAIT,
+
+    /* syscalls invoked on other objects */
+    RT_SYSCALL_SEM_POST,
 };
 
 struct rt_syscall_record

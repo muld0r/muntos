@@ -2,6 +2,7 @@
 #define RT_TASK_H
 
 #include <rt/list.h>
+#include <rt/sem.h>
 #include <rt/syscall.h>
 
 #include <stdbool.h>
@@ -19,6 +20,7 @@ struct rt_task
             unsigned long last_wake_tick;
             unsigned long period;
         } sleep_periodic;
+        struct rt_sem *sem;
     } syscall_args;
     struct rt_context *ctx;
     void (*fn)(void);

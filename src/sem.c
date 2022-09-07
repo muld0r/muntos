@@ -1,49 +1,69 @@
 #include <rt/sem.h>
 
-#include <rt/critical.h>
-
-void rt_sem_init(struct rt_sem *sem, unsigned int initial_value)
+static void sem_init_common(struct rt_sem *sem, int initial_value)
 {
     rt_list_init(&sem->wait_list);
-    sem->value = initial_value;
-    sem->max_value = UINT_MAX;
+    sem->syscall_record.next = NULL;
+    sem->syscall_record.syscall = RT_SYSCALL_SEM_POST;
+    sem->num_waiters = 0;
+    atomic_store_explicit(&sem->value, initial_value, memory_order_relaxed);
+    atomic_flag_clear_explicit(&sem->post_pending, memory_order_release);
 }
 
-void rt_sem_binary_init(struct rt_sem *sem, unsigned int initial_value)
+void rt_sem_init(struct rt_sem *sem, int initial_value)
 {
-    rt_list_init(&sem->wait_list);
-    sem->value = initial_value;
+    sem->max_value = INT_MAX;
+    sem_init_common(sem, initial_value);
+}
+
+void rt_sem_binary_init(struct rt_sem *sem, int initial_value)
+{
     sem->max_value = 1;
+    sem_init_common(sem, initial_value);
 }
 
 void rt_sem_post(struct rt_sem *sem)
 {
-    // TODO: don't use a critical section to protect the semaphore
-    rt_critical_begin();
-    if (sem->value < sem->max_value)
+    int value = atomic_load_explicit(&sem->value, memory_order_relaxed);
+    do
     {
-        ++sem->value;
-    }
-    if (!rt_list_is_empty(&sem->wait_list))
+        if (value == sem->max_value)
+        {
+            /* Semaphore is saturated. */
+            return;
+        }
+    } while (!atomic_compare_exchange_weak_explicit(&sem->value, &value,
+                                                    value + 1,
+                                                    memory_order_release,
+                                                    memory_order_relaxed));
+
+    /* If the value was less than zero, then there was at least one waiter when
+     * we successfully posted. If there isn't already a post system call pending,
+     * then create one. */
+    if ((value < 0) && !atomic_flag_test_and_set_explicit(&sem->post_pending,
+                                                          memory_order_acquire))
     {
-        struct rt_list *const node = rt_list_pop_front(&sem->wait_list);
-        struct rt_task *const waiting_task =
-            rt_list_item(node, struct rt_task, list);
-        rt_task_ready(waiting_task);
+        rt_syscall_push(&sem->syscall_record);
+        rt_syscall_post();
     }
-    rt_critical_end();
 }
 
 void rt_sem_wait(struct rt_sem *sem)
 {
-    rt_critical_begin();
-    if (sem->value == 0)
+    int value = atomic_load_explicit(&sem->value, memory_order_relaxed);
+    while (!atomic_compare_exchange_weak_explicit(&sem->value, &value,
+                                                  value - 1,
+                                                  memory_order_acquire,
+                                                  memory_order_relaxed))
     {
-        rt_list_push_back(&sem->wait_list, &rt_self()->list);
-        rt_yield();
-        rt_critical_end();
-        rt_critical_begin();
     }
-    --sem->value;
-    rt_critical_end();
+
+    if (value <= 0)
+    {
+        struct rt_task *self = rt_self();
+        self->syscall_args.sem = sem;
+        self->syscall_record.syscall = RT_SYSCALL_SEM_WAIT;
+        rt_syscall_push(&self->syscall_record);
+        rt_syscall_post();
+    }
 }
