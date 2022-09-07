@@ -56,7 +56,7 @@ void rt_sched(void)
     };
 
     if (!atomic_flag_test_and_set_explicit(&sched_pending,
-                                           memory_order_acquire))
+                                           memory_order_relaxed))
     {
         rt_syscall_push(&sched);
         rt_syscall_post();
