@@ -38,10 +38,12 @@ void rt_sem_post(struct rt_sem *sem)
                                                     memory_order_relaxed));
 
     /* If the value was less than zero, then there was at least one waiter when
-     * we successfully posted. If there isn't already a post system call pending,
-     * then create one. */
-    /* TODO: if pre-empted after test_and_set but before pushing the syscall, then
-     * posts made by higher priority contexts won't pend a syscall when they should. */
+     * we successfully posted. If there isn't already a post system call
+     * pending, then create one. */
+    /* TODO: if pre-empted after test_and_set but before pushing the syscall,
+     * then posts made by higher priority contexts won't pend a syscall when
+     * they should. This can be solved by having tasks use their own
+     * syscall_record when posting. */
     if ((value < 0) && !atomic_flag_test_and_set_explicit(&sem->post_pending,
                                                           memory_order_acquire))
     {
