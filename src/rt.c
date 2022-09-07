@@ -217,7 +217,7 @@ void rt_tick_advance(void)
         .syscall = RT_SYSCALL_TICK,
     };
 
-    if (!atomic_flag_test_and_set_explicit(&tick_pending, memory_order_acquire))
+    if (!atomic_flag_test_and_set_explicit(&tick_pending, memory_order_relaxed))
     {
         rt_syscall_push(&tick_syscall_record);
         rt_syscall_post();
@@ -231,6 +231,8 @@ unsigned long rt_tick(void)
 
 void rt_syscall_push(struct rt_syscall_record *syscall_record)
 {
+    /* TODO: need to support multiple contexts trying to push the same
+     * record. */
     syscall_record->next =
         atomic_load_explicit(&pending_syscalls, memory_order_relaxed);
     while (!atomic_compare_exchange_weak_explicit(&pending_syscalls,
@@ -327,8 +329,8 @@ void rt_syscall_handler(void)
             struct rt_sem *sem =
                 rt_container_of(syscall_record, struct rt_sem,
                                  syscall_record);
-            /* Allow another post syscall to occur while wakes are evaluated so that
-             * no posts are missed. */
+            /* Allow another post syscall to occur while wakes are evaluated so
+             * that no posts are missed. */
             atomic_flag_clear_explicit(&sem->post_pending,
                                        memory_order_release);
             wake_sem_waiters(sem);
