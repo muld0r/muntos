@@ -27,6 +27,8 @@ void rt_sem_post(struct rt_sem *sem);
 
 void rt_sem_wait(struct rt_sem *sem);
 
+bool rt_sem_trywait(struct rt_sem *sem);
+
 #define RT_SEM_WITH_MAX(name, initial_value, max_value_)                      \
     struct rt_sem name = {                                                    \
         .wait_list = RT_LIST_INIT(name.wait_list),                            \

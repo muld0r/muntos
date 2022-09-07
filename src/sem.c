@@ -50,6 +50,22 @@ void rt_sem_post(struct rt_sem *sem)
     }
 }
 
+bool rt_sem_trywait(struct rt_sem *sem)
+{
+    int value = atomic_load_explicit(&sem->value, memory_order_relaxed);
+    do
+    {
+        if (value <= 0)
+        {
+            return false;
+        }
+    } while (!atomic_compare_exchange_weak_explicit(&sem->value, &value,
+                                                    value - 1,
+                                                    memory_order_acquire,
+                                                    memory_order_relaxed));
+    return true;
+}
+
 void rt_sem_wait(struct rt_sem *sem)
 {
     int value = atomic_load_explicit(&sem->value, memory_order_relaxed);
