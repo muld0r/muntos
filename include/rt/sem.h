@@ -3,7 +3,6 @@
 
 #include <rt/list.h>
 #include <rt/syscall.h>
-#include <rt/rt.h>
 
 #include <limits.h>
 #include <stdatomic.h>
@@ -32,7 +31,7 @@ bool rt_sem_trywait(struct rt_sem *sem);
 #define RT_SEM_WITH_MAX(name, initial_value, max_value_)                      \
     struct rt_sem name = {                                                    \
         .wait_list = RT_LIST_INIT(name.wait_list),                            \
-        .syscall_record = {.next = NULL, .syscall = RT_SYSCALL_NONE},         \
+        .syscall_record = {.next = NULL, .syscall = RT_SYSCALL_SEM_POST},     \
         .post_pending = ATOMIC_FLAG_INIT,                                      \
         .num_waiters = 0,                                                      \
         .value = initial_value,                                                \

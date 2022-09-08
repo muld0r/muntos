@@ -1,5 +1,7 @@
 #include <rt/sem.h>
 
+#include <rt/rt.h>
+
 static void sem_init_common(struct rt_sem *sem, int initial_value)
 {
     rt_list_init(&sem->wait_list);
