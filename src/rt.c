@@ -261,6 +261,17 @@ static void wake_sem_waiters(struct rt_sem *sem)
     }
 }
 
+static void wake_mutex_waiter(struct rt_mutex *mutex)
+{
+    if ((mutex->num_waiters > 0) &&
+        !atomic_flag_test_and_set_explicit(&mutex->lock, memory_order_acquire))
+    {
+        struct rt_list *node = rt_list_pop_front(&mutex->wait_list);
+        rt_list_push_back(&ready_list, node);
+        --mutex->num_waiters;
+    }
+}
+
 void rt_syscall_handler(void)
 {
     /*
@@ -324,6 +335,16 @@ void rt_syscall_handler(void)
             wake_sem_waiters(sem);
             break;
         }
+        case RT_SYSCALL_MUTEX_LOCK:
+        {
+            struct rt_mutex *mutex = active_task->syscall_args.mutex;
+            rt_list_push_back(&mutex->wait_list, &active_task->list);
+            ++mutex->num_waiters;
+            /* Evaluate mutex wakes here as well in case a post occurred
+             * before the wait syscall was handled. */
+            wake_mutex_waiter(mutex);
+            break;
+        }
         case RT_SYSCALL_SEM_POST:
         {
             struct rt_sem *sem =
@@ -334,6 +355,18 @@ void rt_syscall_handler(void)
             atomic_flag_clear_explicit(&sem->post_pending,
                                        memory_order_release);
             wake_sem_waiters(sem);
+            break;
+        }
+        case RT_SYSCALL_MUTEX_UNLOCK:
+        {
+            struct rt_mutex *mutex =
+                rt_container_of(syscall_record, struct rt_mutex,
+                                 syscall_record);
+            /* Allow another unlock syscall to occur while wakes are evaluated
+             * so that no unlocks are missed. */
+            atomic_flag_clear_explicit(&mutex->unlock_pending,
+                                       memory_order_release);
+            wake_mutex_waiter(mutex);
             break;
         }
         }

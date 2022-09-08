@@ -9,6 +9,7 @@ librt = env.StaticLibrary(
         "queue.c",
         "list.c",
         "sem.c",
+        "mutex.c",
     ],
 )
 

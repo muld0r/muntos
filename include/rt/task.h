@@ -2,6 +2,7 @@
 #define RT_TASK_H
 
 #include <rt/list.h>
+#include <rt/mutex.h>
 #include <rt/sem.h>
 #include <rt/syscall.h>
 
@@ -21,6 +22,7 @@ struct rt_task
             unsigned long period;
         } sleep_periodic;
         struct rt_sem *sem;
+        struct rt_mutex *mutex;
     } syscall_args;
     struct rt_context *ctx;
     void (*fn)(void);

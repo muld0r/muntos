@@ -2,8 +2,10 @@
 
 set -xe
 
-scons -j 8
+scons -j $(nproc)
+
 build/simple
 build/sleep
 build/sem
 build/queue
+build/mutex
