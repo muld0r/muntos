@@ -322,9 +322,12 @@ void rt_syscall_handler(void)
             sleep_periodic_syscall();
             break;
         case RT_SYSCALL_EXIT:
-            rt_context_destroy(active_task->ctx);
+        {
+            struct rt_context *ctx = active_task->ctx;
             active_task = NULL;
+            rt_context_destroy(ctx);
             break;
+        }
         case RT_SYSCALL_SEM_WAIT:
         {
             struct rt_sem *sem = active_task->syscall_args.sem;
