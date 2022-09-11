@@ -25,13 +25,14 @@ struct rt_mutex
     int num_waiters;
 };
 
-#define RT_MUTEX(name)                                                        \
-    struct rt_mutex name = {                                                  \
+#define RT_MUTEX_INIT(name)                                                   \
+    {                                                                          \
         .wait_list = RT_LIST_INIT(name.wait_list),                            \
         .syscall_record = {.next = NULL, .syscall = RT_SYSCALL_MUTEX_UNLOCK}, \
-        .unlock_pending = ATOMIC_FLAG_INIT,                                    \
-        .lock = ATOMIC_FLAG_INIT,                                              \
+        .unlock_pending = ATOMIC_FLAG_INIT, .lock = ATOMIC_FLAG_INIT,          \
         .num_waiters = 0,                                                      \
     }
+
+#define RT_MUTEX(name) struct rt_mutex name = RT_MUTEX_INIT(name)
 
 #endif /* RT_MUTEX_H */

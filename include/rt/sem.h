@@ -32,15 +32,22 @@ struct rt_sem
     int max_value;
 };
 
-#define RT_SEM_WITH_MAX(name, initial_value, max_value_)                      \
-    struct rt_sem name = {                                                    \
+#define RT_SEM_INIT_WITH_MAX(name, initial_value, max_value_)                 \
+    {                                                                          \
         .wait_list = RT_LIST_INIT(name.wait_list),                            \
         .syscall_record = {.next = NULL, .syscall = RT_SYSCALL_SEM_POST},     \
-        .post_pending = ATOMIC_FLAG_INIT,                                      \
-        .num_waiters = 0,                                                      \
-        .value = initial_value,                                                \
-        .max_value = max_value_,                                               \
+        .post_pending = ATOMIC_FLAG_INIT, .num_waiters = 0,                    \
+        .value = initial_value, .max_value = max_value_,                       \
     }
+
+#define RT_SEM_INIT(name, initial_value)                                      \
+    RT_SEM_INIT_WITH_MAX(name, initial_value, INT_MAX)
+
+#define RT_SEM_BINARY_INIT(name, initial_value)                               \
+    RT_SEM_INIT_WITH_MAX(name, initial_value, 1)
+
+#define RT_SEM_WITH_MAX(name, initial_value, max_value_)                      \
+    struct rt_sem name = RT_SEM_INIT_WITH_MAX(name, initial_value, max_value_)
 
 #define RT_SEM(name, initial_value)                                           \
     RT_SEM_WITH_MAX(name, initial_value, INT_MAX)

@@ -19,9 +19,11 @@ struct rt_cond
     struct rt_sem sem;
 };
 
-#define RT_COND(name)                                                         \
-    struct rt_cond name = {                                                   \
-        .sem = RT_SEM(name, 0),                                               \
+#define RT_COND_INIT(name)                                                    \
+    {                                                                          \
+        .sem = RT_SEM_INIT(name.sem, 0),                                      \
     }
+
+#define RT_COND(name) struct rt_cond name = RT_COND_INIT(name)
 
 #endif /* RT_COND_H */
