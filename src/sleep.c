@@ -1,5 +1,9 @@
 #include <rt/sleep.h>
 
+#include <rt/syscall.h>
+#include <rt/task.h>
+#include <rt/rt.h>
+
 void rt_sleep(unsigned long ticks)
 {
     struct rt_task *self = rt_self();
