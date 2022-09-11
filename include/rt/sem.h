@@ -8,15 +8,7 @@
 #include <stdatomic.h>
 #include <stdint.h>
 
-struct rt_sem
-{
-    struct rt_list wait_list;
-    struct rt_syscall_record syscall_record;
-    struct atomic_flag post_pending;
-    int num_waiters;
-    atomic_int value;
-    int max_value;
-};
+struct rt_sem;
 
 void rt_sem_init(struct rt_sem *sem, int initial_value);
 
@@ -27,6 +19,16 @@ void rt_sem_post(struct rt_sem *sem);
 void rt_sem_wait(struct rt_sem *sem);
 
 bool rt_sem_trywait(struct rt_sem *sem);
+
+struct rt_sem
+{
+    struct rt_list wait_list;
+    struct rt_syscall_record syscall_record;
+    struct atomic_flag post_pending;
+    int num_waiters;
+    atomic_int value;
+    int max_value;
+};
 
 #define RT_SEM_WITH_MAX(name, initial_value, max_value_)                      \
     struct rt_sem name = {                                                    \
