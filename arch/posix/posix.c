@@ -21,17 +21,19 @@
 #define SIGWAIT (SIGRTMIN + 3)
 #define SIGRTSTOP (SIGRTMIN + 4)
 
-#ifndef RT_LOG
-#define RT_LOG 0
-#endif
-
-#if RT_LOG
-#define log_event(...)                                                         \
+#define log(...)                                                               \
     do                                                                         \
     {                                                                          \
         fprintf(stderr, __VA_ARGS__);                                          \
         fflush(stderr);                                                        \
     } while (0)
+
+#ifndef RT_LOG_EVENTS
+#define RT_LOG_EVENTS 0
+#endif
+
+#if RT_LOG_EVENTS
+#define log_event(...) log(__VA_ARGS__)
 #else
 #define log_event(...)
 #endif
@@ -50,7 +52,7 @@ static pthread_t main_thread;
 
 void rt_interrupt_disable(void)
 {
-    // SIGINT must always be unblocked for debugging and ctrl-C.
+    /* SIGINT must always be unblocked for debugging and ctrl-C. */
     sigset_t blocked_sigset;
     sigfillset(&blocked_sigset);
     sigdelset(&blocked_sigset, SIGINT);
@@ -190,8 +192,9 @@ void rt_syscall_post(void)
 __attribute__((noreturn)) static void resume_handler(int sig)
 {
     (void)sig;
-    log_event("thread %lx received a resume but was not suspended\n",
-              (unsigned long)pthread_self());
+    /* This is always an error, so don't use log_event. */
+    log("thread %lx received a resume but was not suspended\n",
+        (unsigned long)pthread_self());
     exit(1);
 }
 
@@ -288,23 +291,27 @@ void rt_start(void)
 
     rt_sched();
 
-    // Unblock syscalls so the yield can run here.
+    /* Unblock syscalls so the yield can run here. */
     sigset_t syscall_sigset;
     sigemptyset(&syscall_sigset);
     sigaddset(&syscall_sigset, SIGSYSCALL);
     pthread_sigmask(SIG_UNBLOCK, &syscall_sigset, NULL);
     pthread_sigmask(SIG_BLOCK, &syscall_sigset, NULL);
 
-    // Unblock the wait signal to the main thread can wait for interrupts
-    // when all other tasks become idle.
+    /*
+     * Unblock the wait signal to the main thread can wait for interrupts when
+     * all other tasks become idle.
+     */
     sigset_t wait_sigset;
     sigemptyset(&wait_sigset);
     sigaddset(&wait_sigset, SIGWAIT);
     pthread_sigmask(SIG_UNBLOCK, &wait_sigset, NULL);
 
-    // Allow SIGINT or SIGRTSTOP to stop the scheduler.
-    // TODO: do we need to wait on SIGINT here for ctrl-C to work?
-    // It should be always unblocked.
+    /*
+     * Allow SIGINT or SIGRTSTOP to stop the scheduler.
+     * TODO: do we need to wait on SIGINT here for ctrl-C to work?
+     * It should be always unblocked.
+     */
     sigset_t stop_sigset;
     sigemptyset(&stop_sigset);
     sigaddset(&stop_sigset, SIGINT);
@@ -313,7 +320,7 @@ void rt_start(void)
     int sig;
     sigwait(&stop_sigset, &sig);
 
-    // Prevent new SIGTICKs
+    /* Prevent new SIGTICKs */
     static const struct timeval zero = {
         .tv_sec = 0,
         .tv_usec = 0,
@@ -322,7 +329,7 @@ void rt_start(void)
     timer.it_value = zero;
     setitimer(ITIMER_REAL, &timer, NULL);
 
-    // Change handler to SIG_IGN to drop any pending signals.
+    /* Change handler to SIG_IGN to drop any pending signals. */
     struct sigaction action = {.sa_handler = SIG_IGN};
     sigemptyset(&action.sa_mask);
 
@@ -332,10 +339,10 @@ void rt_start(void)
     sigaction(SIGSYSCALL, &action, NULL);
     sigaction(SIGWAIT, &action, NULL);
 
-    // Re-enable all signals.
+    /* Re-enable all signals. */
     rt_interrupt_enable();
 
-    // Restore the default handlers.
+    /* Restore the default handlers. */
     action.sa_handler = SIG_DFL;
     sigaction(SIGTICK, &action, NULL);
     sigaction(SIGRESUME, &action, NULL);
