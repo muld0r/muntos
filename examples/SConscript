@@ -6,3 +6,5 @@ env.Program("queue.c")
 env.Program("list.c")
 env.Program("sem.c")
 env.Program("mutex.c")
+
+env.Program("water_sem.c")
