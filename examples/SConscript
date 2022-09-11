@@ -1,5 +1,6 @@
 Import("env")
 
+env.Program("empty.c")
 env.Program("simple.c")
 env.Program("sleep.c")
 env.Program("queue.c")
@@ -8,3 +9,4 @@ env.Program("sem.c")
 env.Program("mutex.c")
 
 env.Program("water_sem.c")
+env.Program("water_cond.c")

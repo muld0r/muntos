@@ -54,6 +54,35 @@ void rt_sem_post(struct rt_sem *sem)
     }
 }
 
+void rt_sem_post_all(struct rt_sem *sem)
+{
+    int value = atomic_load_explicit(&sem->value, memory_order_relaxed);
+    do
+    {
+        if (value >= 0)
+        {
+            /* Semaphore has no waiters. */
+            return;
+        }
+    } while (!atomic_compare_exchange_weak_explicit(&sem->value, &value, 0,
+                                                    memory_order_release,
+                                                    memory_order_relaxed));
+
+    /* If the value was less than zero, then there was at least one waiter when
+     * we successfully posted. If there isn't already a post system call
+     * pending, then create one. */
+    /* TODO: if pre-empted after test_and_set but before pushing the syscall,
+     * then posts made by higher priority contexts won't pend a syscall when
+     * they should. This can be solved by having tasks use their own
+     * syscall_record when posting. */
+    if (!atomic_flag_test_and_set_explicit(&sem->post_pending,
+                                           memory_order_acquire))
+    {
+        rt_syscall_push(&sem->syscall_record);
+        rt_syscall_post();
+    }
+}
+
 bool rt_sem_trywait(struct rt_sem *sem)
 {
     int value = atomic_load_explicit(&sem->value, memory_order_relaxed);
