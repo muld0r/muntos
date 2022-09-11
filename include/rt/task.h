@@ -8,6 +8,21 @@
 
 #include <stdbool.h>
 
+struct rt_task;
+
+void rt_task_init(struct rt_task *task, void (*fn)(void), void *stack,
+                   size_t stack_size, const char *name, unsigned priority);
+
+/*
+ * Launch a newly created task.
+ */
+void rt_task_start(struct rt_task *task);
+
+/*
+ * Make a task runnable.
+ */
+void rt_task_ready(struct rt_task *task);
+
 struct rt_task
 {
     struct rt_list list;
@@ -43,15 +58,5 @@ struct rt_task
         .name = #name_,                                                        \
         .priority = priority_,                                                 \
     }
-
-/*
- * Launch a newly created task.
- */
-void rt_task_start(struct rt_task *task);
-
-/*
- * Make a task runnable.
- */
-void rt_task_ready(struct rt_task *task);
 
 #endif /* RT_TASK_H */

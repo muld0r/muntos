@@ -376,6 +376,19 @@ void rt_syscall_handler(void)
     sched();
 }
 
+void rt_task_init(struct rt_task *task, void (*fn)(void), void *stack,
+                   size_t stack_size, const char *name, unsigned priority)
+{
+    rt_list_init(&task->list);
+    task->syscall_record.next = NULL;
+    task->syscall_record.syscall = RT_SYSCALL_NONE;
+    task->fn = fn;
+    task->stack = stack;
+    task->stack_size = stack_size;
+    task->name = name;
+    task->priority = priority;
+}
+
 void rt_task_start(struct rt_task *task)
 {
     task->ctx = rt_context_create(task->stack, task->stack_size, task->fn);
