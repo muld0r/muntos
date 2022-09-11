@@ -4,7 +4,6 @@ librt = env.StaticLibrary(
     target="rt",
     source=[
         "rt.c",
-        "critical.c",
         "sleep.c",
         "queue.c",
         "list.c",
