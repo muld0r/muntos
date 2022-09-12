@@ -154,11 +154,11 @@ struct rt_context *rt_context_create(void *stack, size_t stack_size,
 void rt_context_save(struct rt_context *ctx)
 {
     /*
-     * Prevent the thread thread that's being suspended from receiving further
+     * Prevent the thread that's being suspended from receiving further
      * interrupts, even before it has taken its suspend handler. The suspend
      * handler also masks these, but during a context switch, momentarily two
      * different threads could have signals unmasked unless we mask the
-     * suspending thread here first. Otherwise, two threads couldpotentially
+     * suspending thread here first. Otherwise, two threads could potentially
      * both run the same signal handler, and the signal handlers are not
      * written to be re-entrant.
      */
