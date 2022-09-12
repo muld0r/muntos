@@ -50,16 +50,16 @@ struct pthread_arg
 
 static pthread_t main_thread;
 
-void rt_interrupt_disable(void)
+static void block_all_signals(sigset_t *old_sigset)
 {
     /* SIGINT must always be unblocked for debugging and ctrl-C. */
     sigset_t blocked_sigset;
     sigfillset(&blocked_sigset);
     sigdelset(&blocked_sigset, SIGINT);
-    pthread_sigmask(SIG_BLOCK, &blocked_sigset, NULL);
+    pthread_sigmask(SIG_BLOCK, &blocked_sigset, old_sigset);
 }
 
-void rt_interrupt_enable(void)
+static void unblock_all_signals(void)
 {
     sigset_t full_sigset;
     sigfillset(&full_sigset);
@@ -117,7 +117,7 @@ static void *pthread_fn(void *arg)
     sigaddset(&resume_sigset, SIGRESUME);
     sigwait(&resume_sigset, &sig);
     log_event("thread %lx starting\n", (unsigned long)pthread_self());
-    rt_interrupt_enable();
+    unblock_all_signals();
     fn();
     log_event("thread %lx exiting\n", (unsigned long)pthread_self());
     rt_exit();
@@ -139,10 +139,8 @@ struct rt_context *rt_context_create(void *stack, size_t stack_size,
      * Launch each thread with interrupts disabled so only the active thread
      * will receive interrupts.
      */
-    sigset_t blocked_sigset, old_sigset;
-    sigfillset(&blocked_sigset);
-    sigdelset(&blocked_sigset, SIGINT);
-    pthread_sigmask(SIG_BLOCK, &blocked_sigset, &old_sigset);
+    sigset_t old_sigset;
+    block_all_signals(&old_sigset);
 
     pthread_create(&ctx->thread, &attr, pthread_fn, parg);
 
@@ -205,7 +203,7 @@ static void suspend_handler(int sig)
     sigaddset(&resume_sigset, SIGRESUME);
     sigwait(&resume_sigset, &sig);
     log_event("thread %lx resuming\n", (unsigned long)pthread_self());
-    rt_interrupt_enable();
+    unblock_all_signals();
 }
 
 static void syscall_handler(int sig)
@@ -224,7 +222,7 @@ static void tick_handler(int sig)
 
 void rt_start(void)
 {
-    rt_interrupt_disable();
+    block_all_signals(NULL);
 
     /* The tick handler must block SIGSYSCALL and SIGSUSPEND. */
     struct sigaction tick_action = {
@@ -337,8 +335,7 @@ void rt_start(void)
     sigaction(SIGSYSCALL, &action, NULL);
     sigaction(SIGWAIT, &action, NULL);
 
-    /* Re-enable all signals. */
-    rt_interrupt_enable();
+    unblock_all_signals();
 
     /* Restore the default handlers. */
     action.sa_handler = SIG_DFL;
@@ -351,6 +348,6 @@ void rt_start(void)
 
 void rt_stop(void)
 {
-    rt_interrupt_disable();
+    block_all_signals(NULL);
     pthread_kill(main_thread, SIGRTSTOP);
 }
