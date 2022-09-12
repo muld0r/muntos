@@ -1,0 +1,5 @@
+Import("env")
+
+libarm = env.StaticLibrary("arm", source=["arm.c", "armasm.S"])
+
+Return("libarm")
