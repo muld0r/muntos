@@ -1,5 +1,0 @@
-Import("env")
-
-libposix = env.StaticLibrary("posix.c")
-
-Return("libposix")

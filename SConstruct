@@ -50,21 +50,21 @@ librt = SConscript(
     dirs="src", variant_dir="build/lib", duplicate=False, exports=["env"]
 )
 
-posix_env = env.Clone()
-posix_env.Append(
+pthread_env = env.Clone()
+pthread_env.Append(
     CCFLAGS="-pthread",
     LINKFLAGS="-pthread",
 )
 
-libposix = SConscript(
-    "arch/posix/SConscript",
-    variant_dir="build/lib/posix",
+libpthread = SConscript(
+    "arch/pthread/SConscript",
+    variant_dir="build/lib/pthread",
     duplicate=False,
-    exports={"env": posix_env},
+    exports={"env": pthread_env},
 )
 
-example_env = posix_env.Clone()
-example_env.Append(LIBS=[librt, libposix])
+example_env = pthread_env.Clone()
+example_env.Append(LIBS=[librt, libpthread])
 
 SConscript(
     dirs="examples", variant_dir="build", duplicate=False, exports={"env": example_env}
