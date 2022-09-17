@@ -12,7 +12,6 @@ enum rt_syscall
     RT_SYSCALL_TICK,
 
     /* syscalls invoked on tasks */
-    RT_SYSCALL_READY,
     RT_SYSCALL_YIELD,
     RT_SYSCALL_EXIT,
     RT_SYSCALL_SLEEP,

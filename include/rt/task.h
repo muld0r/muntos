@@ -18,11 +18,6 @@ void rt_task_init(struct rt_task *task, void (*fn)(void), void *stack,
  */
 void rt_task_start(struct rt_task *task);
 
-/*
- * Make a task runnable.
- */
-void rt_task_ready(struct rt_task *task);
-
 struct rt_task
 {
     struct rt_list list;

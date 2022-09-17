@@ -68,11 +68,6 @@ void rt_exit(void)
     task_syscall(rt_self(), RT_SYSCALL_EXIT);
 }
 
-void rt_task_ready(struct rt_task *task)
-{
-    task_syscall(task, RT_SYSCALL_READY);
-}
-
 /* TODO: simplify this based on what syscall actually occurred */
 static void sched(void)
 {
@@ -292,7 +287,6 @@ void rt_syscall_handler(void)
      * of order. */
     struct rt_syscall_record *syscall_record =
         atomic_exchange_explicit(&pending_syscalls, NULL, memory_order_acquire);
-    struct rt_list *ready_next = &ready_list;
     while (syscall_record)
     {
         switch (syscall_record->syscall)
@@ -306,18 +300,6 @@ void rt_syscall_handler(void)
             atomic_flag_clear_explicit(&tick_pending, memory_order_release);
             tick_syscall();
             break;
-        case RT_SYSCALL_READY:
-        {
-            /*
-             * Add elements to the ready list in the reverse order that their
-             * READY syscalls are popped from the stack.
-             */
-            struct rt_task *task = task_from_syscall_record(syscall_record);
-            rt_list_insert_before(&task->list, ready_next);
-            ready_next = &task->list;
-            syscall_record->syscall = RT_SYSCALL_NONE;
-            break;
-        }
         case RT_SYSCALL_YIELD:
             break;
         case RT_SYSCALL_SLEEP:
