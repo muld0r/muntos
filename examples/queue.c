@@ -33,9 +33,11 @@ int main(void)
 {
     static char sender_stack[PTHREAD_STACK_MIN],
         receiver_stack[PTHREAD_STACK_MIN];
-    static RT_TASK(sender, send_fn, sender_stack, 1);
-    static RT_TASK(receiver, recv_fn, receiver_stack, 1);
-    rt_task_start(&sender);
-    rt_task_start(&receiver);
+    static struct rt_task sender;
+    static struct rt_task receiver;
+    rt_task_init(&sender, send_fn, sender_stack, sizeof sender_stack, "sender",
+                  1);
+    rt_task_init(&receiver, recv_fn, receiver_stack, sizeof receiver_stack,
+                  "receiver", 1);
     rt_start();
 }

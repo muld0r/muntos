@@ -26,10 +26,9 @@ static void inc_fn(void)
 int main(void)
 {
     static char stack0[PTHREAD_STACK_MIN], stack1[PTHREAD_STACK_MIN];
-    static RT_TASK(inc_task0, inc_fn, stack0, 1);
-    static RT_TASK(inc_task1, inc_fn, stack1, 1);
-    rt_task_start(&inc_task0);
-    rt_task_start(&inc_task1);
+    static struct rt_task inc_task0, inc_task1;
+    rt_task_init(&inc_task0, inc_fn, stack0, sizeof stack0, "inc_task0", 1);
+    rt_task_init(&inc_task1, inc_fn, stack1, sizeof stack1, "inc_task1", 1);
     rt_start();
 
     printf("%d\n", x);

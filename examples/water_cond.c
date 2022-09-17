@@ -1,5 +1,5 @@
-#include <rt/mutex.h>
 #include <rt/cond.h>
+#include <rt/mutex.h>
 #include <rt/sleep.h>
 #include <rt/task.h>
 #include <rt/rt.h>
@@ -43,17 +43,7 @@ static void oxygen(void)
     rt_cond_signal(&rxn.hdone);
     rt_cond_signal(&rxn.hdone);
     rt_mutex_unlock(&rxn.m);
-
 }
-
-
-
-
-
-
-
-
-
 
 #include <math.h>
 #include <pthread.h>
@@ -135,13 +125,12 @@ int main(void)
             rt_task_init(&atoms[i], oxygen_fn, stacks[i], PTHREAD_STACK_MIN,
                           "oxygen", 1);
         }
-
-        rt_task_start(&atoms[i]);
     }
 
     static unsigned char timeout_stack[PTHREAD_STACK_MIN];
-    static RT_TASK(timeout_task, timeout_fn, timeout_stack, 1);
-    rt_task_start(&timeout_task);
+    static struct rt_task timeout_task;
+    rt_task_init(&timeout_task, timeout_fn, timeout_stack,
+                  sizeof timeout_stack, "timeout", 1);
 
     unsigned expected_molecules = hydrogen_atoms / 2;
     if (expected_molecules > oxygen_atoms)

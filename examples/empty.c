@@ -10,7 +10,7 @@ static void empty_fn(void)
 int main(void)
 {
     static char stack[PTHREAD_STACK_MIN];
-    static RT_TASK(task, empty_fn, stack, 1);
-    rt_task_start(&task);
+    static struct rt_task task;
+    rt_task_init(&task, empty_fn, stack, sizeof stack, "empty", 1);
     rt_start();
 }

@@ -22,9 +22,10 @@ static void sleep_fn(void)
 int main(void)
 {
     static char task0_stack[PTHREAD_STACK_MIN], task1_stack[PTHREAD_STACK_MIN];
-    static RT_TASK(task0, sleep_fn, task0_stack, 1);
-    static RT_TASK(task1, sleep_fn, task1_stack, 1);
-    rt_task_start(&task0);
-    rt_task_start(&task1);
+    static struct rt_task task0, task1;
+    rt_task_init(&task0, sleep_fn, task0_stack, sizeof task0_stack, "task0",
+                  1);
+    rt_task_init(&task1, sleep_fn, task1_stack, sizeof task1_stack, "task1",
+                  1);
     rt_start();
 }

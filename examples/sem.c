@@ -30,9 +30,10 @@ int main(void)
 {
     static char poster_stack[PTHREAD_STACK_MIN],
         waiter_stack[PTHREAD_STACK_MIN];
-    static RT_TASK(poster, post_fn, poster_stack, 1);
-    static RT_TASK(waiter, wait_fn, waiter_stack, 1);
-    rt_task_start(&poster);
-    rt_task_start(&waiter);
+    static struct rt_task poster, waiter;
+    rt_task_init(&poster, post_fn, poster_stack, sizeof poster_stack, "poster",
+                  1);
+    rt_task_init(&waiter, wait_fn, waiter_stack, sizeof waiter_stack, "waiter",
+                  1);
     rt_start();
 }

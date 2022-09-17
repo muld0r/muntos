@@ -1,6 +1,6 @@
+#include <rt/sleep.h>
 #include <rt/tick.h>
 #include <rt/rt.h>
-#include <rt/sleep.h>
 
 #include <limits.h>
 #include <stdio.h>
@@ -26,9 +26,8 @@ static void simple_fn(void)
 int main(void)
 {
     static char stack0[PTHREAD_STACK_MIN], stack1[PTHREAD_STACK_MIN];
-    static RT_TASK(task0, simple_fn, stack0, 1);
-    static RT_TASK(task1, simple_fn, stack1, 1);
-    rt_task_start(&task0);
-    rt_task_start(&task1);
+    static struct rt_task task0, task1;
+    rt_task_init(&task0, simple_fn, stack0, sizeof stack0, "task0", 1);
+    rt_task_init(&task1, simple_fn, stack1, sizeof stack1, "task1", 1);
     rt_start();
 }

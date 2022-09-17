@@ -10,13 +10,11 @@
 
 struct rt_task;
 
+/*
+ * Initialize a task and make it runnable. Must be called before rt_start().
+ */
 void rt_task_init(struct rt_task *task, void (*fn)(void), void *stack,
                    size_t stack_size, const char *name, unsigned priority);
-
-/*
- * Launch a newly created task.
- */
-void rt_task_start(struct rt_task *task);
 
 struct rt_task
 {
@@ -35,23 +33,8 @@ struct rt_task
         struct rt_mutex *mutex;
     } syscall_args;
     struct rt_context *ctx;
-    void (*fn)(void);
-    void *stack;
-    size_t stack_size;
     const char *name;
     unsigned priority;
 };
-
-#define RT_TASK(name_, fn_, stack_, priority_)                                \
-    struct rt_task name_ = {                                                  \
-        .list = RT_LIST_INIT(name_.list),                                     \
-        .syscall_record = {.next = NULL, .syscall = RT_SYSCALL_NONE},         \
-        .ctx = NULL,                                                           \
-        .fn = fn_,                                                             \
-        .stack = stack_,                                                       \
-        .stack_size = sizeof stack_,                                           \
-        .name = #name_,                                                        \
-        .priority = priority_,                                                 \
-    }
 
 #endif /* RT_TASK_H */
