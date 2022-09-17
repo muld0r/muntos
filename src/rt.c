@@ -46,7 +46,7 @@ void rt_yield(void)
     task_syscall(rt_self(), RT_SYSCALL_YIELD);
 }
 
-static struct atomic_flag sched_pending = ATOMIC_FLAG_INIT;
+static atomic_flag sched_pending = ATOMIC_FLAG_INIT;
 
 void rt_sched(void)
 {
@@ -217,7 +217,7 @@ static void tick_syscall(void)
 }
 
 static atomic_ulong rt_ticks;
-static struct atomic_flag tick_pending = ATOMIC_FLAG_INIT;
+static atomic_flag tick_pending = ATOMIC_FLAG_INIT;
 
 void rt_tick_advance(void)
 {

@@ -26,7 +26,7 @@ struct rt_sem
 {
     struct rt_list wait_list;
     struct rt_syscall_record syscall_record;
-    struct atomic_flag post_pending;
+    atomic_flag post_pending;
     int num_waiters;
     atomic_int value;
     int max_value;
