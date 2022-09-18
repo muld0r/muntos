@@ -63,7 +63,7 @@ void rt_sched(void)
     }
 }
 
-void rt_exit(void)
+void rt_task_exit(void)
 {
     task_syscall(rt_self(), RT_SYSCALL_EXIT);
 }

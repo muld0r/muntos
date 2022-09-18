@@ -16,6 +16,12 @@ struct rt_task;
 void rt_task_init(struct rt_task *task, void (*fn)(void), void *stack,
                    size_t stack_size, const char *name, unsigned priority);
 
+/*
+ * Cause the current task to exit. This should be called automatically when a task
+ * function returns.
+ */
+void rt_task_exit(void);
+
 struct rt_task
 {
     struct rt_list list;

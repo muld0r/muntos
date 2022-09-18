@@ -120,7 +120,7 @@ static void *pthread_fn(void *arg)
     unblock_all_signals();
     fn();
     log_event("thread %lx exiting\n", (unsigned long)pthread_self());
-    rt_exit();
+    rt_task_exit();
     return NULL;
 }
 

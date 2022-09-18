@@ -24,11 +24,6 @@ void rt_yield(void);
 void rt_sched(void);
 
 /*
- * Terminate the currently running task.
- */
-void rt_exit(void);
-
-/*
  * Get a pointer to the currently executing task.
  */
 struct rt_task *rt_self(void);
