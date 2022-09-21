@@ -38,11 +38,6 @@
 #define log_event(...)
 #endif
 
-struct rt_context
-{
-    pthread_t thread;
-};
-
 struct pthread_arg
 {
     void (*fn)(void);
@@ -124,15 +119,13 @@ static void *pthread_fn(void *arg)
     return NULL;
 }
 
-struct rt_context *rt_context_create(void *stack, size_t stack_size,
-                                       void (*fn)(void))
+void *rt_context_create(void *stack, size_t stack_size, void (*fn)(void))
 {
     pthread_attr_t attr;
     pthread_attr_init(&attr);
     pthread_attr_setstack(&attr, stack, stack_size);
     pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
     struct pthread_arg *parg = malloc(sizeof *parg);
-    struct rt_context *ctx = malloc(sizeof *ctx);
     parg->fn = fn;
 
     /*
@@ -142,43 +135,14 @@ struct rt_context *rt_context_create(void *stack, size_t stack_size,
     sigset_t old_sigset;
     block_all_signals(&old_sigset);
 
-    pthread_create(&ctx->thread, &attr, pthread_fn, parg);
+    pthread_t thread;
+    pthread_create(&thread, &attr, pthread_fn, parg);
 
     pthread_sigmask(SIG_SETMASK, &old_sigset, NULL);
 
     pthread_attr_destroy(&attr);
 
-    return ctx;
-}
-
-void rt_context_save(struct rt_context *ctx)
-{
-    /*
-     * Prevent the thread that's being suspended from receiving further
-     * interrupts, even before it has taken its suspend handler. The suspend
-     * handler also masks these, but during a context switch, momentarily two
-     * different threads could have signals unmasked unless we mask the
-     * suspending thread here first. Otherwise, two threads could potentially
-     * both run the same signal handler, and the signal handlers are not
-     * written to be re-entrant.
-     */
-    sigset_t blocked_sigset;
-    sigfillset(&blocked_sigset);
-    sigdelset(&blocked_sigset, SIGINT);
-    sigdelset(&blocked_sigset, SIGSUSPEND);
-    pthread_sigmask(SIG_BLOCK, &blocked_sigset, NULL);
-    pthread_kill(ctx->thread, SIGSUSPEND);
-}
-
-void rt_context_load(struct rt_context *ctx)
-{
-    pthread_kill(ctx->thread, SIGRESUME);
-}
-
-void rt_context_destroy(struct rt_context *ctx)
-{
-    pthread_cancel(ctx->thread);
-    free(ctx);
+    return (void *)thread;
 }
 
 void rt_syscall_post(void)
@@ -210,7 +174,21 @@ static void syscall_handler(int sig)
 {
     log_event("thread %lx running syscall\n", (unsigned long)pthread_self());
     (void)sig;
-    rt_syscall_handler();
+    struct rt_task *oldtask = rt_self();
+    void *newctx = rt_syscall_run();
+    if (newctx)
+    {
+        /* Block signals on the suspending thread. */
+        sigset_t blocked_sigset;
+        sigfillset(&blocked_sigset);
+        sigdelset(&blocked_sigset, SIGINT);
+        sigdelset(&blocked_sigset, SIGSUSPEND);
+        pthread_sigmask(SIG_BLOCK, &blocked_sigset, NULL);
+
+        oldtask->ctx = (void *)pthread_self();
+        pthread_kill(pthread_self(), SIGSUSPEND);
+        pthread_kill((pthread_t)newctx, SIGRESUME);
+    }
 }
 
 static void tick_handler(int sig)
@@ -220,9 +198,20 @@ static void tick_handler(int sig)
     rt_tick_advance();
 }
 
+__attribute__((noreturn)) static void idle_fn(void)
+{
+    for (;;)
+    {
+    }
+}
+
 void rt_start(void)
 {
     block_all_signals(NULL);
+
+    static char idle_stack[PTHREAD_STACK_MIN];
+    pthread_t idle_thread =
+        (pthread_t)rt_context_create(idle_stack, sizeof idle_stack, idle_fn);
 
     /* The tick handler must block SIGSYSCALL and SIGSUSPEND. */
     struct sigaction tick_action = {
@@ -285,14 +274,8 @@ void rt_start(void)
 
     main_thread = pthread_self();
 
-    rt_sched();
-
-    /* Unblock syscalls so the yield can run here. */
-    sigset_t syscall_sigset;
-    sigemptyset(&syscall_sigset);
-    sigaddset(&syscall_sigset, SIGSYSCALL);
-    pthread_sigmask(SIG_UNBLOCK, &syscall_sigset, NULL);
-    pthread_sigmask(SIG_BLOCK, &syscall_sigset, NULL);
+    pthread_kill(idle_thread, SIGRESUME);
+    pthread_kill(idle_thread, SIGSYSCALL);
 
     /*
      * Unblock the wait signal to the main thread can wait for interrupts when

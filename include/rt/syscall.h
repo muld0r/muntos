@@ -38,8 +38,9 @@ void rt_syscall_push(struct rt_syscall_record *syscall);
 void rt_syscall_post(void);
 
 /*
- * Perform all pending system calls.
+ * Perform all pending system calls and return a new context to execute or NULL
+ * if no context switch is required.
  */
-void rt_syscall_handler(void);
+void *rt_syscall_run(void);
 
 #endif // RT_SYSCALL_H

@@ -12,7 +12,15 @@ static RT_LIST(ready_list);
 
 static struct rt_syscall_record *_Atomic pending_syscalls;
 
-static struct rt_task *_Atomic active_task;
+static struct rt_task idle_task = {
+    .ctx = NULL,
+    .list = RT_LIST_INIT(idle_task.list),
+    .syscall_record = {.next = NULL, .syscall = RT_SYSCALL_NONE},
+    .name = "idle",
+    .priority = 0,
+};
+
+static struct rt_task *_Atomic active_task = &idle_task;
 
 static struct rt_task *task_from_list(struct rt_list *list)
 {
@@ -69,10 +77,15 @@ void rt_task_exit(void)
 }
 
 /* TODO: simplify this based on what syscall actually occurred */
-static void sched(void)
+static void *sched(void)
 {
-    struct rt_task *const prev_task = rt_self();
     struct rt_task *const next_task = ready_pop();
+    if (!next_task)
+    {
+        return NULL;
+    }
+
+    struct rt_task *const prev_task = rt_self();
     const bool prev_exists =
         prev_task != NULL &&
         (prev_task->syscall_record.syscall != RT_SYSCALL_EXIT);
@@ -80,35 +93,16 @@ static void sched(void)
         prev_exists && rt_list_is_empty(&prev_task->list);
 
     /*
-     * If there is no new task to schedule and the current task is still ready
-     * there's nothing to do.
+     * If the previous task is still ready, re-add it to the ready list.
      */
-    if (!next_task && prev_still_ready)
+    if (prev_still_ready)
     {
-        return;
-    }
-
-    if (prev_exists)
-    {
-        rt_context_save(prev_task->ctx);
-        /*
-         * If the previous task is still ready, re-add it to the ready list.
-         */
-        if (prev_still_ready)
-        {
-            rt_list_push_back(&ready_list, &prev_task->list);
-        }
+        rt_list_push_back(&ready_list, &prev_task->list);
     }
 
     atomic_store_explicit(&active_task, next_task, memory_order_relaxed);
-    if (next_task)
-    {
-        rt_context_load(next_task->ctx);
-    }
-    else
-    {
-        rt_interrupt_wait();
-    }
+
+    return next_task->ctx;
 }
 
 /*
@@ -272,7 +266,7 @@ static void wake_mutex_waiter(struct rt_mutex *mutex)
     }
 }
 
-void rt_syscall_handler(void)
+void *rt_syscall_run(void)
 {
     /*
      * Take all elements on the pending syscall stack at once. Syscalls added
@@ -309,11 +303,7 @@ void rt_syscall_handler(void)
             sleep_periodic_syscall(syscall_record);
             break;
         case RT_SYSCALL_EXIT:
-        {
-            struct rt_task *task = task_from_syscall_record(syscall_record);
-            rt_context_destroy(task->ctx);
             break;
-        }
         case RT_SYSCALL_SEM_WAIT:
         {
             struct rt_task *task = task_from_syscall_record(syscall_record);
@@ -364,7 +354,7 @@ void rt_syscall_handler(void)
         syscall_record = syscall_record->next;
     }
 
-    sched();
+    return sched();
 }
 
 void rt_task_init(struct rt_task *task, void (*fn)(void), void *stack,
