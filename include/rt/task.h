@@ -24,6 +24,7 @@ void rt_task_exit(void);
 
 struct rt_task
 {
+    void *ctx;
     struct rt_list list;
     struct rt_syscall_record syscall_record;
     union
@@ -38,7 +39,6 @@ struct rt_task
         struct rt_sem *sem;
         struct rt_mutex *mutex;
     } syscall_args;
-    struct rt_context *ctx;
     const char *name;
     unsigned priority;
 };
