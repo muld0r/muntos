@@ -1,5 +1,4 @@
 #include <rt/context.h>
-#include <rt/interrupt.h>
 #include <rt/rt.h>
 
 #include <rt/syscall.h>
@@ -18,8 +17,7 @@
 #define SIGSUSPEND SIGRTMIN
 #define SIGRESUME (SIGRTMIN + 1)
 #define SIGSYSCALL (SIGRTMIN + 2)
-#define SIGWAIT (SIGRTMIN + 3)
-#define SIGRTSTOP (SIGRTMIN + 4)
+#define SIGRTSTOP (SIGRTMIN + 3)
 
 #define log(...)                                                               \
     do                                                                         \
@@ -59,45 +57,6 @@ static void unblock_all_signals(void)
     sigset_t full_sigset;
     sigfillset(&full_sigset);
     pthread_sigmask(SIG_UNBLOCK, &full_sigset, NULL);
-}
-
-static void wait_handler(int sig)
-{
-    /*
-     * Used to temporarily allow the main thread to handle interrupts because
-     * all other threads are suspended.
-     */
-    log_event("thread %lx waiting for signal\n", (unsigned long)pthread_self());
-    sigset_t wait_sigset;
-    sigfillset(&wait_sigset);
-    /* Don't consume SIGINT or SIGRTSTOP here, as those should be received in
-     * the main thread to allow it to clean up. */
-    sigdelset(&wait_sigset, SIGINT);
-    sigdelset(&wait_sigset, SIGRTSTOP);
-    sigwait(&wait_sigset, &sig);
-    log_event("thread %lx received signal %d while waiting\n",
-              (unsigned long)pthread_self(), sig);
-    /*
-     * After receiving an interrupt via sigwait, re-trigger it, temporarily
-     * unblock that signal, then restore the main thread's signal mask so the
-     * main thread can handle this interrupt. Block SIGWAIT at the same time so
-     * that wait_handler can't run again until the new signal handler returns.
-     */
-    sigemptyset(&wait_sigset);
-    sigaddset(&wait_sigset, SIGWAIT);
-    pthread_kill(pthread_self(), sig);
-    sigset_t old_sigset;
-    pthread_sigmask(SIG_SETMASK, &wait_sigset, &old_sigset);
-    pthread_sigmask(SIG_SETMASK, &old_sigset, NULL);
-}
-
-void rt_interrupt_wait(void)
-{
-    /*
-     * This is called in the syscall handler when there's no active thread to
-     * schedule.
-     */
-    pthread_kill(main_thread, SIGWAIT);
 }
 
 static void *pthread_fn(void *arg)
@@ -200,8 +159,23 @@ static void tick_handler(int sig)
 
 __attribute__((noreturn)) static void idle_fn(void)
 {
+    sigset_t sigset;
+    sigfillset(&sigset);
+    sigdelset(&sigset, SIGINT);
     for (;;)
     {
+        /* Block signals and wait for one to occur. */
+        block_all_signals(NULL);
+        log_event("thread %lx waiting for signal\n",
+                  (unsigned long)pthread_self());
+        int sig;
+        sigwait(&sigset, &sig);
+        log_event("thread %lx received signal %d while waiting\n",
+                  (unsigned long)pthread_self(), sig);
+
+        /* After receiving a signal, re-trigger it and unblock signals. */
+        pthread_kill(pthread_self(), sig);
+        unblock_all_signals();
     }
 }
 
@@ -220,7 +194,6 @@ void rt_start(void)
     sigemptyset(&tick_action.sa_mask);
     sigaddset(&tick_action.sa_mask, SIGSYSCALL);
     sigaddset(&tick_action.sa_mask, SIGSUSPEND);
-    sigaddset(&tick_action.sa_mask, SIGWAIT);
     sigaction(SIGTICK, &tick_action, NULL);
 
     /* The handler for SIGRESUME is just to catch spurious resumes and error
@@ -250,17 +223,7 @@ void rt_start(void)
     };
     sigemptyset(&syscall_action.sa_mask);
     sigaddset(&syscall_action.sa_mask, SIGSUSPEND);
-    sigaddset(&syscall_action.sa_mask, SIGWAIT);
     sigaction(SIGSYSCALL, &syscall_action, NULL);
-
-    /* The wait handler signal mask must not block signals because it needs to
-     * temporarily unmask whatever signal it receives. The wait handler will
-     * re-block signals itself before returning. */
-    struct sigaction wait_action = {
-        .sa_handler = wait_handler,
-    };
-    sigemptyset(&wait_action.sa_mask);
-    sigaction(SIGWAIT, &wait_action, NULL);
 
     static const struct timeval milli = {
         .tv_sec = 0,
@@ -278,22 +241,10 @@ void rt_start(void)
     pthread_kill(idle_thread, SIGSYSCALL);
 
     /*
-     * Unblock the wait signal to the main thread can wait for interrupts when
-     * all other tasks become idle.
-     */
-    sigset_t wait_sigset;
-    sigemptyset(&wait_sigset);
-    sigaddset(&wait_sigset, SIGWAIT);
-    pthread_sigmask(SIG_UNBLOCK, &wait_sigset, NULL);
-
-    /*
-     * Allow SIGINT or SIGRTSTOP to stop the scheduler.
-     * TODO: do we need to wait on SIGINT here for ctrl-C to work?
-     * It should be always unblocked.
+     * Allow SIGRTSTOP to stop the scheduler.
      */
     sigset_t stop_sigset;
     sigemptyset(&stop_sigset);
-    sigaddset(&stop_sigset, SIGINT);
     sigaddset(&stop_sigset, SIGRTSTOP);
 
     int sig;
@@ -316,7 +267,6 @@ void rt_start(void)
     sigaction(SIGRESUME, &action, NULL);
     sigaction(SIGSUSPEND, &action, NULL);
     sigaction(SIGSYSCALL, &action, NULL);
-    sigaction(SIGWAIT, &action, NULL);
 
     unblock_all_signals();
 
@@ -326,7 +276,6 @@ void rt_start(void)
     sigaction(SIGRESUME, &action, NULL);
     sigaction(SIGSUSPEND, &action, NULL);
     sigaction(SIGSYSCALL, &action, NULL);
-    sigaction(SIGWAIT, &action, NULL);
 }
 
 void rt_stop(void)
