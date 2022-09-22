@@ -13,7 +13,7 @@ struct gp_context
     uint32_t r0, r1, r2, r3, r12;
     void (*lr)(void);
     void (*pc)(void);
-    uint32_t apsr;
+    uint32_t xpsr;
 };
 
 void *rt_context_create(void (*fn)(void), void *stack, size_t stack_size)
@@ -21,7 +21,7 @@ void *rt_context_create(void (*fn)(void), void *stack, size_t stack_size)
     void *const stack_end = (char *)stack + stack_size;
     struct gp_context *ctx = stack_end;
     ctx -= 1;
-    ctx->apsr = 0;
+    ctx->xpsr = 0x01000000U;
     ctx->pc = fn;
     ctx->lr = rt_task_exit;
     ctx->exc_lr = 0xFFFFFFFDU; // thread mode, no FP, use PSP
