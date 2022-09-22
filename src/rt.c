@@ -19,6 +19,7 @@ static struct rt_task idle_task = {
     .priority = 0,
 };
 
+struct rt_task *rt_prev_task;
 static struct rt_task *_Atomic active_task = &idle_task;
 
 static struct rt_task *task_from_list(struct rt_list *list)
@@ -84,19 +85,15 @@ static void *sched(void)
         return NULL;
     }
 
-    struct rt_task *const prev_task = rt_self();
-    const bool prev_exists =
-        prev_task != NULL &&
-        (prev_task->syscall_record.syscall != RT_SYSCALL_EXIT);
-    const bool prev_still_ready =
-        prev_exists && rt_list_is_empty(&prev_task->list);
+    rt_prev_task = rt_self();
 
     /*
      * If the previous task is still ready, re-add it to the ready list.
      */
-    if (prev_still_ready)
+    if ((rt_prev_task->syscall_record.syscall != RT_SYSCALL_EXIT) &&
+        rt_list_is_empty(&rt_prev_task->list))
     {
-        rt_list_push_back(&ready_list, &prev_task->list);
+        rt_list_push_back(&ready_list, &rt_prev_task->list);
     }
 
     atomic_store_explicit(&active_task, next_task, memory_order_relaxed);

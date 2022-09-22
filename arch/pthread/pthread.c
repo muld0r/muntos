@@ -133,7 +133,6 @@ static void syscall_handler(int sig)
 {
     log_event("thread %lx running syscall\n", (unsigned long)pthread_self());
     (void)sig;
-    struct rt_task *oldtask = rt_self();
     void *newctx = rt_syscall_run();
     if (newctx)
     {
@@ -144,7 +143,7 @@ static void syscall_handler(int sig)
         sigdelset(&blocked_sigset, SIGSUSPEND);
         pthread_sigmask(SIG_BLOCK, &blocked_sigset, NULL);
 
-        oldtask->ctx = (void *)pthread_self();
+        rt_prev_task->ctx = (void *)pthread_self();
         pthread_kill(pthread_self(), SIGSUSPEND);
         pthread_kill((pthread_t)newctx, SIGRESUME);
     }

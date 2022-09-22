@@ -17,8 +17,8 @@ void rt_task_init(struct rt_task *task, void (*fn)(void), void *stack,
                    size_t stack_size, const char *name, unsigned priority);
 
 /*
- * Cause the current task to exit. This should be called automatically when a task
- * function returns.
+ * Cause the current task to exit. This should be called automatically when a
+ * task function returns.
  */
 void rt_task_exit(void);
 
@@ -42,5 +42,11 @@ struct rt_task
     const char *name;
     unsigned priority;
 };
+
+/*
+ * Pointer to the previous task, used to store the suspending context in a
+ * context switch.
+ */
+extern struct rt_task *rt_prev_task;
 
 #endif /* RT_TASK_H */
