@@ -12,16 +12,20 @@ syscall_handler:
     it eq
     bxeq lr
 
-    /* TODO: condtionally save and restore floating-point non-volatile context */
-
-    ldr r1, =rt_prev_task
-
-    mrs r2, psp
-    stmdb r2!, {r4-r11, lr}
-    str r2, [r1]
+    mrs r1, psp
+    tst lr, 0x10
+    it eq
+    vstmdbeq r1!, {s16-s31}
+    stmdb r1!, {r4-r11, lr}
+    ldr r2, =rt_prev_task
+    str r1, [r2]
 
     ldmia r0!, {r4-r11, lr}
+    tst lr, 0x10
+    it eq
+    vldmiaeq r0!, {s16-s31}
     msr psp, r0
+    isb
 
     bx lr
 

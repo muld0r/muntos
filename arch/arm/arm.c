@@ -24,6 +24,7 @@ void *rt_context_create(void *stack, size_t stack_size, void (*fn)(void))
     ctx->apsr = 0;
     ctx->pc = fn;
     ctx->lr = rt_task_exit;
+    ctx->exc_lr = 0xFFFFFFFDU; // thread mode, no FP, use PSP
     return ctx;
 }
 
@@ -43,10 +44,6 @@ void rt_start(void)
 
     // Set the process stack pointer to the top of the idle task stack.
     __asm__ __volatile__(
-            "ldr r0, =0xE000ED08\n" // Load the address of VTOR.
-            "ldr r0, [r0]\n" // Read VTOR to get the vector address.
-            "ldr r0, [r0]\n" // Load the contents of the first vector entry.
-            "msr msp, r0\n" // Set the main stack pointer back to the start.
             "msr psp, %0\n" // Set the process stack pointer to the idle task stack.
             "mov r0, 3\n" // Switch to the process stack pointer and drop privileges.
             "msr control, r0\n"
