@@ -109,8 +109,7 @@ void rt_start(void)
 
 void rt_stop(void)
 {
-    // TODO: Disable the tick and syscall interrupts, return execution
-    // to the end of rt_start.
+    __asm__("bkpt 0");
 }
 
 void rt_syscall_post(void)
