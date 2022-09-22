@@ -7,27 +7,21 @@
     .global syscall_handler
     .type syscall_handler, %function
 syscall_handler:
-    bl rt_self
-    push {r4}
-    mov r4, r0
-    bl rt_syscall_handler
-    bl rt_self
-    mov r1, r4
-    pop {r4}
-
-    cmp r0, r1
+    bl rt_syscall_run
+    cmp r0, 0
     it eq
     bxeq lr
 
     /* TODO: condtionally save and restore floating-point non-volatile context */
 
+    ldr r1, =rt_prev_task
+
     mrs r2, psp
-    stmdb r2!, {r4-r11}
+    stmdb r2!, {r4-r11, lr}
     str r2, [r1]
 
-    ldr r2, [r0]
-    ldmia r2!, {r4-r11}
-    msr psp, r2
+    ldmia r0!, {r4-r11, lr}
+    msr psp, r0
 
     bx lr
 
