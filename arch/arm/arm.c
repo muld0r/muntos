@@ -38,17 +38,20 @@ void idle_fn(void)
 
 void rt_start(void)
 {
-    static char idle_stack[72];
+    __attribute__((aligned(8))) static char idle_stack[72];
 
-    // TODO: Set the priorities of the tick and syscall interrupts and enable them.
+    // TODO: Set the priorities of the tick and syscall interrupts and enable
+    // them.
 
-    // Set the process stack pointer to the top of the idle task stack.
     __asm__ __volatile__(
-            "msr psp, %0\n" // Set the process stack pointer to the idle task stack.
-            "mov r0, 3\n" // Switch to the process stack pointer and drop privileges.
-            "msr control, r0\n"
-            "isb\n"
-            : :"r"(&idle_stack[sizeof idle_stack]));
+        // Set the process stack pointer to the top of the idle task stack.
+        "msr psp, %0\n"
+        // Switch to the process stack pointer and drop privileges.
+        "mov r0, 3\n"
+        "msr control, r0\n"
+        "isb\n"
+        :
+        : "r"(&idle_stack[sizeof idle_stack]));
 
     rt_yield();
     idle_fn();
@@ -62,7 +65,5 @@ void rt_stop(void)
 
 void rt_syscall_post(void)
 {
-    // TODO: is using pendSV instead within ISRs necessary?
-    // ICSR->PENDSVSET = true;
-    __asm__ __volatile__("svc 0");
+    __asm__("svc 0");
 }
