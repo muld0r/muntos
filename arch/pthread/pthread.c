@@ -78,7 +78,7 @@ static void *pthread_fn(void *arg)
     return NULL;
 }
 
-void *rt_context_create(void *stack, size_t stack_size, void (*fn)(void))
+void *rt_context_create(void (*fn)(void), void *stack, size_t stack_size)
 {
     pthread_attr_t attr;
     pthread_attr_init(&attr);
@@ -184,7 +184,7 @@ void rt_start(void)
 
     static char idle_stack[PTHREAD_STACK_MIN];
     pthread_t idle_thread =
-        (pthread_t)rt_context_create(idle_stack, sizeof idle_stack, idle_fn);
+        (pthread_t)rt_context_create(idle_fn, idle_stack, sizeof idle_stack);
 
     /* The tick handler must block SIGSYSCALL and SIGSUSPEND. */
     struct sigaction tick_action = {

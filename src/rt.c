@@ -359,7 +359,7 @@ void rt_task_init(struct rt_task *task, void (*fn)(void), void *stack,
     rt_list_init(&task->list);
     task->syscall_record.next = NULL;
     task->syscall_record.syscall = RT_SYSCALL_NONE;
-    task->ctx = rt_context_create(stack, stack_size, fn);
+    task->ctx = rt_context_create(fn, stack, stack_size);
     task->name = name;
     task->priority = priority;
     rt_list_push_back(&ready_list, &task->list);
