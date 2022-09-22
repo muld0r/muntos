@@ -2,7 +2,7 @@ import os
 import sys
 
 llvm_flags = [
-    "-g",
+    "-g3",
     "-Og",
     "-ffunction-sections",
     "-fdata-sections",
