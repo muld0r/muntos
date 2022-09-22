@@ -16,7 +16,7 @@ struct gp_context
     uint32_t apsr;
 };
 
-void *rt_context_create(void *stack, size_t stack_size, void (*fn)(void))
+void *rt_context_create(void (*fn)(void), void *stack, size_t stack_size)
 {
     void *const stack_end = (char *)stack + stack_size;
     struct gp_context *ctx = stack_end;
