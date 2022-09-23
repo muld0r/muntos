@@ -13,7 +13,7 @@ struct gp_context
     uint32_t r0, r1, r2, r3, r12;
     void (*lr)(void);
     void (*pc)(void);
-    uint32_t xpsr;
+    uint32_t psr;
 };
 
 void *rt_context_create(void (*fn)(void), void *stack, size_t stack_size)
@@ -21,7 +21,7 @@ void *rt_context_create(void (*fn)(void), void *stack, size_t stack_size)
     void *const stack_end = (char *)stack + stack_size;
     struct gp_context *ctx = stack_end;
     ctx -= 1;
-    ctx->xpsr = 0x01000000U;
+    ctx->psr = 0x01000000U; // thumb state
     ctx->pc = fn;
     ctx->lr = rt_task_exit;
     ctx->exc_lr = 0xFFFFFFFDU; // thread mode, no FP, use PSP
@@ -51,7 +51,7 @@ struct stk
     uint32_t calib;
 };
 
-static volatile struct stk *stk = (volatile struct stk *)0xE000E010U;
+static volatile struct stk *const stk = (volatile struct stk *)0xE000E010U;
 
 struct shpr
 {
@@ -69,7 +69,7 @@ struct shpr
     uint8_t systick;
 };
 
-static volatile struct shpr *shpr = (volatile struct shpr *)0xE000ED18U;
+static volatile struct shpr *const shpr = (volatile struct shpr *)0xE000ED18U;
 
 void rt_start(void)
 {
@@ -87,9 +87,9 @@ void rt_start(void)
         : "r"(&idle_stack[sizeof idle_stack])
         : "r0");
 
-    shpr->svcall = 1 << 4;
-    shpr->systick = 2 << 4;
-    __asm__("isb");
+    shpr->svcall = 15 << 4;
+    shpr->pendsv = 15 << 4;
+    shpr->systick = 14 << 4;
 
     stk->reload = 1000000;
     stk->current = 0;
@@ -109,10 +109,30 @@ void rt_start(void)
 
 void rt_stop(void)
 {
-    __asm__("bkpt 0");
+    __asm__("bkpt");
 }
+
+static volatile uint32_t *const icsr = (volatile uint32_t *)0xE000ED04UL;
+#define PENDSVSET (1U << 28)
 
 void rt_syscall_post(void)
 {
-    __asm__("svc 0");
+    /*
+     * If no exception is active, we are in unprivileged mode and must use svc.
+     * Otherwise, we are in an exception. Because all exceptions have higher
+     * priority than SVCall, using svc will escalate to a hard fault, so we
+     * must use PendSV instead.
+     */
+    uint32_t ipsr;
+    __asm__("mrs %0, ipsr" : "=r"(ipsr));
+    if (ipsr == 0)
+    {
+        __asm__("svc 0");
+    }
+    else
+    {
+        *icsr = PENDSVSET;
+        __asm__("dsb\n"
+                "isb\n");
+    }
 }
