@@ -91,7 +91,7 @@ void rt_start(void)
     shpr->pendsv = 15 << 4;
     shpr->systick = 14 << 4;
 
-    stk->reload = 1000000;
+    stk->reload = 1000;
     stk->current = 0;
     stk->ctrl = STK_CTRL_ENABLE | STK_CTRL_TICKINT;
 
