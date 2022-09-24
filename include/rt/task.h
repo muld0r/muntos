@@ -11,13 +11,22 @@
 struct rt_task;
 
 /*
- * Initialize a task and make it runnable. Must be called before rt_start().
+ * Initialize a task that runs fn() on the given stack, and make it runnable.
+ * Must be called before rt_start().
  */
 void rt_task_init(struct rt_task *task, void (*fn)(void), void *stack,
                    size_t stack_size, const char *name, unsigned priority);
 
 /*
- * Cause the current task to exit. This should be called automatically when a
+ * Initialize a task that runs fn(arg) on the given stack, and make it runnable.
+ * Must be called before rt_start().
+ */
+void rt_task_init_arg(struct rt_task *task, void (*fn)(void *), void *stack,
+                       size_t stack_size, const char *name, unsigned priority,
+                       void *arg);
+
+/*
+ * Exit from the current task. This should be called automatically when a
  * task function returns.
  */
 void rt_task_exit(void);
