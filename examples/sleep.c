@@ -16,7 +16,13 @@ static void sleep(void)
         fflush(stdout);
         --n;
     }
-    rt_stop();
+
+    /* Only the second task to finish will call rt_stop. */
+    static RT_SEM(stop_sem, 1);
+    if (!rt_sem_trywait(&stop_sem))
+    {
+        rt_stop();
+    }
 }
 
 int main(void)
