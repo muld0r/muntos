@@ -18,11 +18,7 @@ void rt_mutex_lock(struct rt_mutex *mutex)
         return;
     }
 
-    struct rt_task *self = rt_self();
-    self->syscall_args.mutex = mutex;
-    self->syscall_record.syscall = RT_SYSCALL_MUTEX_LOCK;
-    rt_syscall_push(&self->syscall_record);
-    rt_syscall_post();
+    rt_syscall_ptr(RT_SYSCALL_MUTEX_LOCK, mutex);
 }
 
 bool rt_mutex_trylock(struct rt_mutex *mutex)

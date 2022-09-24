@@ -23,9 +23,4 @@ void rt_yield(void);
  */
 void rt_sched(void);
 
-/*
- * Get a pointer to the currently executing task.
- */
-struct rt_task *rt_self(void);
-
 #endif /* RT_H */

@@ -111,10 +111,6 @@ void rt_sem_wait(struct rt_sem *sem)
 
     if (value <= 0)
     {
-        struct rt_task *self = rt_self();
-        self->syscall_args.sem = sem;
-        self->syscall_record.syscall = RT_SYSCALL_SEM_WAIT;
-        rt_syscall_push(&self->syscall_record);
-        rt_syscall_post();
+        rt_syscall_ptr(RT_SYSCALL_SEM_WAIT, sem);
     }
 }

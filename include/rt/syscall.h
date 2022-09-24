@@ -27,8 +27,18 @@ enum rt_syscall
 struct rt_syscall_record
 {
     struct rt_syscall_record *next;
+    union {
+        unsigned long val;
+        void *ptr;
+    } arg;
     enum rt_syscall syscall;
 };
+
+void rt_syscall(enum rt_syscall syscall);
+
+void rt_syscall_ptr(enum rt_syscall syscall, void *arg);
+
+void rt_syscall_val(enum rt_syscall syscall, unsigned long arg);
 
 void rt_syscall_push(struct rt_syscall_record *syscall);
 

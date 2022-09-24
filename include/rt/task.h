@@ -27,18 +27,6 @@ struct rt_task
     void *ctx;
     struct rt_list list;
     struct rt_syscall_record syscall_record;
-    union
-    {
-        unsigned long wake_tick;
-        unsigned long sleep_ticks;
-        struct
-        {
-            unsigned long last_wake_tick;
-            unsigned long period;
-        } sleep_periodic;
-        struct rt_sem *sem;
-        struct rt_mutex *mutex;
-    } syscall_args;
     const char *name;
     unsigned priority;
 };
