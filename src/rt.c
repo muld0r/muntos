@@ -253,12 +253,11 @@ static void wake_sem_waiters(struct rt_sem *sem)
 
 static void wake_mutex_waiter(struct rt_mutex *mutex)
 {
-    if ((mutex->num_waiters > 0) &&
+    if (!rt_list_is_empty(&mutex->wait_list) &&
         !atomic_flag_test_and_set_explicit(&mutex->lock, memory_order_acquire))
     {
         struct rt_list *node = rt_list_pop_front(&mutex->wait_list);
         rt_list_push_back(&ready_list, node);
-        --mutex->num_waiters;
     }
 }
 
@@ -316,8 +315,7 @@ void *rt_syscall_run(void)
             struct rt_task *task = task_from_syscall_record(syscall_record);
             struct rt_mutex *mutex = task->syscall_args.mutex;
             rt_list_push_back(&mutex->wait_list, &task->list);
-            ++mutex->num_waiters;
-            /* Evaluate mutex wakes here as well in case a post occurred
+            /* Evaluate mutex wakes here as well in case an unlock occurred
              * before the wait syscall was handled. */
             wake_mutex_waiter(mutex);
             break;

@@ -6,7 +6,6 @@ void rt_mutex_init(struct rt_mutex *mutex)
 {
     rt_list_init(&mutex->wait_list);
     mutex->syscall_record.syscall = RT_SYSCALL_MUTEX_UNLOCK;
-    mutex->num_waiters = 0;
     atomic_flag_clear_explicit(&mutex->unlock_pending, memory_order_relaxed);
     atomic_flag_clear_explicit(&mutex->lock, memory_order_release);
 }
