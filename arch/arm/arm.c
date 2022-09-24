@@ -24,7 +24,7 @@ void *rt_context_create(void (*fn)(void *), void *arg, void *stack,
     ctx -= 1;
     ctx->exc_lr = 0xFFFFFFFDU; // thread mode, no FP, use PSP
     ctx->r0 = (uint32_t)arg;
-    ctx->lr = rt_task_exit;
+    ctx->lr = (uint32_t)rt_task_exit;
     ctx->pc = (uint32_t)fn;
     ctx->psr = 0x01000000U; // thumb state
     return ctx;
