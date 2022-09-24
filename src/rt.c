@@ -54,7 +54,6 @@ static atomic_flag sched_pending = ATOMIC_FLAG_INIT;
 void rt_sched(void)
 {
     static struct rt_syscall_record sched = {
-        .next = NULL,
         .syscall = RT_SYSCALL_SCHED,
     };
 
