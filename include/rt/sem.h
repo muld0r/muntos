@@ -26,10 +26,10 @@ struct rt_sem
 {
     struct rt_list wait_list;
     struct rt_syscall_record syscall_record;
-    atomic_flag post_pending;
     int num_waiters;
     atomic_int value;
     int max_value;
+    atomic_flag post_pending;
 };
 
 #define RT_SEM_INIT_WITH_MAX(name, initial_value, max_value_)                 \
