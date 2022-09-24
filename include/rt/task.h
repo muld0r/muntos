@@ -31,7 +31,7 @@ struct rt_task
 {
     void *ctx;
     struct rt_list list;
-    struct rt_syscall_record syscall_record;
+    unsigned long wake_tick;
     const char *name;
     unsigned priority;
 };

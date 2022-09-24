@@ -1,6 +1,8 @@
 #ifndef RT_SYSCALL_H
 #define RT_SYSCALL_H
 
+struct rt_task;
+
 enum rt_syscall
 {
     RT_SYSCALL_NONE,
@@ -27,6 +29,7 @@ enum rt_syscall
 struct rt_syscall_record
 {
     struct rt_syscall_record *next;
+    struct rt_task *task;
     union {
         unsigned long val;
         void *ptr;
