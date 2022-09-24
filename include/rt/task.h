@@ -22,6 +22,11 @@ void rt_task_init(struct rt_task *task, void (*fn)(void), void *stack,
  */
 void rt_task_exit(void);
 
+/*
+ * Get the name of the current task.
+ */
+const char *rt_task_name(void);
+
 struct rt_task
 {
     void *ctx;

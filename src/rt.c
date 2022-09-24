@@ -59,6 +59,11 @@ void rt_sched(void)
     }
 }
 
+const char *rt_task_name(void)
+{
+    return active_task->name;
+}
+
 void rt_task_exit(void)
 {
     rt_syscall(RT_SYSCALL_EXIT);
