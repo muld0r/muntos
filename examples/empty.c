@@ -2,7 +2,7 @@
 
 #include <limits.h>
 
-static void empty_fn(void)
+static void empty(void)
 {
     rt_stop();
 }
@@ -10,7 +10,6 @@ static void empty_fn(void)
 int main(void)
 {
     static char stack[PTHREAD_STACK_MIN];
-    static struct rt_task task;
-    rt_task_init(&task, empty_fn, stack, sizeof stack, "empty", 1);
+    RT_TASK(empty, stack, 1);
     rt_start();
 }

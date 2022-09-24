@@ -7,7 +7,7 @@
 static const int n = 10;
 static RT_SEM(sem, 0);
 
-static void post_fn(void)
+static void poster(void)
 {
     for (int i = 1; i <= n; ++i)
     {
@@ -15,7 +15,7 @@ static void post_fn(void)
     }
 }
 
-static void wait_fn(void)
+static void waiter(void)
 {
     for (int i = 1; i <= n; ++i)
     {
@@ -30,10 +30,7 @@ int main(void)
 {
     static char poster_stack[PTHREAD_STACK_MIN],
         waiter_stack[PTHREAD_STACK_MIN];
-    static struct rt_task poster, waiter;
-    rt_task_init(&poster, post_fn, poster_stack, sizeof poster_stack, "poster",
-                  1);
-    rt_task_init(&waiter, wait_fn, waiter_stack, sizeof waiter_stack, "waiter",
-                  1);
+    RT_TASK(poster, poster_stack, 1);
+    RT_TASK(waiter, waiter_stack, 1);
     rt_start();
 }

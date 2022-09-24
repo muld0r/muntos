@@ -90,7 +90,7 @@ static void check(atomic_uint *p, const char *s, unsigned expected)
     }
 }
 
-static void timeout_fn(void)
+static void timeout(void)
 {
     rt_sleep(1000);
     rt_stop();
@@ -109,7 +109,7 @@ int main(void)
     reaction_init();
 
     struct rt_task atoms[TOTAL_ATOMS];
-    static unsigned char stacks[TOTAL_ATOMS][PTHREAD_STACK_MIN];
+    static char stacks[TOTAL_ATOMS][PTHREAD_STACK_MIN];
 
     for (int i = 0; i < TOTAL_ATOMS; i++)
     {
@@ -127,10 +127,8 @@ int main(void)
         }
     }
 
-    static unsigned char timeout_stack[PTHREAD_STACK_MIN];
-    static struct rt_task timeout_task;
-    rt_task_init(&timeout_task, timeout_fn, timeout_stack,
-                  sizeof timeout_stack, "timeout", 1);
+    static char timeout_stack[PTHREAD_STACK_MIN];
+    RT_TASK(timeout, timeout_stack, 1);
 
     unsigned expected_molecules = hydrogen_atoms / 2;
     if (expected_molecules > oxygen_atoms)

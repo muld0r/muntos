@@ -43,6 +43,13 @@ struct rt_task
     unsigned priority;
 };
 
+#define RT_TASK(fn, stack, priority)                                          \
+    do                                                                         \
+    {                                                                          \
+        static struct rt_task fn##task;                                       \
+        rt_task_init(&fn##task, fn, stack, sizeof(stack), #fn, priority);     \
+    } while (0)
+
 /*
  * Pointer to the previous task, used to store the suspending context in a
  * context switch.

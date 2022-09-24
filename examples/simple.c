@@ -1,12 +1,13 @@
 #include <rt/sleep.h>
 #include <rt/tick.h>
 #include <rt/rt.h>
+#include <rt/sem.h>
 
 #include <limits.h>
 #include <stdio.h>
 #include <string.h>
 
-static void simple_fn(void)
+static void simple(void)
 {
     int n = 100;
     while (n > 0)
@@ -14,11 +15,13 @@ static void simple_fn(void)
         rt_yield();
         --n;
     }
-    printf("%s finished\n", rt_self()->name);
-    fflush(stdout);
-    if (strcmp(rt_self()->name, "task0") == 0)
+
+    /* Only the second task to finish will call rt_stop. */
+    static RT_SEM(stop_sem, 1);
+    if (!rt_sem_trywait(&stop_sem))
     {
-        rt_sleep(500);
+        printf("finished\n");
+        fflush(stdout);
         rt_stop();
     }
 }
@@ -26,8 +29,7 @@ static void simple_fn(void)
 int main(void)
 {
     static char stack0[PTHREAD_STACK_MIN], stack1[PTHREAD_STACK_MIN];
-    static struct rt_task task0, task1;
-    rt_task_init(&task0, simple_fn, stack0, sizeof stack0, "task0", 1);
-    rt_task_init(&task1, simple_fn, stack1, sizeof stack1, "task1", 1);
+    RT_TASK(simple, stack0, 1);
+    RT_TASK(simple, stack1, 1);
     rt_start();
 }
