@@ -11,19 +11,12 @@
 struct rt_task;
 
 /*
- * Initialize a task that runs fn() on the given stack, and make it runnable.
- * Must be called before rt_start().
- */
-void rt_task_init(struct rt_task *task, void (*fn)(void), void *stack,
-                   size_t stack_size, const char *name, unsigned priority);
-
-/*
  * Initialize a task that runs fn(arg) on the given stack, and make it runnable.
  * Must be called before rt_start().
  */
-void rt_task_init_arg(struct rt_task *task, void (*fn)(void *), void *stack,
-                       size_t stack_size, const char *name, unsigned priority,
-                       void *arg);
+void rt_task_init(struct rt_task *task, void (*fn)(void *), void *arg,
+                   const char *name, unsigned priority, void *stack,
+                   size_t stack_size);
 
 /*
  * Exit from the current task. This should be called automatically when a
@@ -45,11 +38,12 @@ struct rt_task
     unsigned priority;
 };
 
-#define RT_TASK(fn, stack, priority)                                          \
+#define RT_TASK(fn, arg, stack, priority)                                     \
     do                                                                         \
     {                                                                          \
         static struct rt_task fn##task;                                       \
-        rt_task_init(&fn##task, fn, stack, sizeof(stack), #fn, priority);     \
+        rt_task_init(&fn##task, fn, arg, #fn, priority, stack,                \
+                      sizeof(stack));                                          \
     } while (0)
 
 /*

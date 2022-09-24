@@ -364,27 +364,13 @@ void *rt_syscall_run(void)
     return sched();
 }
 
-static void task_init(struct rt_task *task, const char *name,
-                      unsigned priority)
+void rt_task_init(struct rt_task *task, void (*fn)(void *), void *arg,
+                   const char *name, unsigned priority, void *stack,
+                   size_t stack_size)
 {
-    rt_list_init(&task->list);
-    task->name = name;
-    task->wake_tick = 0;
-    task->priority = priority;
+    task->ctx = rt_context_create(fn, arg, stack, stack_size);
     rt_list_push_back(&ready_list, &task->list);
-}
-
-void rt_task_init(struct rt_task *task, void (*fn)(void), void *stack,
-                   size_t stack_size, const char *name, unsigned priority)
-{
-    task->ctx = rt_context_create(fn, stack, stack_size);
-    task_init(task, name, priority);
-}
-
-void rt_task_init_arg(struct rt_task *task, void (*fn)(void *), void *stack,
-                       size_t stack_size, const char *name, unsigned priority,
-                       void *arg)
-{
-    task->ctx = rt_context_create_arg(fn, stack, stack_size, arg);
-    task_init(task, name, priority);
+    task->wake_tick = 0;
+    task->name = name;
+    task->priority = priority;
 }

@@ -8,5 +8,6 @@ env.Program("list.c")
 env.Program("sem.c")
 env.Program("mutex.c")
 
-env.Program("water_sem.c")
-env.Program("water_cond.c")
+water = env.Object("water/water.c")
+env.Program(target="water_sem", source=["water/sem.c", water])
+env.Program(target="water_cond", source=["water/cond.c", water])

@@ -5,7 +5,7 @@
 #include <limits.h>
 #include <stdio.h>
 
-static void sleep(void)
+static void sleep(void *arg)
 {
     int n = 5;
     unsigned long last_wake_tick = 0;
@@ -18,8 +18,7 @@ static void sleep(void)
     }
 
     /* Only the second task to finish will call rt_stop. */
-    static RT_SEM(stop_sem, 1);
-    if (!rt_sem_trywait(&stop_sem))
+    if (!rt_sem_trywait(arg))
     {
         rt_stop();
     }
@@ -27,8 +26,9 @@ static void sleep(void)
 
 int main(void)
 {
+    static RT_SEM(stop_sem, 1);
     static char task0_stack[PTHREAD_STACK_MIN], task1_stack[PTHREAD_STACK_MIN];
-    RT_TASK(sleep, task0_stack, 1);
-    RT_TASK(sleep, task1_stack, 1);
+    RT_TASK(sleep, &stop_sem, task0_stack, 1);
+    RT_TASK(sleep, &stop_sem, task1_stack, 1);
     rt_start();
 }

@@ -10,8 +10,9 @@ static RT_MUTEX(mutex);
 
 static int x;
 
-static void increment(void)
+static void increment(void *arg)
 {
+    (void)arg;
     for (int i = 0; i < n; ++i)
     {
         rt_mutex_lock(&mutex);
@@ -30,8 +31,8 @@ static void increment(void)
 int main(void)
 {
     static char stack0[PTHREAD_STACK_MIN], stack1[PTHREAD_STACK_MIN];
-    RT_TASK(increment, stack0, 1);
-    RT_TASK(increment, stack1, 1);
+    RT_TASK(increment, NULL, stack0, 1);
+    RT_TASK(increment, NULL, stack1, 1);
     rt_start();
 
     printf("%d\n", x);

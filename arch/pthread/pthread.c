@@ -38,7 +38,8 @@
 
 struct pthread_arg
 {
-    void (*fn)(void);
+    void (*fn)(void *);
+    void *arg;
 };
 
 static pthread_t main_thread;
@@ -63,7 +64,8 @@ static void *pthread_fn(void *arg)
 {
     log_event("thread %lx created\n", (unsigned long)pthread_self());
     struct pthread_arg *parg = arg;
-    void (*fn)(void) = parg->fn;
+    void (*fn)(void *) = parg->fn;
+    arg = parg->arg;
     free(parg);
     int sig;
     sigset_t resume_sigset;
@@ -72,13 +74,14 @@ static void *pthread_fn(void *arg)
     sigwait(&resume_sigset, &sig);
     log_event("thread %lx starting\n", (unsigned long)pthread_self());
     unblock_all_signals();
-    fn();
+    fn(arg);
     log_event("thread %lx exiting\n", (unsigned long)pthread_self());
     rt_task_exit();
     return NULL;
 }
 
-void *rt_context_create(void (*fn)(void), void *stack, size_t stack_size)
+void *rt_context_create(void (*fn)(void *), void *arg, void *stack,
+                         size_t stack_size)
 {
     pthread_attr_t attr;
     pthread_attr_init(&attr);
@@ -86,6 +89,7 @@ void *rt_context_create(void (*fn)(void), void *stack, size_t stack_size)
     pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
     struct pthread_arg *parg = malloc(sizeof *parg);
     parg->fn = fn;
+    parg->arg = arg;
 
     /*
      * Launch each thread with interrupts disabled so only the active thread
@@ -156,8 +160,9 @@ static void tick_handler(int sig)
     rt_tick_advance();
 }
 
-__attribute__((noreturn)) static void idle_fn(void)
+__attribute__((noreturn)) static void idle_fn(void *arg)
 {
+    (void)arg;
     sigset_t sigset;
     sigfillset(&sigset);
     sigdelset(&sigset, SIGINT);
@@ -184,7 +189,8 @@ void rt_start(void)
 
     static char idle_stack[PTHREAD_STACK_MIN];
     pthread_t idle_thread =
-        (pthread_t)rt_context_create(idle_fn, idle_stack, sizeof idle_stack);
+        (pthread_t)rt_context_create(idle_fn, NULL, idle_stack,
+                                      sizeof idle_stack);
 
     /* The tick handler must block SIGSYSCALL and SIGSUSPEND. */
     struct sigaction tick_action = {

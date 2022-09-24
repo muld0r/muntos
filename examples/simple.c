@@ -7,7 +7,7 @@
 #include <stdio.h>
 #include <string.h>
 
-static void simple(void)
+static void simple(void *arg)
 {
     int n = 100;
     while (n > 0)
@@ -17,8 +17,7 @@ static void simple(void)
     }
 
     /* Only the second task to finish will call rt_stop. */
-    static RT_SEM(stop_sem, 1);
-    if (!rt_sem_trywait(&stop_sem))
+    if (!rt_sem_trywait(arg))
     {
         printf("finished\n");
         fflush(stdout);
@@ -28,8 +27,9 @@ static void simple(void)
 
 int main(void)
 {
+    static RT_SEM(stop_sem, 1);
     static char stack0[PTHREAD_STACK_MIN], stack1[PTHREAD_STACK_MIN];
-    RT_TASK(simple, stack0, 1);
-    RT_TASK(simple, stack1, 1);
+    RT_TASK(simple, &stop_sem, stack0, 1);
+    RT_TASK(simple, &stop_sem, stack1, 1);
     rt_start();
 }

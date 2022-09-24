@@ -16,29 +16,17 @@ struct gp_context
     uint32_t psr;
 };
 
-struct gp_context *context_create(void *stack, size_t stack_size)
+void *rt_context_create(void (*fn)(void *), void *arg, void *stack,
+                         size_t stack_size)
 {
     void *const stack_end = (char *)stack + stack_size;
     struct gp_context *ctx = stack_end;
     ctx -= 1;
-    ctx->psr = 0x01000000U; // thumb state
-    ctx->lr = rt_task_exit;
     ctx->exc_lr = 0xFFFFFFFDU; // thread mode, no FP, use PSP
-    return ctx;
-}
-
-void *rt_context_create(void (*fn)(void), void *stack, size_t stack_size)
-{
-    struct gp_context *ctx = context_create(stack, stack_size);
-    ctx->pc = fn;
-    return ctx;
-}
-
-void *rt_context_create_arg(void (*fn)(void *), void *stack, size_t stack_size, void *arg)
-{
-    struct gp_context *ctx = context_create(stack, stack_size);
-    ctx->pc = (uint32_t)fn;
     ctx->r0 = (uint32_t)arg;
+    ctx->lr = rt_task_exit;
+    ctx->pc = (uint32_t)fn;
+    ctx->psr = 0x01000000U; // thumb state
     return ctx;
 }
 
