@@ -36,9 +36,17 @@ static struct rt_task *ready_pop(void)
     return task_from_list(rt_list_pop_front(&ready_list));
 }
 
+static void syscall_simple(enum rt_syscall syscall)
+{
+    struct rt_syscall_record syscall_record = {
+        .syscall = syscall,
+    };
+    rt_syscall(&syscall_record);
+}
+
 void rt_yield(void)
 {
-    rt_syscall(RT_SYSCALL_YIELD);
+    syscall_simple(RT_SYSCALL_YIELD);
 }
 
 static atomic_flag sched_pending = ATOMIC_FLAG_INIT;
@@ -53,8 +61,7 @@ void rt_sched(void)
     if (!atomic_flag_test_and_set_explicit(&sched_pending,
                                            memory_order_relaxed))
     {
-        rt_syscall_push(&sched);
-        rt_syscall_post();
+        rt_syscall(&sched);
     }
 }
 
@@ -65,7 +72,7 @@ const char *rt_task_name(void)
 
 void rt_task_exit(void)
 {
-    rt_syscall(RT_SYSCALL_EXIT);
+    syscall_simple(RT_SYSCALL_EXIT);
 }
 
 /* TODO: simplify this based on what syscall actually occurred */
@@ -95,17 +102,25 @@ struct sleep_periodic_args
 
 void rt_sleep(unsigned long ticks)
 {
-    rt_syscall_val(RT_SYSCALL_SLEEP, ticks);
+    struct rt_syscall_record syscall_record = {
+        .syscall = RT_SYSCALL_SLEEP,
+        .args.sleep_ticks = ticks,
+    };
+    rt_syscall(&syscall_record);
 }
 
 void rt_sleep_periodic(unsigned long *last_wake_tick, unsigned long period)
 {
-    struct sleep_periodic_args args = {
-        .last_wake_tick = *last_wake_tick,
-        .period = period,
+    struct rt_syscall_record syscall_record = {
+        .syscall = RT_SYSCALL_SLEEP_PERIODIC,
+        .args.sleep_periodic =
+            {
+                .last_wake_tick = *last_wake_tick,
+                .period = period,
+            },
     };
     *last_wake_tick += period;
-    rt_syscall_ptr(RT_SYSCALL_SLEEP_PERIODIC, &args);
+    rt_syscall(&syscall_record);
 }
 
 /*
@@ -142,7 +157,7 @@ static void sleep_until(struct rt_task *task, unsigned long wake_tick)
 
 static void sleep_syscall(struct rt_syscall_record *syscall_record)
 {
-    const unsigned long ticks = syscall_record->arg.val;
+    const unsigned long ticks = syscall_record->args.sleep_ticks;
     /* Only check for 0 ticks in the syscall so that rt_sleep(0) becomes a
      * synonym for rt_yield(). */
     if (ticks > 0)
@@ -153,9 +168,9 @@ static void sleep_syscall(struct rt_syscall_record *syscall_record)
 
 static void sleep_periodic_syscall(struct rt_syscall_record *syscall_record)
 {
-    struct sleep_periodic_args *args = syscall_record->arg.ptr;
-    const unsigned long last_wake_tick = args->last_wake_tick;
-    const unsigned long period = args->period;
+    const unsigned long last_wake_tick =
+        syscall_record->args.sleep_periodic.last_wake_tick;
+    const unsigned long period = syscall_record->args.sleep_periodic.period;
     const unsigned long ticks_since_last_wake = woken_tick - last_wake_tick;
     /* If there have been at least as many ticks as the period since the last
      * wake, then the desired wake up tick has already occurred. */
@@ -215,8 +230,7 @@ void rt_tick_advance(void)
 
     if (!atomic_flag_test_and_set_explicit(&tick_pending, memory_order_relaxed))
     {
-        rt_syscall_push(&tick_syscall_record);
-        rt_syscall_post();
+        rt_syscall(&tick_syscall_record);
     }
 }
 
@@ -225,42 +239,11 @@ unsigned long rt_tick(void)
     return atomic_load_explicit(&rt_ticks, memory_order_relaxed);
 }
 
-void rt_syscall(enum rt_syscall syscall)
-{
-    struct rt_syscall_record syscall_record = {
-        .task = active_task,
-        .syscall = syscall,
-    };
-    rt_syscall_push(&syscall_record);
-    rt_syscall_post();
-}
-
-void rt_syscall_ptr(enum rt_syscall syscall, void *arg)
-{
-    struct rt_syscall_record syscall_record = {
-        .task = active_task,
-        .syscall = syscall,
-        .arg.ptr = arg,
-    };
-    rt_syscall_push(&syscall_record);
-    rt_syscall_post();
-}
-
-void rt_syscall_val(enum rt_syscall syscall, unsigned long arg)
-{
-    struct rt_syscall_record syscall_record = {
-        .task = active_task,
-        .syscall = syscall,
-        .arg.val = arg,
-    };
-    rt_syscall_push(&syscall_record);
-    rt_syscall_post();
-}
-
-void rt_syscall_push(struct rt_syscall_record *syscall_record)
+void rt_syscall(struct rt_syscall_record *syscall_record)
 {
     /* TODO: need to support multiple contexts trying to push the same
      * record. */
+    syscall_record->task = active_task;
     syscall_record->next =
         atomic_load_explicit(&pending_syscalls, memory_order_relaxed);
     while (!atomic_compare_exchange_weak_explicit(&pending_syscalls,
@@ -270,6 +253,7 @@ void rt_syscall_push(struct rt_syscall_record *syscall_record)
                                                   memory_order_relaxed))
     {
     }
+    rt_syscall_post();
 }
 
 static void wake_sem_waiters(struct rt_sem *sem)
@@ -335,7 +319,7 @@ void *rt_syscall_run(void)
             break;
         case RT_SYSCALL_SEM_WAIT:
         {
-            struct rt_sem *sem = syscall_record->arg.ptr;
+            struct rt_sem *const sem = syscall_record->args.sem;
             rt_list_push_back(&sem->wait_list, &syscall_record->task->list);
             ++sem->num_waiters;
             active_task = NULL;
@@ -346,7 +330,7 @@ void *rt_syscall_run(void)
         }
         case RT_SYSCALL_MUTEX_LOCK:
         {
-            struct rt_mutex *mutex = syscall_record->arg.ptr;
+            struct rt_mutex *const mutex = syscall_record->args.mutex;
             rt_list_push_back(&mutex->wait_list, &syscall_record->task->list);
             active_task = NULL;
             /* Evaluate mutex wakes here as well in case an unlock occurred
@@ -356,9 +340,7 @@ void *rt_syscall_run(void)
         }
         case RT_SYSCALL_SEM_POST:
         {
-            struct rt_sem *sem =
-                rt_container_of(syscall_record, struct rt_sem,
-                                 syscall_record);
+            struct rt_sem *const sem = syscall_record->args.sem;
             /* Allow another post syscall to occur while wakes are evaluated so
              * that no posts are missed. */
             atomic_flag_clear_explicit(&sem->post_pending,
@@ -368,9 +350,7 @@ void *rt_syscall_run(void)
         }
         case RT_SYSCALL_MUTEX_UNLOCK:
         {
-            struct rt_mutex *mutex =
-                rt_container_of(syscall_record, struct rt_mutex,
-                                 syscall_record);
+            struct rt_mutex *mutex = syscall_record->args.mutex;
             /* Allow another unlock syscall to occur while wakes are evaluated
              * so that no unlocks are missed. */
             atomic_flag_clear_explicit(&mutex->unlock_pending,

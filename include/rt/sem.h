@@ -35,7 +35,12 @@ struct rt_sem
 #define RT_SEM_INIT_WITH_MAX(name, initial_value, max_value_)                 \
     {                                                                          \
         .wait_list = RT_LIST_INIT(name.wait_list),                            \
-        .syscall_record = {.next = NULL, .syscall = RT_SYSCALL_SEM_POST},     \
+        .syscall_record =                                                      \
+            {                                                                  \
+                .next = NULL,                                                  \
+                .syscall = RT_SYSCALL_SEM_POST,                               \
+                .args.sem = &name,                                             \
+            },                                                                 \
         .post_pending = ATOMIC_FLAG_INIT, .num_waiters = 0,                    \
         .value = initial_value, .max_value = max_value_,                       \
     }

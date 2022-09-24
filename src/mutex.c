@@ -6,6 +6,7 @@ void rt_mutex_init(struct rt_mutex *mutex)
 {
     rt_list_init(&mutex->wait_list);
     mutex->syscall_record.syscall = RT_SYSCALL_MUTEX_UNLOCK;
+    mutex->syscall_record.args.mutex = mutex;
     atomic_flag_clear_explicit(&mutex->unlock_pending, memory_order_relaxed);
     atomic_flag_clear_explicit(&mutex->lock, memory_order_release);
 }
@@ -18,7 +19,11 @@ void rt_mutex_lock(struct rt_mutex *mutex)
         return;
     }
 
-    rt_syscall_ptr(RT_SYSCALL_MUTEX_LOCK, mutex);
+    struct rt_syscall_record syscall_record = {
+        .syscall = RT_SYSCALL_MUTEX_LOCK,
+        .args.mutex = mutex,
+    };
+    rt_syscall(&syscall_record);
 }
 
 bool rt_mutex_trylock(struct rt_mutex *mutex)
@@ -37,7 +42,6 @@ void rt_mutex_unlock(struct rt_mutex *mutex)
     if (!atomic_flag_test_and_set_explicit(&mutex->unlock_pending,
                                            memory_order_acquire))
     {
-        rt_syscall_push(&mutex->syscall_record);
-        rt_syscall_post();
+        rt_syscall(&mutex->syscall_record);
     }
 }

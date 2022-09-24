@@ -26,24 +26,27 @@ enum rt_syscall
     RT_SYSCALL_MUTEX_UNLOCK,
 };
 
+union rt_syscall_args
+{
+    unsigned long sleep_ticks;
+    struct
+    {
+        unsigned long last_wake_tick;
+        unsigned long period;
+    } sleep_periodic;
+    struct rt_sem *sem;
+    struct rt_mutex *mutex;
+};
+
 struct rt_syscall_record
 {
     struct rt_syscall_record *next;
     struct rt_task *task;
-    union {
-        unsigned long val;
-        void *ptr;
-    } arg;
+    union rt_syscall_args args;
     enum rt_syscall syscall;
 };
 
-void rt_syscall(enum rt_syscall syscall);
-
-void rt_syscall_ptr(enum rt_syscall syscall, void *arg);
-
-void rt_syscall_val(enum rt_syscall syscall, unsigned long arg);
-
-void rt_syscall_push(struct rt_syscall_record *syscall);
+void rt_syscall(struct rt_syscall_record *syscall);
 
 /*
  * Trigger the syscall handler.

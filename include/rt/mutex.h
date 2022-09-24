@@ -27,7 +27,12 @@ struct rt_mutex
 #define RT_MUTEX_INIT(name)                                                   \
     {                                                                          \
         .wait_list = RT_LIST_INIT(name.wait_list),                            \
-        .syscall_record = {.next = NULL, .syscall = RT_SYSCALL_MUTEX_UNLOCK}, \
+        .syscall_record =                                                      \
+            {                                                                  \
+                .next = NULL,                                                  \
+                .syscall = RT_SYSCALL_MUTEX_UNLOCK,                           \
+                .args.mutex = &name,                                           \
+            },                                                                 \
         .lock = ATOMIC_FLAG_INIT, .unlock_pending = ATOMIC_FLAG_INIT,          \
     }
 

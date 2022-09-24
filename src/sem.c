@@ -7,6 +7,7 @@ static void sem_init_common(struct rt_sem *sem, int initial_value)
     rt_list_init(&sem->wait_list);
     sem->syscall_record.next = NULL;
     sem->syscall_record.syscall = RT_SYSCALL_SEM_POST;
+    sem->syscall_record.args.sem = sem;
     sem->num_waiters = 0;
     atomic_store_explicit(&sem->value, initial_value, memory_order_relaxed);
     atomic_flag_clear_explicit(&sem->post_pending, memory_order_release);
@@ -49,8 +50,7 @@ void rt_sem_post(struct rt_sem *sem)
     if ((value < 0) && !atomic_flag_test_and_set_explicit(&sem->post_pending,
                                                           memory_order_acquire))
     {
-        rt_syscall_push(&sem->syscall_record);
-        rt_syscall_post();
+        rt_syscall(&sem->syscall_record);
     }
 }
 
@@ -78,8 +78,7 @@ void rt_sem_post_all(struct rt_sem *sem)
     if (!atomic_flag_test_and_set_explicit(&sem->post_pending,
                                            memory_order_acquire))
     {
-        rt_syscall_push(&sem->syscall_record);
-        rt_syscall_post();
+        rt_syscall(&sem->syscall_record);
     }
 }
 
@@ -111,6 +110,10 @@ void rt_sem_wait(struct rt_sem *sem)
 
     if (value <= 0)
     {
-        rt_syscall_ptr(RT_SYSCALL_SEM_WAIT, sem);
+        struct rt_syscall_record syscall_record = {
+            .syscall = RT_SYSCALL_SEM_WAIT,
+            .args.sem = sem,
+        };
+        rt_syscall(&syscall_record);
     }
 }
