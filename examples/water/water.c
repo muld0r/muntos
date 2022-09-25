@@ -5,9 +5,9 @@
 
 #include <stdatomic.h>
 
-static atomic_uint hydrogen_bonded = 0;
-static atomic_uint oxygen_bonded = 0;
-static atomic_uint water_formed = 0;
+static volatile atomic_uint hydrogen_bonded = 0;
+static volatile atomic_uint oxygen_bonded = 0;
+static volatile atomic_uint water_formed = 0;
 
 void make_water(void)
 {
@@ -26,9 +26,9 @@ static void oxygen_fn(void *arg)
     atomic_fetch_add(&oxygen_bonded, 1);
 }
 
-static bool check(atomic_uint *p, unsigned expected)
+static bool check(volatile atomic_uint *p, unsigned expected)
 {
-    return atomic_load_explicit(p, memory_order_acquire) == expected;
+    return atomic_load(p) == expected;
 }
 
 static void timeout(void *arg)
