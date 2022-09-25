@@ -107,7 +107,7 @@ void rt_start(void)
             : "r0");
 
     rt_yield();
-    idle_fn();
+    idle_fn(NULL);
 }
 
 void rt_stop(void)
