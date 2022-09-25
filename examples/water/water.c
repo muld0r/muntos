@@ -59,14 +59,14 @@ int main(void)
         if (hydrogen)
         {
             ++hydrogen_atoms;
-            rt_task_init(&atoms[i], hydrogen_fn, rxn, stacks[i],
-                          TASK_STACK_SIZE, "hydrogen", 1);
+            rt_task_init(&atoms[i], hydrogen_fn, rxn, "hydrogen", 1, stacks[i],
+                          TASK_STACK_SIZE);
         }
         else
         {
             ++oxygen_atoms;
-            rt_task_init(&atoms[i], oxygen_fn, rxn, stacks[i], TASK_STACK_SIZE,
-                          "oxygen", 1);
+            rt_task_init(&atoms[i], oxygen_fn, rxn, "oxygen", 1, stacks[i],
+                          TASK_STACK_SIZE);
         }
         hydrogen = !hydrogen;
     }
