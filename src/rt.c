@@ -85,7 +85,7 @@ static void *sched(void)
 
     if (active_task)
     {
-        rt_list_push_back(&ready_list, &rt_prev_task->list);
+        rt_list_push_back(&ready_list, &active_task->list);
     }
 
     active_task = next_task;
