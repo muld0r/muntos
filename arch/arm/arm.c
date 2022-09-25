@@ -30,8 +30,9 @@ void *rt_context_create(void (*fn)(void *), void *arg, void *stack,
     return ctx;
 }
 
-void idle_fn(void)
+void idle_fn(void *arg)
 {
+    (void)arg;
     for (;;)
     {
         __asm__("wfi");
