@@ -2,8 +2,9 @@
 #include <rt/tick.h>
 #include <rt/rt.h>
 
-#include <limits.h>
-#include <stdio.h>
+#include <stdatomic.h>
+
+static atomic_bool wrong_tick = false;
 
 static void sleep(void *arg)
 {
@@ -12,8 +13,10 @@ static void sleep(void *arg)
     while (n > 0)
     {
         rt_sleep_periodic(&last_wake_tick, 10);
-        printf("wake at tick %lu\n", rt_tick());
-        fflush(stdout);
+        if (rt_tick() != last_wake_tick)
+        {
+            atomic_store(&wrong_tick, true);
+        }
         --n;
     }
 
@@ -27,8 +30,14 @@ static void sleep(void *arg)
 int main(void)
 {
     static RT_SEM(stop_sem, 1);
-    static char task0_stack[PTHREAD_STACK_MIN], task1_stack[PTHREAD_STACK_MIN];
-    RT_TASK(sleep, &stop_sem, task0_stack, 1);
-    RT_TASK(sleep, &stop_sem, task1_stack, 1);
+    __attribute__((aligned(STACK_ALIGN))) static char stack0[TASK_STACK_SIZE],
+        stack1[TASK_STACK_SIZE];
+    RT_TASK(sleep, &stop_sem, stack0, 1);
+    RT_TASK(sleep, &stop_sem, stack1, 1);
     rt_start();
+
+    if (atomic_load(&wrong_tick))
+    {
+        return 1;
+    }
 }

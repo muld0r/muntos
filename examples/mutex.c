@@ -2,9 +2,6 @@
 #include <rt/sleep.h>
 #include <rt/rt.h>
 
-#include <limits.h>
-#include <stdio.h>
-
 static const int n = 50;
 static RT_MUTEX(mutex);
 
@@ -30,10 +27,14 @@ static void increment(void *arg)
 
 int main(void)
 {
-    static char stack0[PTHREAD_STACK_MIN], stack1[PTHREAD_STACK_MIN];
+    __attribute__((aligned(STACK_ALIGN))) static char stack0[TASK_STACK_SIZE],
+        stack1[TASK_STACK_SIZE];
     RT_TASK(increment, NULL, stack0, 1);
     RT_TASK(increment, NULL, stack1, 1);
     rt_start();
 
-    printf("%d\n", x);
+    if (x != n * 2)
+    {
+        return 1;
+    }
 }

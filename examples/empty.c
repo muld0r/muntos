@@ -1,7 +1,5 @@
 #include <rt/rt.h>
 
-#include <limits.h>
-
 static void empty(void *arg)
 {
     (void)arg;
@@ -10,7 +8,7 @@ static void empty(void *arg)
 
 int main(void)
 {
-    static char stack[PTHREAD_STACK_MIN];
+    __attribute__((aligned(STACK_ALIGN))) static char stack[TASK_STACK_SIZE];
     RT_TASK(empty, NULL, stack, 1);
     rt_start();
 }

@@ -41,7 +41,9 @@ if "darwin" in sys.platform:
 elif "linux" in sys.platform:
     env["RANLIB"] = "llvm-ranlib"
     env["AR"] = "llvm-ar"
-    env["LINKCOM"] = env["LINKCOM"].replace("$_LIBFLAGS", "-Wl,--start-group $_LIBFLAGS -Wl,--end-group")
+    env["LINKCOM"] = env["LINKCOM"].replace(
+        "$_LIBFLAGS", "-Wl,--start-group $_LIBFLAGS -Wl,--end-group"
+    )
     env.Append(
         CPPDEFINES={"_POSIX_C_SOURCE": "200809L"}, LINKFLAGS=["-Wl,--gc-sections"]
     )
@@ -64,7 +66,10 @@ libpthread = SConscript(
 )
 
 example_env = pthread_env.Clone()
-example_env.Append(LIBS=[librt, libpthread])
+example_env.Append(
+    CPPDEFINES={"STACK_ALIGN": 4096, "TASK_STACK_SIZE": 32768},
+    LIBS=[librt, libpthread],
+)
 
 SConscript(
     dirs="examples", variant_dir="build", duplicate=False, exports={"env": example_env}
