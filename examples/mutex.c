@@ -5,15 +5,13 @@
 static const int n = 50;
 static RT_MUTEX(mutex);
 
-static int x;
-
 static void increment(void *arg)
 {
-    (void)arg;
+    int *x = arg;
     for (int i = 0; i < n; ++i)
     {
         rt_mutex_lock(&mutex);
-        ++x;
+        ++*x;
         rt_mutex_unlock(&mutex);
     }
 
@@ -27,10 +25,11 @@ static void increment(void *arg)
 
 int main(void)
 {
+    static int x;
     __attribute__((aligned(STACK_ALIGN))) static char stack0[TASK_STACK_SIZE],
         stack1[TASK_STACK_SIZE];
-    RT_TASK(increment, NULL, stack0, 1);
-    RT_TASK(increment, NULL, stack1, 1);
+    RT_TASK(increment, &x, stack0, 1);
+    RT_TASK(increment, &x, stack1, 1);
     rt_start();
 
     if (x != n * 2)
