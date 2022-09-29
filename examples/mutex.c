@@ -3,11 +3,12 @@
 #include <rt/rt.h>
 
 static const int n = 50;
-static RT_MUTEX(mutex);
 
 static void increment(void *arg)
 {
+    static RT_MUTEX(mutex);
     int *x = arg;
+
     for (int i = 0; i < n; ++i)
     {
         rt_mutex_lock(&mutex);
