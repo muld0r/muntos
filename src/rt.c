@@ -83,11 +83,12 @@ static void *sched(void)
         return NULL;
     }
 
-    if (active_task)
+    if (rt_list_is_empty(&active_task->list))
     {
         rt_list_push_back(&ready_list, &active_task->list);
     }
 
+    rt_prev_task = active_task;
     active_task = next_task;
 
     return next_task->ctx;
@@ -150,8 +151,6 @@ static void sleep_until(struct rt_task *task, unsigned long wake_tick)
     {
         next_wake_tick = wake_tick;
     }
-
-    active_task = NULL;
 }
 
 static void sleep_syscall(struct rt_syscall_record *syscall_record)
@@ -240,8 +239,6 @@ unsigned long rt_tick(void)
 
 void rt_syscall(struct rt_syscall_record *syscall_record)
 {
-    /* TODO: need to support multiple contexts trying to push the same
-     * record. */
     syscall_record->task = active_task;
     syscall_record->next =
         atomic_load_explicit(&pending_syscalls, memory_order_relaxed);
@@ -289,7 +286,6 @@ void *rt_syscall_run(void)
      * results in the syscall handler being called again, otherwise we should
      * just keep handling system calls from the same stack, even if they're out
      * of order. */
-    rt_prev_task = active_task;
     struct rt_syscall_record *syscall_record =
         atomic_exchange_explicit(&pending_syscalls, NULL, memory_order_acquire);
     while (syscall_record)
@@ -314,14 +310,13 @@ void *rt_syscall_run(void)
             sleep_periodic_syscall(syscall_record);
             break;
         case RT_SYSCALL_EXIT:
-            active_task = NULL;
+            active_task->list.next = NULL;
             break;
         case RT_SYSCALL_SEM_WAIT:
         {
             struct rt_sem *const sem = syscall_record->args.sem;
             rt_list_push_back(&sem->wait_list, &syscall_record->task->list);
             ++sem->num_waiters;
-            active_task = NULL;
             /* Evaluate semaphore wakes here as well in case a post occurred
              * before the wait syscall was handled. */
             wake_sem_waiters(sem);
@@ -331,7 +326,6 @@ void *rt_syscall_run(void)
         {
             struct rt_mutex *const mutex = syscall_record->args.mutex;
             rt_list_push_back(&mutex->wait_list, &syscall_record->task->list);
-            active_task = NULL;
             /* Evaluate mutex wakes here as well in case an unlock occurred
              * before the wait syscall was handled. */
             wake_mutex_waiter(mutex);
