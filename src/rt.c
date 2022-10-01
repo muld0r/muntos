@@ -310,8 +310,11 @@ void *rt_syscall_run(void)
             sleep_periodic_syscall(syscall_record);
             break;
         case RT_SYSCALL_EXIT:
-            active_task->list.next = NULL;
+        {
+            static RT_LIST(exited_list);
+            rt_list_push_back(&exited_list, &syscall_record->task->list);
             break;
+        }
         case RT_SYSCALL_SEM_WAIT:
         {
             struct rt_sem *const sem = syscall_record->args.sem;
