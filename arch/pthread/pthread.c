@@ -1,6 +1,7 @@
 #include <rt/context.h>
 #include <rt/rt.h>
 
+#include <rt/log.h>
 #include <rt/syscall.h>
 #include <rt/tick.h>
 
@@ -10,6 +11,7 @@
 #include <stdlib.h>
 #include <sys/time.h>
 
+#include <stdarg.h>
 #include <stdatomic.h>
 #include <stdio.h>
 
@@ -19,22 +21,21 @@
 #define SIGSYSCALL (SIGRTMIN + 2)
 #define SIGRTSTOP (SIGRTMIN + 3)
 
-#define log(...)                                                               \
-    do                                                                         \
-    {                                                                          \
-        fprintf(stderr, __VA_ARGS__);                                          \
-        fflush(stderr);                                                        \
-    } while (0)
-
-#ifndef RT_LOG_EVENTS
-#define RT_LOG_EVENTS 0
+#ifndef RT_LOG_ENABLE
+#define RT_LOG_ENABLE 0
 #endif
 
-#if RT_LOG_EVENTS
-#define log_event(...) log(__VA_ARGS__)
+void rt_log(const char *format, ...)
+{
+#if RT_LOG_ENABLE
+    va_list vlist;
+    va_start(vlist, format);
+    vfprintf(stderr, format, vlist);
+    fflush(stderr);
 #else
-#define log_event(...)
+    (void)format;
 #endif
+}
 
 struct pthread_arg
 {
@@ -62,7 +63,7 @@ static void unblock_all_signals(void)
 
 static void *pthread_fn(void *arg)
 {
-    log_event("thread %lx created\n", (unsigned long)pthread_self());
+    rt_log("thread %lx created\n", (unsigned long)pthread_self());
     struct pthread_arg *parg = arg;
     void (*fn)(void *) = parg->fn;
     arg = parg->arg;
@@ -72,10 +73,10 @@ static void *pthread_fn(void *arg)
     sigemptyset(&resume_sigset);
     sigaddset(&resume_sigset, SIGRESUME);
     sigwait(&resume_sigset, &sig);
-    log_event("thread %lx starting\n", (unsigned long)pthread_self());
+    rt_log("thread %lx starting\n", (unsigned long)pthread_self());
     unblock_all_signals();
     fn(arg);
-    log_event("thread %lx exiting\n", (unsigned long)pthread_self());
+    rt_log("thread %lx exiting\n", (unsigned long)pthread_self());
     rt_task_exit();
     return NULL;
 }
@@ -116,27 +117,28 @@ void rt_syscall_post(void)
 __attribute__((noreturn)) static void resume_handler(int sig)
 {
     (void)sig;
-    /* This is always an error, so don't use log_event. */
-    log("thread %lx received a resume but was not suspended\n",
-        (unsigned long)pthread_self());
+    /* This is always an error, so don't use rt_log. */
+    fprintf(stderr, "thread %lx received a resume but was not suspended\n",
+            (unsigned long)pthread_self());
+    fflush(stderr);
     exit(1);
 }
 
 static void suspend_handler(int sig)
 {
-    log_event("thread %lx suspending\n", (unsigned long)pthread_self());
+    rt_log("thread %lx suspending\n", (unsigned long)pthread_self());
     sigset_t resume_sigset;
     sigemptyset(&resume_sigset);
     sigaddset(&resume_sigset, SIGRESUME);
     sigwait(&resume_sigset, &sig);
-    log_event("thread %lx resuming\n", (unsigned long)pthread_self());
+    rt_log("thread %lx resuming\n", (unsigned long)pthread_self());
     unblock_all_signals();
 }
 
 static void syscall_handler(int sig)
 {
-    log_event("thread %lx running syscall\n", (unsigned long)pthread_self());
     (void)sig;
+    rt_log("thread %lx running syscall\n", (unsigned long)pthread_self());
     void *newctx = rt_syscall_run();
     if (newctx)
     {
@@ -148,14 +150,18 @@ static void syscall_handler(int sig)
         pthread_sigmask(SIG_BLOCK, &blocked_sigset, NULL);
 
         rt_prev_task->ctx = (void *)pthread_self();
+        rt_log("thread %lx sending suspend to itself\n",
+                (unsigned long)pthread_self());
         pthread_kill(pthread_self(), SIGSUSPEND);
+        rt_log("thread %lx sending resume to %lx\n",
+                (unsigned long)pthread_self(), (unsigned long)newctx);
         pthread_kill((pthread_t)newctx, SIGRESUME);
     }
 }
 
 static void tick_handler(int sig)
 {
-    log_event("thread %lx received a tick\n", (unsigned long)pthread_self());
+    rt_log("thread %lx received a tick\n", (unsigned long)pthread_self());
     (void)sig;
     rt_tick_advance();
 }
@@ -170,12 +176,12 @@ __attribute__((noreturn)) static void idle_fn(void *arg)
     {
         /* Block signals and wait for one to occur. */
         block_all_signals(NULL);
-        log_event("thread %lx waiting for signal\n",
-                  (unsigned long)pthread_self());
+        rt_log("thread %lx waiting for signal\n",
+                (unsigned long)pthread_self());
         int sig;
         sigwait(&sigset, &sig);
-        log_event("thread %lx received signal %d while waiting\n",
-                  (unsigned long)pthread_self(), sig);
+        rt_log("thread %lx received signal %d while waiting\n",
+                (unsigned long)pthread_self(), sig);
 
         /* After receiving a signal, re-trigger it and unblock signals. */
         pthread_kill(pthread_self(), sig);
