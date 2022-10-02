@@ -16,10 +16,8 @@
 #include <stdio.h>
 
 #define SIGTICK SIGALRM
-#define SIGSUSPEND SIGRTMIN
+#define SIGSYSCALL SIGRTMIN
 #define SIGRESUME (SIGRTMIN + 1)
-#define SIGSYSCALL (SIGRTMIN + 2)
-#define SIGRTSTOP (SIGRTMIN + 3)
 
 #ifndef RT_LOG_ENABLE
 #define RT_LOG_ENABLE 0
@@ -124,38 +122,28 @@ __attribute__((noreturn)) static void resume_handler(int sig)
     exit(1);
 }
 
-static void suspend_handler(int sig)
-{
-    rt_log("thread %lx suspending\n", (unsigned long)pthread_self());
-    sigset_t resume_sigset;
-    sigemptyset(&resume_sigset);
-    sigaddset(&resume_sigset, SIGRESUME);
-    sigwait(&resume_sigset, &sig);
-    rt_log("thread %lx resuming\n", (unsigned long)pthread_self());
-    unblock_all_signals();
-}
-
 static void syscall_handler(int sig)
 {
     (void)sig;
     rt_log("thread %lx running syscall\n", (unsigned long)pthread_self());
     void *newctx = rt_syscall_run();
+
     if (newctx)
     {
         /* Block signals on the suspending thread. */
-        sigset_t blocked_sigset;
-        sigfillset(&blocked_sigset);
-        sigdelset(&blocked_sigset, SIGINT);
-        sigdelset(&blocked_sigset, SIGSUSPEND);
-        pthread_sigmask(SIG_BLOCK, &blocked_sigset, NULL);
+        block_all_signals(NULL);
 
-        rt_prev_task->ctx = (void *)pthread_self();
-        rt_log("thread %lx sending suspend to itself\n",
-                (unsigned long)pthread_self());
-        pthread_kill(pthread_self(), SIGSUSPEND);
         rt_log("thread %lx sending resume to %lx\n",
                 (unsigned long)pthread_self(), (unsigned long)newctx);
         pthread_kill((pthread_t)newctx, SIGRESUME);
+
+        rt_prev_task->ctx = (void *)pthread_self();
+        rt_log("thread %lx suspending\n", (unsigned long)pthread_self());
+        sigset_t resume_sigset;
+        sigemptyset(&resume_sigset);
+        sigaddset(&resume_sigset, SIGRESUME);
+        sigwait(&resume_sigset, &sig);
+        rt_log("thread %lx resuming\n", (unsigned long)pthread_self());
     }
 }
 
@@ -198,14 +186,21 @@ void rt_start(void)
         (pthread_t)rt_context_create(idle_fn, NULL, idle_stack,
                                       sizeof idle_stack);
 
-    /* The tick handler must block SIGSYSCALL and SIGSUSPEND. */
+    /* The tick handler must block SIGSYSCALL. */
     struct sigaction tick_action = {
         .sa_handler = tick_handler,
     };
     sigemptyset(&tick_action.sa_mask);
     sigaddset(&tick_action.sa_mask, SIGSYSCALL);
-    sigaddset(&tick_action.sa_mask, SIGSUSPEND);
     sigaction(SIGTICK, &tick_action, NULL);
+
+    /* The syscall handler doesn't need to block any signals.
+     * Each signal handler blocks itself implicitly. */
+    struct sigaction syscall_action = {
+        .sa_handler = syscall_handler,
+    };
+    sigemptyset(&syscall_action.sa_mask);
+    sigaction(SIGSYSCALL, &syscall_action, NULL);
 
     /* The handler for SIGRESUME is just to catch spurious resumes and error
      * out. Threads expecting a SIGRESUME must block it and sigwait on it. This
@@ -216,25 +211,6 @@ void rt_start(void)
     sigfillset(&resume_action.sa_mask);
     sigdelset(&resume_action.sa_mask, SIGINT);
     sigaction(SIGRESUME, &resume_action, NULL);
-
-    /* The suspend handler must block all signals so that other signals are
-     * only delivered to the active thread. */
-    struct sigaction suspend_action = {
-        .sa_handler = suspend_handler,
-    };
-    sigfillset(&suspend_action.sa_mask);
-    sigdelset(&suspend_action.sa_mask, SIGINT);
-    sigaction(SIGSUSPEND, &suspend_action, NULL);
-
-    /* The syscall handler must block SIGSUSPEND so that it can suspend the
-     * current thread and then resume the next one. This way when the syscall
-     * handler returns the thread will actually become suspended. */
-    struct sigaction syscall_action = {
-        .sa_handler = syscall_handler,
-    };
-    sigemptyset(&syscall_action.sa_mask);
-    sigaddset(&syscall_action.sa_mask, SIGSUSPEND);
-    sigaction(SIGSYSCALL, &syscall_action, NULL);
 
     static const struct timeval milli = {
         .tv_sec = 0,
@@ -251,15 +227,13 @@ void rt_start(void)
     pthread_kill(idle_thread, SIGRESUME);
     pthread_kill(idle_thread, SIGSYSCALL);
 
-    /*
-     * Allow SIGRTSTOP to stop the scheduler.
-     */
-    sigset_t stop_sigset;
-    sigemptyset(&stop_sigset);
-    sigaddset(&stop_sigset, SIGRTSTOP);
+    /* Sending a SIGRESUME to the main thread stops the scheduler. */
+    sigset_t resume_sigset;
+    sigemptyset(&resume_sigset);
+    sigaddset(&resume_sigset, SIGRESUME);
 
     int sig;
-    sigwait(&stop_sigset, &sig);
+    sigwait(&resume_sigset, &sig);
 
     /* Prevent new SIGTICKs */
     static const struct timeval zero = {
@@ -276,7 +250,6 @@ void rt_start(void)
 
     sigaction(SIGTICK, &action, NULL);
     sigaction(SIGRESUME, &action, NULL);
-    sigaction(SIGSUSPEND, &action, NULL);
     sigaction(SIGSYSCALL, &action, NULL);
 
     unblock_all_signals();
@@ -285,12 +258,11 @@ void rt_start(void)
     action.sa_handler = SIG_DFL;
     sigaction(SIGTICK, &action, NULL);
     sigaction(SIGRESUME, &action, NULL);
-    sigaction(SIGSUSPEND, &action, NULL);
     sigaction(SIGSYSCALL, &action, NULL);
 }
 
 void rt_stop(void)
 {
     block_all_signals(NULL);
-    pthread_kill(main_thread, SIGRTSTOP);
+    pthread_kill(main_thread, SIGRESUME);
 }
