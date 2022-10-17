@@ -7,6 +7,7 @@
 #include <rt/syscall.h>
 
 #include <stdbool.h>
+#include <stddef.h>
 
 struct rt_task;
 

@@ -3,17 +3,18 @@
 #include <rt/rt.h>
 
 #include <stdbool.h>
+#include <stdint.h>
 
 struct gp_context
 {
     // Saved by task context switch.
-    uint32_t r4, r5, r6, r7, r8, r9, r10, r11, exc_lr;
+    uintptr_t r4, r5, r6, r7, r8, r9, r10, r11, exc_lr;
 
     // Saved automatically on exception entry.
-    uint32_t r0, r1, r2, r3, r12;
-    uint32_t lr;
-    uint32_t pc;
-    uint32_t psr;
+    uintptr_t r0, r1, r2, r3, r12;
+    void (*lr)(void);
+    void (*pc)(void *);
+    uintptr_t psr;
 };
 
 void *rt_context_create(void (*fn)(void *), void *arg, void *stack,
@@ -23,16 +24,15 @@ void *rt_context_create(void (*fn)(void *), void *arg, void *stack,
     struct gp_context *ctx = stack_end;
     ctx -= 1;
     ctx->exc_lr = 0xFFFFFFFDU; // thread mode, no FP, use PSP
-    ctx->r0 = (uint32_t)arg;
-    ctx->lr = (uint32_t)rt_task_exit;
-    ctx->pc = (uint32_t)fn;
+    ctx->r0 = (uintptr_t)arg;
+    ctx->lr = rt_task_exit;
+    ctx->pc = fn;
     ctx->psr = 0x01000000U; // thumb state
     return ctx;
 }
 
-void idle_fn(void *arg)
+__attribute__((noreturn)) static void idle_fn(void)
 {
-    (void)arg;
     for (;;)
     {
         __asm__("wfi");
@@ -74,7 +74,7 @@ struct shpr
 
 static volatile struct shpr *const shpr = (volatile struct shpr *)0xE000ED18U;
 
-void rt_start(void)
+__attribute__((noreturn)) void rt_start(void)
 {
     // TODO: make this smaller
     __attribute__((aligned(8))) static char idle_stack[512];
@@ -107,7 +107,7 @@ void rt_start(void)
             : "r0");
 
     rt_yield();
-    idle_fn(NULL);
+    idle_fn();
 }
 
 void rt_stop(void)
@@ -126,7 +126,7 @@ void rt_syscall_post(void)
      * priority than SVCall, using svc will escalate to a hard fault, so we
      * must use PendSV instead.
      */
-    uint32_t ipsr;
+    uintptr_t ipsr;
     __asm__("mrs %0, ipsr" : "=r"(ipsr));
     if (ipsr == 0)
     {
