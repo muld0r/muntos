@@ -42,9 +42,10 @@ struct rt_task
 #define RT_TASK(fn, arg, stack, priority)                                     \
     do                                                                         \
     {                                                                          \
-        static struct rt_task fn##task;                                       \
-        rt_task_init(&fn##task, fn, arg, (arg ? #fn "(" #arg ")" : #fn "()"), \
-                      priority, stack, sizeof(stack));                         \
+        static struct rt_task fn##_task;                                      \
+        rt_task_init(&fn##_task, fn, arg,                                     \
+                      ((arg != NULL) ? #fn "(" #arg ")" : #fn "()"), priority, \
+                      stack, sizeof(stack));                                   \
     } while (0)
 
 /*
