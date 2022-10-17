@@ -31,14 +31,6 @@ void *rt_context_create(void (*fn)(void *), void *arg, void *stack,
     return ctx;
 }
 
-__attribute__((noreturn)) static void idle_fn(void)
-{
-    for (;;)
-    {
-        __asm__("wfi");
-    }
-}
-
 #define STK_CTRL_ENABLE 0x1U
 #define STK_CTRL_TICKINT 0x2U
 #define STK_CTRL_CLKSOURCE 0x4U
@@ -76,8 +68,7 @@ static volatile struct shpr *const shpr = (volatile struct shpr *)0xE000ED18U;
 
 __attribute__((noreturn)) void rt_start(void)
 {
-    // TODO: make this smaller
-    __attribute__((aligned(8))) static char idle_stack[512];
+    __attribute__((aligned(8))) static char idle_stack[128];
 
     __asm__ __volatile__(
         // Set the process stack pointer to the top of the idle task stack.
@@ -98,16 +89,24 @@ __attribute__((noreturn)) void rt_start(void)
     stk->current = 0;
     stk->ctrl = STK_CTRL_ENABLE | STK_CTRL_TICKINT;
 
-    // Drop privileges (and keep using the process stack pointer).
+    /*
+     * Drop privileges (and keep using the process stack pointer).
+     * Then execute a supervisor call to switch into the first task.
+     * TODO: is the isb required when dropping privileges prior to an svc?
+     */
     __asm__("mov r0, 3\n"
             "msr control, r0\n"
             "isb\n"
+            "svc 0\n"
             :
             :
             : "r0");
 
-    rt_yield();
-    idle_fn();
+    /* Idle loop that will run when no other tasks are runnable. */
+    for (;;)
+    {
+        __asm__("wfi");
+    }
 }
 
 void rt_stop(void)
