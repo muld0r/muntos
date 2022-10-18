@@ -12,7 +12,7 @@ struct rt_list
 
 void rt_list_init(struct rt_list *list);
 
-#define RT_LIST_INIT(name)                                                    \
+#define RT_LIST_INIT(name)                                                     \
     {                                                                          \
         .prev = &name, .next = &name                                           \
     }
@@ -35,7 +35,7 @@ struct rt_list *rt_list_front(struct rt_list *list);
 
 struct rt_list *rt_list_pop_front(struct rt_list *list);
 
-#define rt_list_for_each(node, listp)                                         \
+#define rt_list_for_each(node, listp)                                          \
     for (node = rt_list_front((listp)); node != (listp); node = node->next)
 
 #endif /* RT_LIST_H */

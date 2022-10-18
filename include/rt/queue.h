@@ -9,7 +9,7 @@
 struct rt_queue;
 
 void rt_queue_init(struct rt_queue *queue, void *buf, size_t num_elems,
-                    size_t elem_len);
+                   size_t elem_len);
 
 void rt_queue_recv(struct rt_queue *queue, void *elem);
 
@@ -28,11 +28,11 @@ struct rt_queue
     size_t elem_len;
 };
 
-#define RT_QUEUE_FROM_ARRAY(name, array)                                      \
-    struct rt_queue name = {                                                  \
-        .mutex = RT_MUTEX_INIT(name.mutex),                                        \
-        .recv_ready = RT_COND_INIT(name.recv_ready),                               \
-        .send_ready = RT_COND_INIT(name.send_ready),                               \
+#define RT_QUEUE_FROM_ARRAY(name, array)                                       \
+    struct rt_queue name = {                                                   \
+        .mutex = RT_MUTEX_INIT(name.mutex),                                    \
+        .recv_ready = RT_COND_INIT(name.recv_ready),                           \
+        .send_ready = RT_COND_INIT(name.send_ready),                           \
         .buf = array,                                                          \
         .len = 0,                                                              \
         .recv_offset = 0,                                                      \

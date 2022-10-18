@@ -24,13 +24,13 @@ struct rt_mutex
     atomic_flag unlock_pending;
 };
 
-#define RT_MUTEX_INIT(name)                                                   \
+#define RT_MUTEX_INIT(name)                                                    \
     {                                                                          \
-        .wait_list = RT_LIST_INIT(name.wait_list),                            \
+        .wait_list = RT_LIST_INIT(name.wait_list),                             \
         .syscall_record =                                                      \
             {                                                                  \
                 .next = NULL,                                                  \
-                .syscall = RT_SYSCALL_MUTEX_UNLOCK,                           \
+                .syscall = RT_SYSCALL_MUTEX_UNLOCK,                            \
                 .args.mutex = &name,                                           \
             },                                                                 \
         .lock = ATOMIC_FLAG_INIT, .unlock_pending = ATOMIC_FLAG_INIT,          \

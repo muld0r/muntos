@@ -1,7 +1,7 @@
 #include "water.h"
 
-#include <rt/sleep.h>
 #include <rt/rt.h>
+#include <rt/sleep.h>
 
 #include <stdatomic.h>
 
@@ -60,13 +60,13 @@ int main(void)
         {
             ++hydrogen_atoms;
             rt_task_init(&atoms[i], hydrogen_fn, rxn, "hydrogen", 1, stacks[i],
-                          TASK_STACK_SIZE);
+                         TASK_STACK_SIZE);
         }
         else
         {
             ++oxygen_atoms;
             rt_task_init(&atoms[i], oxygen_fn, rxn, "oxygen", 1, stacks[i],
-                          TASK_STACK_SIZE);
+                         TASK_STACK_SIZE);
         }
         hydrogen = !hydrogen;
     }

@@ -1,6 +1,6 @@
+#include <rt/rt.h>
 #include <rt/sleep.h>
 #include <rt/tick.h>
-#include <rt/rt.h>
 
 #include <stdatomic.h>
 

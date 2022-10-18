@@ -80,7 +80,7 @@ static void *pthread_fn(void *arg)
 }
 
 void *rt_context_create(void (*fn)(void *), void *arg, void *stack,
-                         size_t stack_size)
+                        size_t stack_size)
 {
     pthread_attr_t attr;
     pthread_attr_init(&attr);
@@ -134,7 +134,7 @@ static void syscall_handler(int sig)
         block_all_signals(NULL);
 
         rt_log("thread %lx sending resume to %lx\n",
-                (unsigned long)pthread_self(), (unsigned long)newctx);
+               (unsigned long)pthread_self(), (unsigned long)newctx);
         pthread_kill((pthread_t)newctx, SIGRESUME);
 
         rt_prev_task->ctx = (void *)pthread_self();
@@ -165,11 +165,11 @@ __attribute__((noreturn)) static void idle_fn(void *arg)
         /* Block signals and wait for one to occur. */
         block_all_signals(NULL);
         rt_log("thread %lx waiting for signal\n",
-                (unsigned long)pthread_self());
+               (unsigned long)pthread_self());
         int sig;
         sigwait(&sigset, &sig);
         rt_log("thread %lx received signal %d while waiting\n",
-                (unsigned long)pthread_self(), sig);
+               (unsigned long)pthread_self(), sig);
 
         /* After receiving a signal, re-trigger it and unblock signals. */
         pthread_kill(pthread_self(), sig);
@@ -184,7 +184,7 @@ void rt_start(void)
     static char idle_stack[PTHREAD_STACK_MIN];
     pthread_t idle_thread =
         (pthread_t)rt_context_create(idle_fn, NULL, idle_stack,
-                                      sizeof idle_stack);
+                                     sizeof idle_stack);
 
     /* The tick handler must block SIGSYSCALL. */
     struct sigaction tick_action = {

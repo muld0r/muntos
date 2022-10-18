@@ -3,7 +3,7 @@
 #include <string.h>
 
 void rt_queue_init(struct rt_queue *queue, void *buf, size_t num_elems,
-                    size_t elem_len)
+                   size_t elem_len)
 {
     rt_mutex_init(&queue->mutex);
     rt_cond_init(&queue->recv_ready);

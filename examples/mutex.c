@@ -1,6 +1,6 @@
 #include <rt/mutex.h>
-#include <rt/sleep.h>
 #include <rt/rt.h>
+#include <rt/sleep.h>
 
 static const int n = 50;
 

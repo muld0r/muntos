@@ -18,7 +18,7 @@ struct gp_context
 };
 
 void *rt_context_create(void (*fn)(void *), void *arg, void *stack,
-                         size_t stack_size)
+                        size_t stack_size)
 {
     void *const stack_end = (char *)stack + stack_size;
     struct gp_context *ctx = stack_end;

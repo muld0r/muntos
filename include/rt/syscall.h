@@ -59,4 +59,4 @@ void rt_syscall_post(void);
  */
 void *rt_syscall_run(void);
 
-#endif // RT_SYSCALL_H
+#endif /* RT_SYSCALL_H */

@@ -363,8 +363,8 @@ void *rt_syscall_run(void)
 }
 
 void rt_task_init(struct rt_task *task, void (*fn)(void *), void *arg,
-                   const char *name, unsigned priority, void *stack,
-                   size_t stack_size)
+                  const char *name, unsigned priority, void *stack,
+                  size_t stack_size)
 {
     task->ctx = rt_context_create(fn, arg, stack, stack_size);
     rt_list_push_back(&ready_list, &task->list);

@@ -1,5 +1,5 @@
-#include <rt/sem.h>
 #include <rt/rt.h>
+#include <rt/sem.h>
 
 static void simple(void *arg)
 {

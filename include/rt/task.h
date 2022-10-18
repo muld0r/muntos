@@ -16,8 +16,8 @@ struct rt_task;
  * Must be called before rt_start().
  */
 void rt_task_init(struct rt_task *task, void (*fn)(void *), void *arg,
-                   const char *name, unsigned priority, void *stack,
-                   size_t stack_size);
+                  const char *name, unsigned priority, void *stack,
+                  size_t stack_size);
 
 /*
  * Exit from the current task. This should be called automatically when a
@@ -39,13 +39,13 @@ struct rt_task
     unsigned priority;
 };
 
-#define RT_TASK(fn, arg, stack, priority)                                     \
+#define RT_TASK(fn, arg, stack, priority)                                      \
     do                                                                         \
     {                                                                          \
-        static struct rt_task fn##_task;                                      \
-        rt_task_init(&fn##_task, fn, arg,                                     \
-                      ((arg != NULL) ? #fn "(" #arg ")" : #fn "()"), priority, \
-                      stack, sizeof(stack));                                   \
+        static struct rt_task fn##_task;                                       \
+        rt_task_init(&fn##_task, fn, arg,                                      \
+                     ((arg != NULL) ? #fn "(" #arg ")" : #fn "()"), priority,  \
+                     stack, sizeof(stack));                                    \
     } while (0)
 
 /*
