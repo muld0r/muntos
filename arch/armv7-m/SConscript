@@ -1,0 +1,5 @@
+Import("env")
+
+libarmv7_m = env.StaticLibrary("armv7-m", source=["armv7-m.c", "armv7-m_asm.S"])
+
+Return("libarmv7_m")
