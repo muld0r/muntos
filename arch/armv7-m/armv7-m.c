@@ -68,23 +68,33 @@ static volatile struct shpr *const shpr = (volatile struct shpr *)0xE000ED18U;
 
 __attribute__((noreturn)) void rt_start(void)
 {
-    __attribute__((aligned(8))) static char idle_stack[128];
+    /* The idle stack needs to be large enough to store a register context. */
+    __attribute__((aligned(8))) static unsigned char idle_stack[72];
 
-    __asm__ __volatile__(
-        // Set the process stack pointer to the top of the idle task stack.
-        "msr psp, %0\n"
-        // Switch to the process stack pointer.
-        "mov r0, 2\n"
-        "msr control, r0\n"
-        "isb\n"
-        :
-        : "r"(&idle_stack[sizeof idle_stack])
-        : "r0");
+    /*
+     * Set the process stack pointer to the top of the idle stack and
+     * switch to it.
+     */
+    __asm__("msr psp, %0\n"
+            "mov r0, 2\n"
+            "msr control, r0\n"
+            "isb\n"
+            :
+            : "r"(&idle_stack[sizeof idle_stack])
+            : "r0");
 
+    /*
+     * Set svcall and pendsv to the lowest exception priority, and systick to
+     * one higher.
+     */
     shpr->svcall = 15 << 4;
     shpr->pendsv = 15 << 4;
     shpr->systick = 14 << 4;
 
+    /*
+     * Enable the systick interrupt.
+     * TODO: determine the appropriate reload value after configuring the clock.
+     */
     stk->reload = 1000;
     stk->current = 0;
     stk->ctrl = STK_CTRL_ENABLE | STK_CTRL_TICKINT;
