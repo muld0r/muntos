@@ -120,12 +120,6 @@ static void *sched(void)
     return next_task->ctx;
 }
 
-struct sleep_periodic_args
-{
-    unsigned long last_wake_tick;
-    unsigned long period;
-};
-
 void rt_sleep(unsigned long ticks)
 {
     struct rt_syscall_record syscall_record = {
