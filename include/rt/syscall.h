@@ -49,6 +49,12 @@ struct rt_syscall_record
 void rt_syscall(struct rt_syscall_record *syscall);
 
 /*
+ * Architecture-dependent handler for syscalls. This will call rt_syscall_run
+ * and perform a context switch if necessary.
+ */
+void rt_syscall_handler(void);
+
+/*
  * Trigger the syscall handler.
  */
 void rt_syscall_post(void);

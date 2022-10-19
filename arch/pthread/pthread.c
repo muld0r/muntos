@@ -125,6 +125,11 @@ __attribute__((noreturn)) static void resume_handler(int sig)
 static void syscall_handler(int sig)
 {
     (void)sig;
+    rt_syscall_handler();
+}
+
+void rt_syscall_handler(void)
+{
     rt_log("thread %lx running syscall\n", (unsigned long)pthread_self());
     void *newctx = rt_syscall_run();
 
@@ -142,6 +147,7 @@ static void syscall_handler(int sig)
         sigset_t resume_sigset;
         sigemptyset(&resume_sigset);
         sigaddset(&resume_sigset, SIGRESUME);
+        int sig;
         sigwait(&resume_sigset, &sig);
         rt_log("thread %lx resuming\n", (unsigned long)pthread_self());
     }
