@@ -49,7 +49,7 @@ int main(void)
     struct reaction *rxn = (void *)rxnbuf;
     reaction_init(rxn);
 
-    struct rt_task atoms[TOTAL_ATOMS];
+    static struct rt_task atoms[TOTAL_ATOMS];
     __attribute__((aligned(STACK_ALIGN))) static char stacks[TOTAL_ATOMS]
                                                             [TASK_STACK_SIZE];
 
