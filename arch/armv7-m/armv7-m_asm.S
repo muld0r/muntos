@@ -9,10 +9,8 @@ rt_syscall_handler:
     push {lr}
     bl rt_syscall_run
     pop {lr}
-    /* If there's no new context to swap to, return early. */
-    cmp r0, 0
-    it eq
-    bxeq lr
+    /* If there's no new context to switch to, return early. */
+    cbz r0, .Lreturn
 
     /* Write the suspending context to its stack pointer. */
     mrs r1, psp
@@ -37,4 +35,5 @@ rt_syscall_handler:
     /* Set the new stack pointer. */
     msr psp, r0
 
+.Lreturn:
     bx lr
