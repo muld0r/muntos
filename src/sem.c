@@ -7,8 +7,8 @@ static void sem_init_common(struct rt_sem *sem, int initial_value)
     rt_list_init(&sem->wait_list);
     sem->syscall_record.syscall = RT_SYSCALL_SEM_POST;
     sem->syscall_record.args.sem = sem;
-    sem->num_waiters = 0;
     atomic_store_explicit(&sem->value, initial_value, memory_order_relaxed);
+    sem->num_waiters = 0;
     atomic_flag_clear_explicit(&sem->post_pending, memory_order_release);
 }
 
