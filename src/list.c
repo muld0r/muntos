@@ -34,7 +34,7 @@ void rt_list_remove(struct rt_list *node)
     node->next = node;
 }
 
-bool rt_list_is_empty(struct rt_list *list)
+bool rt_list_is_empty(const struct rt_list *list)
 {
     return list->next == list;
 }

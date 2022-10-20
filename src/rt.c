@@ -1,6 +1,7 @@
 #include <rt/rt.h>
 
 #include <rt/context.h>
+#include <rt/list.h>
 #include <rt/log.h>
 #include <rt/sleep.h>
 #include <rt/syscall.h>
