@@ -39,7 +39,7 @@ bool rt_list_is_empty(const struct rt_list *list)
     return list->next == list;
 }
 
-struct rt_list *rt_list_front(struct rt_list *list)
+struct rt_list *rt_list_front(const struct rt_list *list)
 {
     return list->next;
 }
@@ -49,4 +49,10 @@ struct rt_list *rt_list_pop_front(struct rt_list *list)
     struct rt_list *const front = rt_list_front(list);
     rt_list_remove(front);
     return front;
+}
+
+void rt_list_move_all(struct rt_list *dst, struct rt_list *src)
+{
+    rt_list_insert_before(dst, src);
+    rt_list_remove(src);
 }

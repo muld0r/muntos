@@ -20,9 +20,11 @@ void rt_list_remove(struct rt_list *node);
 
 bool rt_list_is_empty(const struct rt_list *list);
 
-struct rt_list *rt_list_front(struct rt_list *list);
+struct rt_list *rt_list_front(const struct rt_list *list);
 
 struct rt_list *rt_list_pop_front(struct rt_list *list);
+
+void rt_list_move_all(struct rt_list *dst, struct rt_list *src);
 
 #define rt_list_for_each(node, listp)                                          \
     for (node = rt_list_front((listp)); node != (listp); node = node->next)
