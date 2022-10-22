@@ -5,6 +5,7 @@ env.Program("simple.c")
 env.Program("sleep.c")
 env.Program("queue.c")
 env.Program("list.c")
+env.Program("sbheap.c")
 env.Program("sem.c")
 env.Program("mutex.c")
 

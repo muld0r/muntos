@@ -6,6 +6,7 @@ librt = env.StaticLibrary(
         "rt.c",
         "queue.c",
         "list.c",
+        "sbheap.c",
         "sem.c",
         "mutex.c",
         "cond.c",
