@@ -5,6 +5,7 @@
 #include <rt/task.h>
 
 #include <stdatomic.h>
+#include <stdbool.h>
 
 static volatile atomic_uint hydrogen_bonded = 0;
 static volatile atomic_uint oxygen_bonded = 0;
@@ -35,7 +36,7 @@ static bool check(volatile atomic_uint *p, unsigned expected)
 static void timeout(void *arg)
 {
     (void)arg;
-    rt_sleep(1000);
+    rt_sleep(100);
     rt_stop();
 }
 
@@ -55,18 +56,18 @@ int main(void)
                                                             [TASK_STACK_SIZE];
 
     bool hydrogen = true;
-    for (int i = 0; i < TOTAL_ATOMS; i++)
+    for (unsigned i = 0; i < TOTAL_ATOMS; i++)
     {
         if (hydrogen)
         {
             ++hydrogen_atoms;
-            rt_task_init(&atoms[i], hydrogen_fn, rxn, "hydrogen", 1, stacks[i],
-                         TASK_STACK_SIZE);
+            rt_task_init(&atoms[i], hydrogen_fn, rxn, "hydrogen", i + 1,
+                         stacks[i], TASK_STACK_SIZE);
         }
         else
         {
             ++oxygen_atoms;
-            rt_task_init(&atoms[i], oxygen_fn, rxn, "oxygen", 1, stacks[i],
+            rt_task_init(&atoms[i], oxygen_fn, rxn, "oxygen", i + 1, stacks[i],
                          TASK_STACK_SIZE);
         }
         hydrogen = !hydrogen;
@@ -74,7 +75,7 @@ int main(void)
 
     __attribute__((aligned(STACK_ALIGN))) static char
         timeout_stack[TASK_STACK_SIZE];
-    RT_TASK(timeout, NULL, timeout_stack, 1);
+    RT_TASK(timeout, NULL, timeout_stack, 0);
 
     unsigned expected_water = hydrogen_atoms / 2;
     if (expected_water > oxygen_atoms)
