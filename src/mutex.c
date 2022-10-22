@@ -1,6 +1,6 @@
 #include <rt/mutex.h>
 
-#include <rt/rt.h>
+#include <rt/task.h>
 
 void rt_mutex_init(struct rt_mutex *mutex)
 {

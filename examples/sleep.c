@@ -1,5 +1,6 @@
 #include <rt/rt.h>
 #include <rt/sleep.h>
+#include <rt/task.h>
 #include <rt/tick.h>
 
 #include <stdatomic.h>

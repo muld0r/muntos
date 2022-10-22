@@ -1,6 +1,6 @@
 #include <rt/sem.h>
 
-#include <rt/rt.h>
+#include <rt/task.h>
 
 static void sem_init_common(struct rt_sem *sem, int initial_value)
 {

@@ -1,8 +1,6 @@
 #ifndef RT_H
 #define RT_H
 
-#include <rt/task.h>
-
 /*
  * Start the rt scheduler.
  */

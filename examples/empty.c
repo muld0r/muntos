@@ -1,4 +1,5 @@
 #include <rt/rt.h>
+#include <rt/task.h>
 
 static void empty(void *arg)
 {

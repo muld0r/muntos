@@ -1,5 +1,6 @@
 #include <rt/rt.h>
 #include <rt/sem.h>
+#include <rt/task.h>
 
 static void simple(void *arg)
 {

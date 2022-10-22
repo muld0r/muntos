@@ -2,6 +2,7 @@
 
 #include <rt/rt.h>
 #include <rt/sleep.h>
+#include <rt/task.h>
 
 #include <stdatomic.h>
 

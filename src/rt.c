@@ -6,6 +6,7 @@
 #include <rt/log.h>
 #include <rt/sleep.h>
 #include <rt/syscall.h>
+#include <rt/task.h>
 #include <rt/tick.h>
 
 #include <stdatomic.h>

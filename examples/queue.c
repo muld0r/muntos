@@ -1,5 +1,6 @@
 #include <rt/queue.h>
 #include <rt/rt.h>
+#include <rt/task.h>
 
 static const int n = 10;
 
