@@ -183,7 +183,7 @@ static void merge_heaps(struct rt_sbheap *heap, struct rt_list *other_trees)
     }
 }
 
-struct rt_sbheap_node *rt_sbheap_pop_min(struct rt_sbheap *heap)
+struct rt_sbheap_node *rt_sbheap_min(const struct rt_sbheap *heap)
 {
     if (rt_sbheap_is_empty(heap))
     {
@@ -201,16 +201,30 @@ struct rt_sbheap_node *rt_sbheap_pop_min(struct rt_sbheap *heap)
         }
     }
 
+    return min;
+}
+
+void rt_sbheap_remove(struct rt_sbheap *heap, struct rt_sbheap_node *node)
+{
+    rt_list_remove(&node->list);
+    merge_heaps(heap, &node->children);
+    while (!rt_list_is_empty(&node->singletons))
+    {
+        insert_singleton(heap, tree(rt_list_pop_front(&node->singletons)));
+    }
+    --heap->num_nodes;
+}
+
+struct rt_sbheap_node *rt_sbheap_pop_min(struct rt_sbheap *heap)
+{
+    struct rt_sbheap_node *min = rt_sbheap_min(heap);
+    if (!min)
+    {
+        return NULL;
+    }
     /* Remove the tree with the smallest root and re-add its children and
      * singletons to the heap. */
-    rt_list_remove(&min->list);
-    merge_heaps(heap, &min->children);
-    while (!rt_list_is_empty(&min->singletons))
-    {
-        insert_singleton(heap, tree(rt_list_pop_front(&min->singletons)));
-    }
-
-    --heap->num_nodes;
+    rt_sbheap_remove(heap, min);
     return min;
 }
 
@@ -222,6 +236,13 @@ size_t rt_sbheap_size(const struct rt_sbheap *heap)
 bool rt_sbheap_is_empty(const struct rt_sbheap *heap)
 {
     return heap->num_nodes == 0;
+}
+
+bool rt_sbheap_node_in_heap(const struct rt_sbheap_node *node)
+{
+    /* If a node is in a heap, it is contained within a heap->trees list or a
+     * node->singletons list, so its own list will be non-empty. */
+    return !rt_list_is_empty(&node->list);
 }
 
 void rt_sbheap_merge(struct rt_sbheap *heap, struct rt_sbheap *other)

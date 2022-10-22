@@ -11,13 +11,21 @@
 
 #include <stdatomic.h>
 
-static RT_LIST(ready_list);
+#define task_from_node(node_) rt_container_of((node_), struct rt_task, node)
+
+bool rt_task_priority_less_than(const struct rt_sbheap_node *a,
+                                const struct rt_sbheap_node *b)
+{
+    return task_from_node(a)->priority < task_from_node(b)->priority;
+}
+
+static RT_SBHEAP(ready_heap, rt_task_priority_less_than);
 
 static struct rt_syscall_record *_Atomic pending_syscalls;
 
 static struct rt_task idle_task = {
     .ctx = NULL,
-    .list = RT_LIST_INIT(idle_task.list),
+    .node = RT_SBHEAP_NODE_INIT(idle_task.node),
     .name = "idle",
     .priority = 0,
 };
@@ -25,19 +33,13 @@ static struct rt_task idle_task = {
 struct rt_task *rt_prev_task;
 static struct rt_task *active_task = &idle_task;
 
-static struct rt_task *task_from_list(struct rt_list *list)
-{
-    return rt_container_of(list, struct rt_task, list);
-}
-
 static struct rt_task *ready_pop(void)
 {
-    /* TODO: deal with different priorities */
-    if (rt_list_is_empty(&ready_list))
+    if (rt_sbheap_is_empty(&ready_heap))
     {
         return NULL;
     }
-    return task_from_list(rt_list_pop_front(&ready_list));
+    return task_from_node(rt_sbheap_pop_min(&ready_heap));
 }
 
 static void syscall_simple(enum rt_syscall syscall)
@@ -87,9 +89,9 @@ static void *sched(void)
         return NULL;
     }
 
-    if (rt_list_is_empty(&active_task->list))
+    if (!rt_sbheap_node_in_heap(&active_task->node))
     {
-        rt_list_push_back(&ready_list, &active_task->list);
+        rt_sbheap_insert(&ready_heap, &active_task->node);
     }
 
     rt_prev_task = active_task;
@@ -130,27 +132,23 @@ void rt_sleep_periodic(unsigned long *last_wake_tick, unsigned long period)
 /*
  * These globals may only be manipulated in the system call handler.
  */
-static RT_LIST(sleep_list);
 static unsigned long woken_tick;
 static unsigned long next_wake_tick;
 
+static bool wake_tick_less_than(const struct rt_sbheap_node *a,
+                                const struct rt_sbheap_node *b)
+{
+    return (task_from_node(a)->wake_tick - woken_tick) <
+           (task_from_node(b)->wake_tick - woken_tick);
+}
+
+static RT_SBHEAP(sleep_heap, wake_tick_less_than);
+
 static void sleep_until(struct rt_task *task, unsigned long wake_tick)
 {
-    const unsigned long ticks_until_wake = wake_tick - woken_tick;
-
-    struct rt_list *node;
-    rt_list_for_each(node, &sleep_list)
-    {
-        const struct rt_task *const sleeping_task = task_from_list(node);
-        if (ticks_until_wake < (sleeping_task->wake_tick - woken_tick))
-        {
-            break;
-        }
-    }
-
     task->wake_tick = wake_tick;
-    rt_list_insert_before(&task->list, node);
-    if (rt_list_front(&sleep_list) == &task->list)
+    rt_sbheap_insert(&sleep_heap, &task->node);
+    if (rt_sbheap_min(&sleep_heap) == &task->node)
     {
         next_wake_tick = wake_tick;
     }
@@ -195,10 +193,10 @@ static void tick_syscall(void)
             break;
         }
 
-        while (!rt_list_is_empty(&sleep_list))
+        while (!rt_sbheap_is_empty(&sleep_heap))
         {
-            struct rt_list *const node = rt_list_front(&sleep_list);
-            const struct rt_task *const sleeping_task = task_from_list(node);
+            struct rt_sbheap_node *const node = rt_sbheap_min(&sleep_heap);
+            struct rt_task *const sleeping_task = task_from_node(node);
             if (sleeping_task->wake_tick != woken_tick)
             {
                 /*
@@ -210,8 +208,8 @@ static void tick_syscall(void)
                 next_wake_tick = sleeping_task->wake_tick;
                 break;
             }
-            rt_list_remove(node);
-            rt_list_push_back(&ready_list, node);
+            rt_sbheap_remove(&sleep_heap, node);
+            rt_sbheap_insert(&ready_heap, node);
         }
     }
 }
@@ -257,21 +255,22 @@ void rt_syscall(struct rt_syscall_record *syscall_record)
 static void wake_sem_waiters(struct rt_sem *sem)
 {
     int waiters = -atomic_load_explicit(&sem->value, memory_order_acquire);
-    while ((sem->num_waiters > 0) && (sem->num_waiters > waiters))
+    if (waiters < 0)
     {
-        struct rt_list *node = rt_list_pop_front(&sem->wait_list);
-        rt_list_push_back(&ready_list, node);
-        --sem->num_waiters;
+        waiters = 0;
+    }
+    while (rt_sbheap_size(&sem->wait_heap) > (size_t)waiters)
+    {
+        rt_sbheap_insert(&ready_heap, rt_sbheap_pop_min(&sem->wait_heap));
     }
 }
 
 static void wake_mutex_waiter(struct rt_mutex *mutex)
 {
-    if (!rt_list_is_empty(&mutex->wait_list) &&
+    if (!rt_sbheap_is_empty(&mutex->wait_heap) &&
         !atomic_flag_test_and_set_explicit(&mutex->lock, memory_order_acquire))
     {
-        struct rt_list *node = rt_list_pop_front(&mutex->wait_list);
-        rt_list_push_back(&ready_list, node);
+        rt_sbheap_insert(&ready_heap, rt_sbheap_pop_min(&mutex->wait_heap));
     }
 }
 
@@ -313,15 +312,14 @@ void *rt_syscall_run(void)
             break;
         case RT_SYSCALL_EXIT:
         {
-            static RT_LIST(exited_list);
-            rt_list_push_back(&exited_list, &syscall_record->task->list);
+            static RT_SBHEAP(exited_heap, rt_task_priority_less_than);
+            rt_sbheap_insert(&exited_heap, &syscall_record->task->node);
             break;
         }
         case RT_SYSCALL_SEM_WAIT:
         {
             struct rt_sem *const sem = syscall_record->args.sem;
-            rt_list_push_back(&sem->wait_list, &syscall_record->task->list);
-            ++sem->num_waiters;
+            rt_sbheap_insert(&sem->wait_heap, &syscall_record->task->node);
             /* Evaluate semaphore wakes here as well in case a post occurred
              * before the wait syscall was handled. */
             wake_sem_waiters(sem);
@@ -330,7 +328,7 @@ void *rt_syscall_run(void)
         case RT_SYSCALL_MUTEX_LOCK:
         {
             struct rt_mutex *const mutex = syscall_record->args.mutex;
-            rt_list_push_back(&mutex->wait_list, &syscall_record->task->list);
+            rt_sbheap_insert(&mutex->wait_heap, &syscall_record->task->node);
             /* Evaluate mutex wakes here as well in case an unlock occurred
              * before the wait syscall was handled. */
             wake_mutex_waiter(mutex);
@@ -368,7 +366,7 @@ void rt_task_init(struct rt_task *task, void (*fn)(void *), void *arg,
                   size_t stack_size)
 {
     task->ctx = rt_context_create(fn, arg, stack, stack_size);
-    rt_list_push_back(&ready_list, &task->list);
+    rt_sbheap_insert(&ready_heap, &task->node);
     task->wake_tick = 0;
     task->name = name;
     task->priority = priority;

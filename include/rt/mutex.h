@@ -1,7 +1,7 @@
 #ifndef RT_MUTEX_H
 #define RT_MUTEX_H
 
-#include <rt/list.h>
+#include <rt/sbheap.h>
 #include <rt/syscall.h>
 
 #include <stdatomic.h>
@@ -18,7 +18,7 @@ void rt_mutex_unlock(struct rt_mutex *mutex);
 
 struct rt_mutex
 {
-    struct rt_list wait_list;
+    struct rt_sbheap wait_heap;
     struct rt_syscall_record syscall_record;
     atomic_flag lock;
     atomic_flag unlock_pending;
@@ -26,7 +26,8 @@ struct rt_mutex
 
 #define RT_MUTEX_INIT(name)                                                    \
     {                                                                          \
-        .wait_list = RT_LIST_INIT(name.wait_list),                             \
+        .wait_heap =                                                           \
+            RT_SBHEAP_INIT(name.wait_heap, rt_task_priority_less_than),        \
         .syscall_record =                                                      \
             {                                                                  \
                 .next = NULL,                                                  \

@@ -46,7 +46,7 @@ int main(void)
     unsigned hydrogen_atoms = 0;
     unsigned oxygen_atoms = 0;
 
-    __attribute__((aligned(8))) static char rxnbuf[256];
+    __attribute__((aligned(8))) static char rxnbuf[1024];
     struct reaction *rxn = (void *)rxnbuf;
     reaction_init(rxn);
 

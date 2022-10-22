@@ -1,8 +1,8 @@
 #ifndef RT_TASK_H
 #define RT_TASK_H
 
-#include <rt/list.h>
 #include <rt/mutex.h>
+#include <rt/sbheap.h>
 #include <rt/sem.h>
 #include <rt/syscall.h>
 
@@ -33,7 +33,7 @@ const char *rt_task_name(void);
 struct rt_task
 {
     void *ctx;
-    struct rt_list list;
+    struct rt_sbheap_node node;
     unsigned long wake_tick;
     const char *name;
     unsigned priority;
@@ -53,5 +53,8 @@ struct rt_task
  * context switch.
  */
 extern struct rt_task *rt_prev_task;
+
+bool rt_task_priority_less_than(const struct rt_sbheap_node *a,
+                                const struct rt_sbheap_node *b);
 
 #endif /* RT_TASK_H */
