@@ -371,8 +371,8 @@ void rt_task_init(struct rt_task *task, void (*fn)(void *), void *arg,
                   size_t stack_size)
 {
     task->ctx = rt_context_create(fn, arg, stack, stack_size);
-    rt_sbheap_insert(&ready_heap, &task->node);
+    task->priority = priority;
     task->wake_tick = 0;
     task->name = name;
-    task->priority = priority;
+    rt_sbheap_insert(&ready_heap, &task->node);
 }
