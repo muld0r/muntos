@@ -32,15 +32,6 @@ static struct rt_task idle_task = {
 struct rt_task *rt_prev_task;
 static struct rt_task *active_task = &idle_task;
 
-static struct rt_task *ready_pop(void)
-{
-    if (rt_sbheap_is_empty(&ready_heap))
-    {
-        return NULL;
-    }
-    return task_from_node(rt_sbheap_pop_min(&ready_heap));
-}
-
 static void syscall_simple(enum rt_syscall syscall)
 {
     struct rt_syscall_record syscall_record = {
@@ -79,16 +70,31 @@ void rt_task_exit(void)
     syscall_simple(RT_SYSCALL_EXIT);
 }
 
-/* TODO: simplify this based on what syscall actually occurred */
 static void *sched(void)
 {
-    struct rt_task *const next_task = ready_pop();
-    if (!next_task)
+    struct rt_sbheap_node *const node = rt_sbheap_min(&ready_heap);
+    if (!node)
     {
         return NULL;
     }
 
-    if (!rt_sbheap_node_in_heap(&active_task->node))
+    struct rt_task *next_task = task_from_node(node);
+
+    const bool active_is_runnable = !rt_sbheap_node_in_heap(&active_task->node);
+
+    /* If the active task is still runnable and the new task is lower priority,
+     * then continue executing the active task. */
+    if (active_is_runnable && (next_task->priority > active_task->priority))
+    {
+        return NULL;
+    }
+
+    /* The next task will be used, so remove it from the ready heap. */
+    rt_sbheap_remove(&ready_heap, node);
+
+    /* If the active task is not already waiting for some other event, re-add
+     * it to the ready heap. */
+    if (active_is_runnable)
     {
         rt_sbheap_insert(&ready_heap, &active_task->node);
     }
