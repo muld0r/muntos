@@ -16,8 +16,8 @@
 #include <stdio.h>
 
 #define SIGTICK SIGALRM
-#define SIGSYSCALL SIGRTMIN
-#define SIGRESUME (SIGRTMIN + 1)
+#define SIGSYSCALL SIGUSR1
+#define SIGRESUME SIGUSR2
 
 #ifndef RT_LOG_ENABLE
 #define RT_LOG_ENABLE 0
