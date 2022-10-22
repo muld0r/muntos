@@ -26,7 +26,7 @@ static struct rt_task idle_task = {
     .ctx = NULL,
     .node = RT_SBHEAP_NODE_INIT(idle_task.node),
     .name = "idle",
-    .priority = 0,
+    .priority = UINT_MAX,
 };
 
 struct rt_task *rt_prev_task;
