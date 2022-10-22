@@ -1,3 +1,4 @@
+#include <rt/container.h>
 #include <rt/list.h>
 
 struct intl
@@ -5,6 +6,11 @@ struct intl
     int x;
     struct rt_list list;
 };
+
+static struct intl *item(struct rt_list *node)
+{
+    return rt_container_of(node, struct intl, list);
+}
 
 #define NUM_NODES 5
 
@@ -25,7 +31,7 @@ int main(void)
     i = 0;
     rt_list_for_each(node, &list)
     {
-        if (rt_list_item(node, struct intl, list)->x != i)
+        if (item(node)->x != i)
         {
             return 1;
         }
@@ -35,7 +41,7 @@ int main(void)
     i = 0;
     while (!rt_list_is_empty(&list))
     {
-        if (rt_list_item(rt_list_pop_front(&list), struct intl, list)->x != i)
+        if (item(rt_list_pop_front(&list))->x != i)
         {
             return 1;
         }

@@ -1,5 +1,6 @@
 #include <rt/rt.h>
 
+#include <rt/container.h>
 #include <rt/context.h>
 #include <rt/list.h>
 #include <rt/log.h>
@@ -25,7 +26,7 @@ static struct rt_task *active_task = &idle_task;
 
 static struct rt_task *task_from_list(struct rt_list *list)
 {
-    return rt_list_item(list, struct rt_task, list);
+    return rt_container_of(list, struct rt_task, list);
 }
 
 static struct rt_task *ready_pop(void)
@@ -139,8 +140,7 @@ static void sleep_until(struct rt_task *task, unsigned long wake_tick)
     struct rt_list *node;
     rt_list_for_each(node, &sleep_list)
     {
-        const struct rt_task *const sleeping_task =
-            rt_list_item(node, struct rt_task, list);
+        const struct rt_task *const sleeping_task = task_from_list(node);
         if (ticks_until_wake < (sleeping_task->wake_tick - woken_tick))
         {
             break;
@@ -197,8 +197,7 @@ static void tick_syscall(void)
         while (!rt_list_is_empty(&sleep_list))
         {
             struct rt_list *const node = rt_list_front(&sleep_list);
-            const struct rt_task *const sleeping_task =
-                rt_list_item(node, struct rt_task, list);
+            const struct rt_task *const sleeping_task = task_from_list(node);
             if (sleeping_task->wake_tick != woken_tick)
             {
                 /*

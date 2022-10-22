@@ -1,8 +1,6 @@
 #ifndef RT_LIST_H
 #define RT_LIST_H
 
-#include <rt/container.h>
-
 #include <stdbool.h>
 
 struct rt_list
@@ -35,7 +33,5 @@ struct rt_list *rt_list_pop_front(struct rt_list *list);
     }
 
 #define RT_LIST(name) struct rt_list name = RT_LIST_INIT(name)
-
-#define rt_list_item rt_container_of
 
 #endif /* RT_LIST_H */
