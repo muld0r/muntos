@@ -29,7 +29,6 @@ static struct rt_task idle_task = {
     .priority = UINT_MAX,
 };
 
-struct rt_task *rt_prev_task;
 static struct rt_task *active_task = &idle_task;
 
 static void syscall_simple(enum rt_syscall syscall)
@@ -73,6 +72,8 @@ void rt_task_exit(void)
     syscall_simple(RT_SYSCALL_EXIT);
 }
 
+void **rt_prev_context;
+
 static void *sched(void)
 {
     struct rt_sbheap_node *const node = rt_sbheap_min(&ready_heap);
@@ -106,7 +107,7 @@ static void *sched(void)
         rt_sbheap_insert(&ready_heap, &active_task->node);
     }
 
-    rt_prev_task = active_task;
+    rt_prev_context = &active_task->ctx;
     active_task = next_task;
 
     rt_logf("sched: switching to %s with priority %u\n", rt_task_name(),

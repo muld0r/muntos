@@ -137,7 +137,7 @@ void rt_syscall_handler(void)
 
         pthread_kill((pthread_t)newctx, SIGRESUME);
 
-        rt_prev_task->ctx = (void *)pthread_self();
+        *rt_prev_context = (void *)pthread_self();
         sigset_t resume_sigset;
         sigemptyset(&resume_sigset);
         sigaddset(&resume_sigset, SIGRESUME);

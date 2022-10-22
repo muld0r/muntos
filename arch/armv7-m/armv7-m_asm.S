@@ -20,8 +20,8 @@ rt_syscall_handler:
     vstmdbeq r1!, {s16-s31}
 #endif
     stmdb r1!, {r4-r11, lr}
-    /* Store the new stack pointer with the saved context in the suspending task. */
-    ldr r2, =rt_prev_task
+    /* Store the new stack pointer with the saved context. */
+    ldr r2, =rt_prev_context
     ldr r2, [r2]
     str r1, [r2]
 

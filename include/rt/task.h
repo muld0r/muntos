@@ -49,10 +49,10 @@ struct rt_task
     } while (0)
 
 /*
- * Pointer to the previous task, used to store the suspending context in a
- * context switch.
+ * Pointer to the previous task's context field, used to store the suspending
+ * context during a context switch.
  */
-extern struct rt_task *rt_prev_task;
+extern void **rt_prev_context;
 
 bool rt_task_priority_less_than(const struct rt_sbheap_node *a,
                                 const struct rt_sbheap_node *b);
