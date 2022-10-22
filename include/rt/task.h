@@ -32,8 +32,8 @@ const char *rt_task_name(void);
 
 struct rt_task
 {
-    void *ctx;
     struct rt_sbheap_node node;
+    void *ctx;
     unsigned long wake_tick;
     const char *name;
     unsigned priority;
