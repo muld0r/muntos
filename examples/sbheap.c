@@ -3,27 +3,26 @@
 #include <rt/log.h>
 #include <rt/sbheap.h>
 
-#include <stdint.h>
-struct u32_node
+struct u_node
 {
-    uint32_t x;
+    unsigned x;
     struct rt_sbheap_node node;
 };
 
 #define NUM_NODES 20
 
-static struct u32_node nodes[NUM_NODES];
+static struct u_node nodes[NUM_NODES];
 
-static bool u32_node_less_than(const struct rt_sbheap_node *a,
-                               const struct rt_sbheap_node *b)
+static bool u_node_less_than(const struct rt_sbheap_node *a,
+                             const struct rt_sbheap_node *b)
 {
-    return rt_container_of(a, struct u32_node, node)->x <
-           rt_container_of(b, struct u32_node, node)->x;
+    return rt_container_of(a, struct u_node, node)->x <
+           rt_container_of(b, struct u_node, node)->x;
 }
 
-static struct u32_node *item(const struct rt_sbheap_node *node)
+static struct u_node *item(const struct rt_sbheap_node *node)
 {
-    return rt_container_of(node, struct u32_node, node);
+    return rt_container_of(node, struct u_node, node);
 }
 
 static void print_indent(size_t indent)
@@ -72,7 +71,7 @@ static void print_heap(const struct rt_sbheap *heap)
 int main(void)
 {
     struct rt_sbheap heap;
-    rt_sbheap_init(&heap, u32_node_less_than);
+    rt_sbheap_init(&heap, u_node_less_than);
     uint32_t seed = 0;
     uint32_t a = 1664525, c = 1013904223;
     int i;
