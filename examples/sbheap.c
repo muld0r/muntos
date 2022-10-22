@@ -29,24 +29,33 @@ static struct u32_node *item(const struct rt_sbheap_node *node)
 
 static void print_indent(size_t indent)
 {
-    for (size_t i = 0; i < indent; ++i)
+    if (indent > 0)
     {
-        printf("  ");
+        for (size_t i = 0; i < indent - 1; ++i)
+        {
+            printf("    ");
+        }
+        printf("└───");
     }
 }
 
 static void print_tree(const struct rt_sbheap_node *tree, size_t indent)
 {
     print_indent(indent);
-    printf("item %u, order %zu\n", item(tree)->x, tree->order);
+    printf("%u\n", item(tree)->x);
+
+    struct rt_list *node;
+    rt_list_for_each(node, &tree->singletons)
+    {
+        print_indent(indent);
+        printf("%u\n", item(rt_sbheap_from_list(node))->x);
+    }
 
     if (!rt_list_is_empty(&tree->children))
     {
-        struct rt_list *node;
         rt_list_for_each(node, &tree->children)
         {
-            print_tree(rt_container_of(node, struct rt_sbheap_node, list),
-                       indent + 1);
+            print_tree(rt_sbheap_from_list(node), indent + 1);
         }
     }
 }
@@ -57,7 +66,7 @@ static void print_heap(const struct rt_sbheap *heap)
     struct rt_list *node;
     rt_list_for_each(node, &heap->trees)
     {
-        print_tree(rt_container_of(node, struct rt_sbheap_node, list), 0);
+        print_tree(rt_sbheap_from_list(node), 0);
     }
 }
 
@@ -71,15 +80,12 @@ int main(void)
     for (i = 0; i < NUM_NODES; ++i)
     {
         seed = ((a * seed) + c);
-        nodes[i].x = seed % 100;
+        nodes[i].x = seed % 1000;
         rt_sbheap_insert(&heap, &nodes[i].node);
 
         printf("\n");
         print_heap(&heap);
     }
-
-    // print_heap(&heap);
-    // rt_sbheap_pop_min(&heap);
 
     /* Check that the output is in sorted order. */
     uint32_t max = 0;

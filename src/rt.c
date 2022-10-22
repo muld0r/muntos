@@ -2,7 +2,6 @@
 
 #include <rt/container.h>
 #include <rt/context.h>
-#include <rt/list.h>
 #include <rt/log.h>
 #include <rt/sleep.h>
 #include <rt/syscall.h>
@@ -11,7 +10,7 @@
 
 #include <stdatomic.h>
 
-#define task_from_node(node_) rt_container_of((node_), struct rt_task, node)
+#define task_from_node(node_) (rt_container_of((node_), struct rt_task, node))
 
 bool rt_task_priority_less_than(const struct rt_sbheap_node *a,
                                 const struct rt_sbheap_node *b)

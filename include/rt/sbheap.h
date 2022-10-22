@@ -12,6 +12,9 @@ struct rt_sbheap_node
     size_t order;
 };
 
+#define rt_sbheap_from_list(list_)                                             \
+    (rt_container_of(list_, struct rt_sbheap_node, list))
+
 struct rt_sbheap
 {
     struct rt_list trees;
