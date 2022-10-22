@@ -1,3 +1,4 @@
+#include <rt/log.h>
 #include <rt/rt.h>
 #include <rt/sleep.h>
 #include <rt/task.h>
@@ -15,8 +16,11 @@ static void sleep(void *arg)
     for (int i = 0; i < nloops; ++i)
     {
         rt_sleep_periodic(&last_wake_tick, *period);
-        if (rt_tick() != last_wake_tick)
+        unsigned long wake_tick = rt_tick();
+        if (wake_tick != last_wake_tick)
         {
+            rt_logf("expected to wake at %lu, instead woke at %lu\n",
+                    last_wake_tick, wake_tick);
             atomic_store(&wrong_tick, true);
         }
     }
