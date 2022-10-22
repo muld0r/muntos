@@ -1,6 +1,7 @@
 #include <rt/mutex.h>
 
 #include <rt/task.h>
+#include <rt/log.h>
 
 void rt_mutex_init(struct rt_mutex *mutex)
 {
@@ -16,6 +17,7 @@ void rt_mutex_lock(struct rt_mutex *mutex)
     if (rt_mutex_trylock(mutex))
     {
         /* Acquired the lock. */
+        rt_logf("%s lock\n", rt_task_name());
         return;
     }
 
@@ -23,6 +25,7 @@ void rt_mutex_lock(struct rt_mutex *mutex)
         .syscall = RT_SYSCALL_MUTEX_LOCK,
         .args.mutex = mutex,
     };
+    rt_logf("syscall: %s mutex lock\n", rt_task_name());
     rt_syscall(&syscall_record);
 }
 
@@ -37,11 +40,13 @@ void rt_mutex_unlock(struct rt_mutex *mutex)
     /* TODO: make the lock go to the highest priority waiter, rather than
      * whoever gets to the test_and_set first. */
     atomic_flag_clear_explicit(&mutex->lock, memory_order_release);
+    rt_logf("%s unlock\n", rt_task_name());
 
     /* If there isn't already an unlock system call pending, then create one. */
     if (!atomic_flag_test_and_set_explicit(&mutex->unlock_pending,
                                            memory_order_acquire))
     {
+        rt_logf("syscall: %s mutex unlock\n", rt_task_name());
         rt_syscall(&mutex->syscall_record);
     }
 }

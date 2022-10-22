@@ -1,6 +1,8 @@
 #include <rt/context.h>
 
+#include <rt/log.h>
 #include <rt/rt.h>
+#include <rt/task.h>
 
 #include <stdbool.h>
 #include <stdint.h>
@@ -147,4 +149,9 @@ void rt_syscall_post(void)
         __asm__("dsb\n"
                 "isb\n");
     }
+}
+
+void rt_logf(const char *fmt, ...)
+{
+    (void)fmt;
 }

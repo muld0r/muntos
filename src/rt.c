@@ -42,6 +42,7 @@ static void syscall_simple(enum rt_syscall syscall)
 
 void rt_yield(void)
 {
+    rt_logf("syscall: %s yield\n", rt_task_name());
     syscall_simple(RT_SYSCALL_YIELD);
 }
 
@@ -56,6 +57,7 @@ void rt_sched(void)
     if (!atomic_flag_test_and_set_explicit(&sched_pending,
                                            memory_order_relaxed))
     {
+        rt_logf("syscall: sched\n");
         rt_syscall(&sched);
     }
 }
@@ -67,6 +69,7 @@ const char *rt_task_name(void)
 
 void rt_task_exit(void)
 {
+    rt_logf("syscall: %s exit\n", rt_task_name());
     syscall_simple(RT_SYSCALL_EXIT);
 }
 
@@ -75,6 +78,7 @@ static void *sched(void)
     struct rt_sbheap_node *const node = rt_sbheap_min(&ready_heap);
     if (!node)
     {
+        rt_logf("sched: no new task to run, continuing %s\n", rt_task_name());
         return NULL;
     }
 
@@ -86,6 +90,8 @@ static void *sched(void)
      * then continue executing the active task. */
     if (active_is_runnable && (next_task->priority > active_task->priority))
     {
+        rt_logf("sched: %s is still highest priority (%u < %u)\n",
+               rt_task_name(), active_task->priority, next_task->priority);
         return NULL;
     }
 
@@ -96,12 +102,15 @@ static void *sched(void)
      * it to the ready heap. */
     if (active_is_runnable)
     {
+        rt_logf("sched: %s is still runnable\n", rt_task_name());
         rt_sbheap_insert(&ready_heap, &active_task->node);
     }
 
     rt_prev_task = active_task;
     active_task = next_task;
 
+    rt_logf("sched: switching to %s with priority %u\n", rt_task_name(),
+           active_task->priority);
     return next_task->ctx;
 }
 
@@ -117,6 +126,7 @@ void rt_sleep(unsigned long ticks)
         .syscall = RT_SYSCALL_SLEEP,
         .args.sleep_ticks = ticks,
     };
+    rt_logf("syscall: %s sleep %lu\n", rt_task_name(), ticks);
     rt_syscall(&syscall_record);
 }
 
@@ -130,6 +140,8 @@ void rt_sleep_periodic(unsigned long *last_wake_tick, unsigned long period)
                 .period = period,
             },
     };
+    rt_logf("syscall: %s sleep periodic, last wake = %lu, period = %lu\n",
+           rt_task_name(), *last_wake_tick, period);
     *last_wake_tick += period;
     rt_syscall(&syscall_record);
 }
@@ -224,7 +236,8 @@ static atomic_flag tick_pending = ATOMIC_FLAG_INIT;
 
 void rt_tick_advance(void)
 {
-    atomic_fetch_add_explicit(&rt_ticks, 1, memory_order_relaxed);
+    unsigned long oldticks =
+        atomic_fetch_add_explicit(&rt_ticks, 1, memory_order_relaxed);
 
     static struct rt_syscall_record tick_syscall_record = {
         .next = NULL,
@@ -233,6 +246,7 @@ void rt_tick_advance(void)
 
     if (!atomic_flag_test_and_set_explicit(&tick_pending, memory_order_relaxed))
     {
+        rt_logf("syscall: tick %lu\n", oldticks + 1);
         rt_syscall(&tick_syscall_record);
     }
 }
@@ -370,6 +384,7 @@ void rt_task_init(struct rt_task *task, void (*fn)(void *), void *arg,
                   const char *name, unsigned priority, void *stack,
                   size_t stack_size)
 {
+    rt_logf("%s created\n", name);
     task->ctx = rt_context_create(fn, arg, stack, stack_size);
     task->priority = priority;
     task->wake_tick = 0;

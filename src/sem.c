@@ -1,5 +1,6 @@
 #include <rt/sem.h>
 
+#include <rt/log.h>
 #include <rt/task.h>
 
 static void sem_init_common(struct rt_sem *sem, int initial_value)
@@ -37,6 +38,8 @@ void rt_sem_post(struct rt_sem *sem)
                                                     value + 1,
                                                     memory_order_release,
                                                     memory_order_relaxed));
+
+    rt_logf("%s sem post, new value %d\n", rt_task_name(), value + 1);
 
     /* If the value was less than zero, then there was at least one waiter when
      * we successfully posted. If there isn't already a post system call
@@ -105,6 +108,8 @@ void rt_sem_wait(struct rt_sem *sem)
                                                   memory_order_relaxed))
     {
     }
+
+    rt_logf("%s sem wait, new value %d\n", rt_task_name(), value - 1);
 
     if (value <= 0)
     {
