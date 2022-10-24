@@ -1,0 +1,7 @@
+Import("env")
+
+libarmv6_m = env.StaticLibrary(
+    "armv6-m", source=["armv6-m.c", "armv6-m_asm.S", "atomic.c"]
+)
+
+Return("libarmv6_m")
