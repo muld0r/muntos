@@ -57,26 +57,6 @@ struct stk
     uint32_t calib;
 };
 
-static volatile struct stk *const stk = (volatile struct stk *)0xE000E010U;
-
-struct shpr
-{
-    uint8_t mem_manage;
-    uint8_t bus_fault;
-    uint8_t usage_fault;
-    uint8_t : 8;
-    uint8_t : 8;
-    uint8_t : 8;
-    uint8_t : 8;
-    uint8_t svcall;
-    uint8_t : 8;
-    uint8_t : 8;
-    uint8_t pendsv;
-    uint8_t systick;
-};
-
-static volatile struct shpr *const shpr = (volatile struct shpr *)0xE000ED18U;
-
 __attribute__((noreturn)) void rt_start(void)
 {
     /* The idle stack needs to be large enough to store a register context. */
@@ -97,16 +77,17 @@ __attribute__((noreturn)) void rt_start(void)
 
     /*
      * Set svcall and pendsv to the lowest exception priority, and systick to
-     * one higher.
+     * one higher. Cortex-M4 implements only 4 bits of priority for each exception.
      */
-    shpr->svcall = 15 << 4;
-    shpr->pendsv = 15 << 4;
-    shpr->systick = 14 << 4;
+    static volatile uint32_t *const shpr = (uint32_t *)0xE000ED18U;
+    shpr[1] = 0xF0000000U;
+    shpr[2] = 0xE0F00000U;
 
     /*
      * Enable the systick interrupt.
      * TODO: determine the appropriate reload value after configuring the clock.
      */
+    static volatile struct stk *const stk = (volatile struct stk *)0xE000E010U;
     stk->reload = 1000;
     stk->current = 0;
     stk->ctrl = STK_CTRL_ENABLE | STK_CTRL_TICKINT;
@@ -136,7 +117,6 @@ void rt_stop(void)
     __asm__("bkpt");
 }
 
-static volatile uint32_t *const icsr = (volatile uint32_t *)0xE000ED04UL;
 #define PENDSVSET (1U << 28)
 
 void rt_syscall_post(void)
@@ -155,9 +135,10 @@ void rt_syscall_post(void)
     }
     else
     {
+        static volatile uint32_t *const icsr = (volatile uint32_t *)0xE000ED04UL;
         *icsr = PENDSVSET;
         /* TODO: are these needed? This code path is run from an exception with
-         * higher-priority than PendSV, and will execute an exception return
+         * higher priority than PendSV, and will execute an exception return
          * before the PendSV handler gets to run. */
         __asm__("dsb\n"
                 "isb");
