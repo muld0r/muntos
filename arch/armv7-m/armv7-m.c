@@ -10,7 +10,14 @@
 struct gp_context
 {
     // Saved by task context switch.
-    uintptr_t r4, r5, r6, r7, r8, r9, r10, r11, exc_lr;
+    uintptr_t r4, r5, r6, r7, r8, r9, r10, r11;
+
+    /* Only use a per-task exception lr if floating-point is enabled.
+     * Otherwise, any task's exception lr is the same as any other, and its
+     * value will be set when any task takes an exception. */
+#if defined(__ARM_FP)
+    uintptr_t exc_lr;
+#endif
 
     // Saved automatically on exception entry.
     uintptr_t r0, r1, r2, r3, r12;
@@ -25,7 +32,9 @@ void *rt_context_create(void (*fn)(void *), void *arg, void *stack,
     void *const stack_end = (char *)stack + stack_size;
     struct gp_context *ctx = stack_end;
     ctx -= 1;
+#if defined(__ARM_FP)
     ctx->exc_lr = 0xFFFFFFFDU; // thread mode, no FP, use PSP
+#endif
     ctx->r0 = (uintptr_t)arg;
     ctx->lr = rt_task_exit;
     ctx->pc = fn;
@@ -77,8 +86,9 @@ __attribute__((noreturn)) void rt_start(void)
      * Set the process stack pointer to the top of the idle stack and
      * switch to it.
      */
-    __asm__("msr psp, %0\n"
-            "mov r0, 2\n"
+    __asm__(".syntax unified\n"
+            "msr psp, %0\n"
+            "movs r0, 2\n"
             "msr control, r0\n"
             "isb\n"
             :
@@ -146,8 +156,11 @@ void rt_syscall_post(void)
     else
     {
         *icsr = PENDSVSET;
+        /* TODO: are these needed? This code path is run from an exception with
+         * higher-priority than PendSV, and will execute an exception return
+         * before the PendSV handler gets to run. */
         __asm__("dsb\n"
-                "isb\n");
+                "isb");
     }
 }
 
