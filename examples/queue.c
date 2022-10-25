@@ -26,8 +26,7 @@ static void receiver(void *arg)
 
 int main(void)
 {
-    static int queue_buf[2];
-    static RT_QUEUE_FROM_ARRAY(queue, queue_buf);
+    RT_QUEUE_STATIC(queue, int, 2);
     __attribute__((aligned(STACK_ALIGN))) static char
         sender_stack[TASK_STACK_SIZE],
         receiver_stack[TASK_STACK_SIZE];

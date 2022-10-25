@@ -41,4 +41,18 @@ struct rt_queue
         .elem_len = sizeof((array)[0]),                                        \
     }
 
+#define RT_QUEUE_STATIC(name, type, nelems)                                    \
+    static type name##_elems[(nelems)];                                        \
+    static struct rt_queue name = {                                            \
+        .mutex = RT_MUTEX_INIT(name.mutex),                                    \
+        .recv_ready = RT_COND_INIT(name.recv_ready),                           \
+        .send_ready = RT_COND_INIT(name.send_ready),                           \
+        .buf = name##_elems,                                                   \
+        .len = 0,                                                              \
+        .recv_offset = 0,                                                      \
+        .send_offset = 0,                                                      \
+        .capacity = sizeof name##_elems,                                       \
+        .elem_len = sizeof(type),                                              \
+    }
+
 #endif /* RT_QUEUE_H */
