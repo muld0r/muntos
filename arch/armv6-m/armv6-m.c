@@ -101,6 +101,8 @@ void rt_syscall_post(void)
 {
     static volatile uint32_t *const icsr = (volatile uint32_t *)0xE000ED04UL;
     *icsr = PENDSVSET;
+    /* Barriers ensure that the PendSV exception is taken before any other code
+     * executes, which is required when tasks post a system call. */
     __asm__("dsb\n"
             "isb\n");
 }
