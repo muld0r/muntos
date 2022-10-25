@@ -10,20 +10,19 @@
 struct gp_context
 {
     // Saved by task context switch.
-    uintptr_t r4, r5, r6, r7, r8, r9, r10, r11;
+    uint32_t r4, r5, r6, r7, r8, r9, r10, r11;
 
-    /* Only use a per-task exception lr if floating-point is enabled.
-     * Otherwise, any task's exception lr is the same as any other, and its
-     * value will be set when any task takes an exception. */
 #if defined(__ARM_FP)
-    uintptr_t exc_lr;
+    /* Only use a per-task exception lr if floating-point is enabled, because
+     * otherwise the exception return value is always the same. */
+    uint32_t exc_lr;
 #endif
 
     // Saved automatically on exception entry.
-    uintptr_t r0, r1, r2, r3, r12;
+    uint32_t r0, r1, r2, r3, r12;
     void (*lr)(void);
     void (*pc)(void *);
-    uintptr_t psr;
+    uint32_t psr;
 };
 
 void *rt_context_create(void (*fn)(void *), void *arg, void *stack,
@@ -35,7 +34,7 @@ void *rt_context_create(void (*fn)(void *), void *arg, void *stack,
 #if defined(__ARM_FP)
     ctx->exc_lr = 0xFFFFFFFDU; // thread mode, no FP, use PSP
 #endif
-    ctx->r0 = (uintptr_t)arg;
+    ctx->r0 = (uint32_t)arg;
     ctx->lr = rt_task_exit;
     ctx->pc = fn;
     ctx->psr = 0x01000000U; // thumb state
@@ -66,18 +65,16 @@ __attribute__((noreturn)) void rt_start(void)
      * Set the process stack pointer to the top of the idle stack and
      * switch to it.
      */
-    __asm__(".syntax unified\n"
-            "msr psp, %0\n"
-            "movs r0, 2\n"
-            "msr control, r0\n"
+    __asm__("msr psp, %0\n"
+            "msr control, %1\n"
             "isb\n"
             :
-            : "r"(&idle_stack[sizeof idle_stack])
-            : "r0");
+            : "r"(&idle_stack[sizeof idle_stack]), "r"(2));
 
     /*
      * Set svcall and pendsv to the lowest exception priority, and systick to
-     * one higher. Cortex-M4 implements only 4 bits of priority for each exception.
+     * one higher. STM32F4 implements only 4 bits of priority for each
+     * exception. TODO: make this configurable?
      */
     static volatile uint32_t *const shpr = (uint32_t *)0xE000ED18U;
     shpr[1] = 0xF0000000U;
@@ -97,13 +94,11 @@ __attribute__((noreturn)) void rt_start(void)
      * Then execute a supervisor call to switch into the first task.
      * TODO: is the isb required when dropping privileges prior to an svc?
      */
-    __asm__("mov r0, 3\n"
-            "msr control, r0\n"
+    __asm__("msr control, %0\n"
             "isb\n"
             "svc 0\n"
             :
-            :
-            : "r0");
+            : "r"(3));
 
     /* Idle loop that will run when no other tasks are runnable. */
     for (;;)
@@ -127,7 +122,7 @@ void rt_syscall_post(void)
      * priority than SVCall, using svc will escalate to a hard fault, so we
      * must use PendSV instead.
      */
-    uintptr_t ipsr;
+    uint32_t ipsr;
     __asm__("mrs %0, ipsr" : "=r"(ipsr));
     if (ipsr == 0)
     {
@@ -135,13 +130,14 @@ void rt_syscall_post(void)
     }
     else
     {
-        static volatile uint32_t *const icsr = (volatile uint32_t *)0xE000ED04UL;
+        static volatile uint32_t *const icsr =
+            (volatile uint32_t *)0xE000ED04UL;
         *icsr = PENDSVSET;
         /* TODO: are these needed? This code path is run from an exception with
-         * higher priority than PendSV, and will execute an exception return
-         * before the PendSV handler gets to run. */
+         * higher priority than PendSV, and that exception must execute an
+         * exception return before the PendSV handler gets to run. */
         __asm__("dsb\n"
-                "isb");
+                "isb\n");
     }
 }
 

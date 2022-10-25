@@ -10,13 +10,13 @@
 struct gp_context
 {
     // Saved by task context switch.
-    uintptr_t r4, r5, r6, r7, r8, r9, r10, r11;
+    uint32_t r4, r5, r6, r7, r8, r9, r10, r11;
 
     // Saved automatically on exception entry.
-    uintptr_t r0, r1, r2, r3, r12;
+    uint32_t r0, r1, r2, r3, r12;
     void (*lr)(void);
     void (*pc)(void *);
-    uintptr_t psr;
+    uint32_t psr;
 };
 
 void *rt_context_create(void (*fn)(void *), void *arg, void *stack,
@@ -25,7 +25,7 @@ void *rt_context_create(void (*fn)(void *), void *arg, void *stack,
     void *const stack_end = (char *)stack + stack_size;
     struct gp_context *ctx = stack_end;
     ctx -= 1;
-    ctx->r0 = (uintptr_t)arg;
+    ctx->r0 = (uint32_t)arg;
     ctx->lr = rt_task_exit;
     ctx->pc = fn;
     ctx->psr = 0x01000000U; // thumb state
@@ -57,14 +57,11 @@ __attribute__((noreturn)) void rt_start(void)
      * Set the process stack pointer to the top of the idle stack and
      * switch to it.
      */
-    __asm__(".syntax unified\n"
-            "msr psp, %0\n"
-            "movs r0, 2\n"
-            "msr control, r0\n"
+    __asm__("msr psp, %0\n"
+            "msr control, %1\n"
             "isb\n"
             :
-            : "r"(&idle_stack[sizeof idle_stack])
-            : "r0");
+            : "r"(&idle_stack[sizeof idle_stack]), "r"(2));
 
     /*
      * Set svcall and pendsv to the lowest exception priority, and systick to
@@ -83,7 +80,7 @@ __attribute__((noreturn)) void rt_start(void)
     stk->current = 0;
     stk->ctrl = STK_CTRL_ENABLE | STK_CTRL_TICKINT;
 
-    /* Execute a supervisor call to switch into the first task. */
+    /* Execute a supervisor call to switch into the highest-priority task. */
     __asm__("svc 0");
 
     /* Idle loop that will run when no other tasks are runnable. */
@@ -105,7 +102,7 @@ void rt_syscall_post(void)
     static volatile uint32_t *const icsr = (volatile uint32_t *)0xE000ED04UL;
     *icsr = PENDSVSET;
     __asm__("dsb\n"
-            "isb");
+            "isb\n");
 }
 
 void rt_logf(const char *fmt, ...)
