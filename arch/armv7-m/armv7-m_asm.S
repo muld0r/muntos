@@ -60,3 +60,5 @@ rt_syscall_handler:
     bx r0
 
 #endif
+
+    .size rt_syscall_handler, .-rt_syscall_handler

@@ -49,3 +49,5 @@ rt_syscall_handler:
     movs r0, 3
     negs r0, r0
     bx r0
+
+    .size rt_syscall_handler, .-rt_syscall_handler
