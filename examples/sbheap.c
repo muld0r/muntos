@@ -20,9 +20,14 @@ static bool u_node_less_than(const struct rt_sbheap_node *a,
            rt_container_of(b, struct u_node, node)->x;
 }
 
-static struct u_node *item(const struct rt_sbheap_node *node)
+static struct u_node *heap_item(const struct rt_sbheap_node *node)
 {
     return rt_container_of(node, struct u_node, node);
+}
+
+static struct u_node *list_item(const struct rt_list *node)
+{
+    return heap_item(rt_sbheap_from_list(node));
 }
 
 static void print_indent(size_t indent)
@@ -40,13 +45,13 @@ static void print_indent(size_t indent)
 static void print_tree(const struct rt_sbheap_node *tree, size_t indent)
 {
     print_indent(indent);
-    rt_logf("%u\n", item(tree)->x);
+    rt_logf("%u\n", heap_item(tree)->x);
 
     struct rt_list *node;
     rt_list_for_each(node, &tree->singletons)
     {
         print_indent(indent);
-        rt_logf("%u\n", item(rt_sbheap_from_list(node))->x);
+        rt_logf("%u\n", list_item(node)->x);
     }
 
     if (!rt_list_is_empty(&tree->children))
@@ -60,7 +65,7 @@ static void print_tree(const struct rt_sbheap_node *tree, size_t indent)
 
 static void print_heap(const struct rt_sbheap *heap)
 {
-    rt_logf("heap size %zu\n", rt_sbheap_size(heap));
+    rt_logf("\nheap size %zu\n", rt_sbheap_size(heap));
     struct rt_list *node;
     rt_list_for_each(node, &heap->trees)
     {
@@ -80,8 +85,6 @@ int main(void)
         seed = ((a * seed) + c);
         nodes[i].x = seed % 1000;
         rt_sbheap_insert(&heap, &nodes[i].node);
-
-        rt_logf("\n");
         print_heap(&heap);
     }
 
@@ -89,9 +92,8 @@ int main(void)
     uint32_t max = 0;
     while (!rt_sbheap_is_empty(&heap))
     {
-        rt_logf("\n");
         print_heap(&heap);
-        uint32_t x = item(rt_sbheap_pop_min(&heap))->x;
+        uint32_t x = heap_item(rt_sbheap_pop_min(&heap))->x;
         if (x < max)
         {
             return 1;

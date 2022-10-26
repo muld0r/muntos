@@ -1,13 +1,14 @@
 Import("env")
 
 env.Program("empty.c")
-env.Program("simple.c")
-env.Program("sleep.c")
-env.Program("queue.c")
 env.Program("list.c")
+env.Program("mutex.c")
+env.Program("pq.c")
+env.Program("queue.c")
 env.Program("sbheap.c")
 env.Program("sem.c")
-env.Program("mutex.c")
+env.Program("simple.c")
+env.Program("sleep.c")
 
 water = env.Object("water/water.c")
 env.Program(target="water_sem", source=["water/sem.c", water])

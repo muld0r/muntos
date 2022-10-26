@@ -5,7 +5,7 @@
 
 void rt_mutex_init(struct rt_mutex *mutex)
 {
-    rt_sbheap_init(&mutex->wait_heap, rt_task_priority_less_than);
+    rt_pq_init(&mutex->wait_pq, rt_task_priority_less_than);
     mutex->syscall_record.syscall = RT_SYSCALL_MUTEX_UNLOCK;
     mutex->syscall_record.args.mutex = mutex;
     atomic_flag_clear_explicit(&mutex->unlock_pending, memory_order_relaxed);

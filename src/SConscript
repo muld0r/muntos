@@ -3,13 +3,14 @@ Import("env")
 librt = env.StaticLibrary(
     target="rt",
     source=[
-        "rt.c",
-        "queue.c",
+        "cond.c",
         "list.c",
+        "mutex.c",
+        "pq.c",
+        "queue.c",
+        "rt.c",
         "sbheap.c",
         "sem.c",
-        "mutex.c",
-        "cond.c",
     ],
 )
 

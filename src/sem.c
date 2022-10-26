@@ -5,7 +5,7 @@
 
 static void sem_init_common(struct rt_sem *sem, int initial_value)
 {
-    rt_sbheap_init(&sem->wait_heap, rt_task_priority_less_than);
+    rt_pq_init(&sem->wait_pq, rt_task_priority_less_than);
     sem->syscall_record.syscall = RT_SYSCALL_SEM_POST;
     sem->syscall_record.args.sem = sem;
     atomic_store_explicit(&sem->value, initial_value, memory_order_relaxed);

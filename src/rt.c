@@ -3,6 +3,7 @@
 #include <rt/container.h>
 #include <rt/context.h>
 #include <rt/log.h>
+#include <rt/pq.h>
 #include <rt/sleep.h>
 #include <rt/syscall.h>
 #include <rt/task.h>
@@ -10,21 +11,21 @@
 
 #include <stdatomic.h>
 
-#define task_from_node(node_) (rt_container_of((node_), struct rt_task, node))
+#define task_from_list(list_) (rt_container_of((list_), struct rt_task, list))
 
-bool rt_task_priority_less_than(const struct rt_sbheap_node *a,
-                                const struct rt_sbheap_node *b)
+bool rt_task_priority_less_than(const struct rt_list *a,
+                                const struct rt_list *b)
 {
-    return task_from_node(a)->priority < task_from_node(b)->priority;
+    return task_from_list(a)->priority < task_from_list(b)->priority;
 }
 
-static RT_SBHEAP(ready_heap, rt_task_priority_less_than);
+static RT_PQ(ready_pq, rt_task_priority_less_than);
 
 static struct rt_syscall_record *_Atomic pending_syscalls;
 
 static struct rt_task idle_task = {
     .ctx = NULL,
-    .node = RT_SBHEAP_NODE_INIT(idle_task.node),
+    .list = RT_LIST_INIT(idle_task.list),
     .name = "idle",
     .priority = UINT_MAX,
 };
@@ -76,42 +77,42 @@ void **rt_prev_context;
 
 static void *sched(void)
 {
-    struct rt_sbheap_node *const node = rt_sbheap_min(&ready_heap);
+    struct rt_list *const node = rt_pq_min(&ready_pq);
     if (!node)
     {
         rt_logf("sched: no new task to run, continuing %s\n", rt_task_name());
         return NULL;
     }
 
-    struct rt_task *next_task = task_from_node(node);
+    struct rt_task *next_task = task_from_list(node);
 
-    const bool active_is_runnable = !rt_sbheap_node_in_heap(&active_task->node);
+    const bool active_is_runnable = rt_list_is_empty(&active_task->list);
 
     /* If the active task is still runnable and the new task is lower priority,
      * then continue executing the active task. */
     if (active_is_runnable && (next_task->priority > active_task->priority))
     {
         rt_logf("sched: %s is still highest priority (%u < %u)\n",
-               rt_task_name(), active_task->priority, next_task->priority);
+                rt_task_name(), active_task->priority, next_task->priority);
         return NULL;
     }
 
     /* The next task will be used, so remove it from the ready heap. */
-    rt_sbheap_remove(&ready_heap, node);
+    rt_pq_remove(&ready_pq, node);
 
     /* If the active task is not already waiting for some other event, re-add
      * it to the ready heap. */
     if (active_is_runnable)
     {
         rt_logf("sched: %s is still runnable\n", rt_task_name());
-        rt_sbheap_insert(&ready_heap, &active_task->node);
+        rt_pq_insert(&ready_pq, &active_task->list);
     }
 
     rt_prev_context = &active_task->ctx;
     active_task = next_task;
 
     rt_logf("sched: switching to %s with priority %u\n", rt_task_name(),
-           active_task->priority);
+            active_task->priority);
     return next_task->ctx;
 }
 
@@ -142,7 +143,7 @@ void rt_sleep_periodic(unsigned long *last_wake_tick, unsigned long period)
             },
     };
     rt_logf("syscall: %s sleep periodic, last wake = %lu, period = %lu\n",
-           rt_task_name(), *last_wake_tick, period);
+            rt_task_name(), *last_wake_tick, period);
     *last_wake_tick += period;
     rt_syscall(&syscall_record);
 }
@@ -153,20 +154,20 @@ void rt_sleep_periodic(unsigned long *last_wake_tick, unsigned long period)
 static unsigned long woken_tick;
 static unsigned long next_wake_tick;
 
-static bool wake_tick_less_than(const struct rt_sbheap_node *a,
-                                const struct rt_sbheap_node *b)
+static bool wake_tick_less_than(const struct rt_list *a,
+                                const struct rt_list *b)
 {
-    return (task_from_node(a)->wake_tick - woken_tick) <
-           (task_from_node(b)->wake_tick - woken_tick);
+    return (task_from_list(a)->wake_tick - woken_tick) <
+           (task_from_list(b)->wake_tick - woken_tick);
 }
 
-static RT_SBHEAP(sleep_heap, wake_tick_less_than);
+static RT_PQ(sleep_pq, wake_tick_less_than);
 
 static void sleep_until(struct rt_task *task, unsigned long wake_tick)
 {
     task->wake_tick = wake_tick;
-    rt_sbheap_insert(&sleep_heap, &task->node);
-    if (rt_sbheap_min(&sleep_heap) == &task->node)
+    rt_pq_insert(&sleep_pq, &task->list);
+    if (rt_pq_min(&sleep_pq) == &task->list)
     {
         next_wake_tick = wake_tick;
     }
@@ -211,10 +212,10 @@ static void tick_syscall(void)
             break;
         }
 
-        while (!rt_sbheap_is_empty(&sleep_heap))
+        while (!rt_pq_is_empty(&sleep_pq))
         {
-            struct rt_sbheap_node *const node = rt_sbheap_min(&sleep_heap);
-            struct rt_task *const sleeping_task = task_from_node(node);
+            struct rt_list *const node = rt_pq_min(&sleep_pq);
+            struct rt_task *const sleeping_task = task_from_list(node);
             if (sleeping_task->wake_tick != woken_tick)
             {
                 /*
@@ -226,8 +227,8 @@ static void tick_syscall(void)
                 next_wake_tick = sleeping_task->wake_tick;
                 break;
             }
-            rt_sbheap_remove(&sleep_heap, node);
-            rt_sbheap_insert(&ready_heap, node);
+            rt_pq_remove(&sleep_pq, node);
+            rt_pq_insert(&ready_pq, node);
         }
     }
 }
@@ -279,18 +280,18 @@ static void wake_sem_waiters(struct rt_sem *sem)
     {
         waiters = 0;
     }
-    while (rt_sbheap_size(&sem->wait_heap) > (size_t)waiters)
+    while (rt_pq_size(&sem->wait_pq) > (size_t)waiters)
     {
-        rt_sbheap_insert(&ready_heap, rt_sbheap_pop_min(&sem->wait_heap));
+        rt_pq_insert(&ready_pq, rt_pq_pop_min(&sem->wait_pq));
     }
 }
 
 static void wake_mutex_waiter(struct rt_mutex *mutex)
 {
-    if (!rt_sbheap_is_empty(&mutex->wait_heap) &&
+    if (!rt_pq_is_empty(&mutex->wait_pq) &&
         !atomic_flag_test_and_set_explicit(&mutex->lock, memory_order_acquire))
     {
-        rt_sbheap_insert(&ready_heap, rt_sbheap_pop_min(&mutex->wait_heap));
+        rt_pq_insert(&ready_pq, rt_pq_pop_min(&mutex->wait_pq));
     }
 }
 
@@ -332,14 +333,14 @@ void *rt_syscall_run(void)
             break;
         case RT_SYSCALL_EXIT:
         {
-            static RT_SBHEAP(exited_heap, rt_task_priority_less_than);
-            rt_sbheap_insert(&exited_heap, &syscall_record->task->node);
+            static RT_LIST(exited_list);
+            rt_list_push_back(&exited_list, &syscall_record->task->list);
             break;
         }
         case RT_SYSCALL_SEM_WAIT:
         {
             struct rt_sem *const sem = syscall_record->args.sem;
-            rt_sbheap_insert(&sem->wait_heap, &syscall_record->task->node);
+            rt_pq_insert(&sem->wait_pq, &syscall_record->task->list);
             /* Evaluate semaphore wakes here as well in case a post occurred
              * before the wait syscall was handled. */
             wake_sem_waiters(sem);
@@ -348,7 +349,7 @@ void *rt_syscall_run(void)
         case RT_SYSCALL_MUTEX_LOCK:
         {
             struct rt_mutex *const mutex = syscall_record->args.mutex;
-            rt_sbheap_insert(&mutex->wait_heap, &syscall_record->task->node);
+            rt_pq_insert(&mutex->wait_pq, &syscall_record->task->list);
             /* Evaluate mutex wakes here as well in case an unlock occurred
              * before the wait syscall was handled. */
             wake_mutex_waiter(mutex);
@@ -390,5 +391,5 @@ void rt_task_init(struct rt_task *task, void (*fn)(void *), void *arg,
     task->priority = priority;
     task->wake_tick = 0;
     task->name = name;
-    rt_sbheap_insert(&ready_heap, &task->node);
+    rt_pq_insert(&ready_pq, &task->list);
 }

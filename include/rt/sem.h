@@ -1,7 +1,7 @@
 #ifndef RT_SEM_H
 #define RT_SEM_H
 
-#include <rt/sbheap.h>
+#include <rt/pq.h>
 #include <rt/syscall.h>
 
 #include <limits.h>
@@ -24,7 +24,7 @@ bool rt_sem_trywait(struct rt_sem *sem);
 
 struct rt_sem
 {
-    struct rt_sbheap wait_heap;
+    struct rt_pq wait_pq;
     struct rt_syscall_record syscall_record;
     atomic_int value;
     int max_value;
@@ -33,8 +33,7 @@ struct rt_sem
 
 #define RT_SEM_INIT_WITH_MAX(name, initial_value, max_value_)                  \
     {                                                                          \
-        .wait_heap =                                                           \
-            RT_SBHEAP_INIT(name.wait_heap, rt_task_priority_less_than),        \
+        .wait_pq = RT_PQ_INIT(name.wait_pq, rt_task_priority_less_than),       \
         .syscall_record =                                                      \
             {                                                                  \
                 .next = NULL,                                                  \
