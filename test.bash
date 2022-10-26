@@ -10,6 +10,8 @@ set -x
 build/simple
 build/sleep
 build/sem
+build/pq
+build/sbheap
 build/queue
 build/mutex
 build/water_sem

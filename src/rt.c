@@ -2,8 +2,8 @@
 
 #include <rt/container.h>
 #include <rt/context.h>
+#include <rt/list.h>
 #include <rt/log.h>
-#include <rt/pq.h>
 #include <rt/sleep.h>
 #include <rt/syscall.h>
 #include <rt/task.h>
@@ -13,13 +13,18 @@
 
 #define task_from_list(list_) (rt_container_of((list_), struct rt_task, list))
 
-bool rt_task_priority_less_than(const struct rt_list *a,
-                                const struct rt_list *b)
+static bool task_priority_less_than(const struct rt_list *a,
+                                    const struct rt_list *b)
 {
     return task_from_list(a)->priority < task_from_list(b)->priority;
 }
 
-static RT_PQ(ready_pq, rt_task_priority_less_than);
+static void insert_by_priority(struct rt_list *list, struct rt_list *node)
+{
+    rt_list_insert_by(list, node, task_priority_less_than);
+}
+
+static RT_LIST(ready_list);
 
 static struct rt_syscall_record *_Atomic pending_syscalls;
 
@@ -77,13 +82,13 @@ void **rt_prev_context;
 
 static void *sched(void)
 {
-    struct rt_list *const node = rt_pq_min(&ready_pq);
-    if (!node)
+    if (rt_list_is_empty(&ready_list))
     {
         rt_logf("sched: no new task to run, continuing %s\n", rt_task_name());
         return NULL;
     }
 
+    struct rt_list *const node = rt_list_front(&ready_list);
     struct rt_task *next_task = task_from_list(node);
 
     const bool active_is_runnable = rt_list_is_empty(&active_task->list);
@@ -97,15 +102,15 @@ static void *sched(void)
         return NULL;
     }
 
-    /* The next task will be used, so remove it from the ready heap. */
-    rt_pq_remove(&ready_pq, node);
+    /* The next task will be used, so remove it from the ready list. */
+    rt_list_remove(node);
 
     /* If the active task is not already waiting for some other event, re-add
-     * it to the ready heap. */
+     * it to the ready list. */
     if (active_is_runnable)
     {
         rt_logf("sched: %s is still runnable\n", rt_task_name());
-        rt_pq_insert(&ready_pq, &active_task->list);
+        insert_by_priority(&ready_list, &active_task->list);
     }
 
     rt_prev_context = &active_task->ctx;
@@ -161,13 +166,13 @@ static bool wake_tick_less_than(const struct rt_list *a,
            (task_from_list(b)->wake_tick - woken_tick);
 }
 
-static RT_PQ(sleep_pq, wake_tick_less_than);
+static RT_LIST(sleep_list);
 
 static void sleep_until(struct rt_task *task, unsigned long wake_tick)
 {
     task->wake_tick = wake_tick;
-    rt_pq_insert(&sleep_pq, &task->list);
-    if (rt_pq_min(&sleep_pq) == &task->list)
+    rt_list_insert_by(&sleep_list, &task->list, wake_tick_less_than);
+    if (rt_list_front(&sleep_list) == &task->list)
     {
         next_wake_tick = wake_tick;
     }
@@ -212,11 +217,11 @@ static void tick_syscall(void)
             break;
         }
 
-        while (!rt_pq_is_empty(&sleep_pq))
+        while (!rt_list_is_empty(&sleep_list))
         {
-            struct rt_list *const node = rt_pq_min(&sleep_pq);
-            struct rt_task *const sleeping_task = task_from_list(node);
-            if (sleeping_task->wake_tick != woken_tick)
+            struct rt_list *const node = rt_list_front(&sleep_list);
+            const struct rt_task *const task = task_from_list(node);
+            if (task->wake_tick != woken_tick)
             {
                 /*
                  * Tasks are ordered by when they should wake up, so if we
@@ -224,11 +229,11 @@ static void tick_syscall(void)
                  * scanning tasks. This task will be the next to wake, unless
                  * another task goes to sleep later, with an earlier wake tick.
                  */
-                next_wake_tick = sleeping_task->wake_tick;
+                next_wake_tick = task->wake_tick;
                 break;
             }
-            rt_pq_remove(&sleep_pq, node);
-            rt_pq_insert(&ready_pq, node);
+            rt_list_remove(node);
+            insert_by_priority(&ready_list, node);
         }
     }
 }
@@ -238,7 +243,7 @@ static atomic_flag tick_pending = ATOMIC_FLAG_INIT;
 
 void rt_tick_advance(void)
 {
-    unsigned long oldticks =
+    const unsigned long oldticks =
         atomic_fetch_add_explicit(&rt_ticks, 1, memory_order_relaxed);
 
     static struct rt_syscall_record tick_syscall_record = {
@@ -280,18 +285,21 @@ static void wake_sem_waiters(struct rt_sem *sem)
     {
         waiters = 0;
     }
-    while (rt_pq_size(&sem->wait_pq) > (size_t)waiters)
+    while (sem->num_waiters > (size_t)waiters)
     {
-        rt_pq_insert(&ready_pq, rt_pq_pop_min(&sem->wait_pq));
+        insert_by_priority(&ready_list, rt_list_pop_front(&sem->wait_list));
+        --sem->num_waiters;
     }
 }
 
 static void wake_mutex_waiter(struct rt_mutex *mutex)
 {
-    if (!rt_pq_is_empty(&mutex->wait_pq) &&
+    /* TODO: should probably just ready the task and let it compete with any
+     * already-running tasks that might want the mutex. */
+    if (!rt_list_is_empty(&mutex->wait_list) &&
         !atomic_flag_test_and_set_explicit(&mutex->lock, memory_order_acquire))
     {
-        rt_pq_insert(&ready_pq, rt_pq_pop_min(&mutex->wait_pq));
+        insert_by_priority(&ready_list, rt_list_pop_front(&mutex->wait_list));
     }
 }
 
@@ -340,7 +348,8 @@ void *rt_syscall_run(void)
         case RT_SYSCALL_SEM_WAIT:
         {
             struct rt_sem *const sem = syscall_record->args.sem;
-            rt_pq_insert(&sem->wait_pq, &syscall_record->task->list);
+            insert_by_priority(&sem->wait_list, &syscall_record->task->list);
+            ++sem->num_waiters;
             /* Evaluate semaphore wakes here as well in case a post occurred
              * before the wait syscall was handled. */
             wake_sem_waiters(sem);
@@ -349,7 +358,7 @@ void *rt_syscall_run(void)
         case RT_SYSCALL_MUTEX_LOCK:
         {
             struct rt_mutex *const mutex = syscall_record->args.mutex;
-            rt_pq_insert(&mutex->wait_pq, &syscall_record->task->list);
+            insert_by_priority(&mutex->wait_list, &syscall_record->task->list);
             /* Evaluate mutex wakes here as well in case an unlock occurred
              * before the wait syscall was handled. */
             wake_mutex_waiter(mutex);
@@ -391,5 +400,5 @@ void rt_task_init(struct rt_task *task, void (*fn)(void *), void *arg,
     task->priority = priority;
     task->wake_tick = 0;
     task->name = name;
-    rt_pq_insert(&ready_pq, &task->list);
+    insert_by_priority(&ready_list, &task->list);
 }

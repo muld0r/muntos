@@ -53,7 +53,4 @@ struct rt_task
  */
 extern void **rt_prev_context;
 
-bool rt_task_priority_less_than(const struct rt_list *a,
-                                const struct rt_list *b);
-
 #endif /* RT_TASK_H */

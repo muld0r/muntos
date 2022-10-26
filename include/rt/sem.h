@@ -1,11 +1,12 @@
 #ifndef RT_SEM_H
 #define RT_SEM_H
 
-#include <rt/pq.h>
+#include <rt/list.h>
 #include <rt/syscall.h>
 
 #include <limits.h>
 #include <stdatomic.h>
+#include <stddef.h>
 #include <stdint.h>
 
 struct rt_sem;
@@ -24,24 +25,25 @@ bool rt_sem_trywait(struct rt_sem *sem);
 
 struct rt_sem
 {
-    struct rt_pq wait_pq;
+    struct rt_list wait_list;
     struct rt_syscall_record syscall_record;
     atomic_int value;
     int max_value;
+    size_t num_waiters;
     atomic_flag post_pending;
 };
 
 #define RT_SEM_INIT_WITH_MAX(name, initial_value, max_value_)                  \
     {                                                                          \
-        .wait_pq = RT_PQ_INIT(name.wait_pq, rt_task_priority_less_than),       \
+        .wait_list = RT_LIST_INIT(name.wait_list),                             \
         .syscall_record =                                                      \
             {                                                                  \
                 .next = NULL,                                                  \
                 .syscall = RT_SYSCALL_SEM_POST,                                \
                 .args.sem = &name,                                             \
             },                                                                 \
-        .post_pending = ATOMIC_FLAG_INIT, .value = initial_value,              \
-        .max_value = max_value_,                                               \
+        .value = initial_value, .max_value = max_value_, .num_waiters = 0,     \
+        .post_pending = ATOMIC_FLAG_INIT,                                      \
     }
 
 #define RT_SEM_INIT(name, initial_value)                                       \

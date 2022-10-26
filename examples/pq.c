@@ -1,7 +1,6 @@
 #include <rt/container.h>
 #include <rt/list.h>
 #include <rt/log.h>
-#include <rt/pq.h>
 
 struct u_node
 {
@@ -25,11 +24,11 @@ static struct u_node *list_item(const struct rt_list *node)
     return rt_container_of(node, struct u_node, list);
 }
 
-static void print_pq(const struct rt_pq *pq)
+static void print_list(const struct rt_list *list)
 {
-    rt_logf("\npq size %zu\n", rt_pq_size(pq));
+    rt_logf("\n");
     struct rt_list *node;
-    rt_list_for_each(node, &pq->list)
+    rt_list_for_each(node, list)
     {
         rt_logf("%u\n", list_item(node)->x);
     }
@@ -37,7 +36,7 @@ static void print_pq(const struct rt_pq *pq)
 
 int main(void)
 {
-    RT_PQ(pq, u_node_less_than);
+    RT_LIST(list);
     uint32_t seed = 0;
     uint32_t a = 1664525, c = 1013904223;
     int i;
@@ -45,16 +44,16 @@ int main(void)
     {
         seed = ((a * seed) + c);
         nodes[i].x = seed % 1000;
-        rt_pq_insert(&pq, &nodes[i].list);
-        print_pq(&pq);
+        rt_list_insert_by(&list, &nodes[i].list, u_node_less_than);
+        print_list(&list);
     }
 
     /* Check that the output is in sorted order. */
     uint32_t max = 0;
-    while (!rt_pq_is_empty(&pq))
+    while (!rt_list_is_empty(&list))
     {
-        print_pq(&pq);
-        uint32_t x = list_item(rt_pq_pop_min(&pq))->x;
+        print_list(&list);
+        uint32_t x = list_item(rt_list_pop_front(&list))->x;
         if (x < max)
         {
             return 1;

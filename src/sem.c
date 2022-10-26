@@ -5,10 +5,11 @@
 
 static void sem_init_common(struct rt_sem *sem, int initial_value)
 {
-    rt_pq_init(&sem->wait_pq, rt_task_priority_less_than);
+    rt_list_init(&sem->wait_list);
     sem->syscall_record.syscall = RT_SYSCALL_SEM_POST;
     sem->syscall_record.args.sem = sem;
     atomic_store_explicit(&sem->value, initial_value, memory_order_relaxed);
+    sem->num_waiters = 0;
     atomic_flag_clear_explicit(&sem->post_pending, memory_order_release);
 }
 
