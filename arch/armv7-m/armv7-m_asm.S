@@ -1,5 +1,8 @@
     .syntax unified
     .arch armv7-m
+#if defined(__ARM_FP)
+    .fpu fpv4-sp-d16
+#endif
     .thumb
     .p2align 1
     .section .text.rt_syscall_handler
@@ -9,9 +12,9 @@ rt_syscall_handler:
 
 #if defined(__ARM_FP)
 
-    push {lr, r3}
+    push {r3, lr}
     bl rt_syscall_run
-    pop {lr, r3}
+    pop {r3, lr}
     /* If there's no new context to switch to, return early. */
     cbz r0, .Lreturn
 
