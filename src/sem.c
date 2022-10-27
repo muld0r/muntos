@@ -8,9 +8,9 @@ static void sem_init_common(struct rt_sem *sem, int initial_value)
     rt_list_init(&sem->wait_list);
     sem->syscall_record.syscall = RT_SYSCALL_SEM_POST;
     sem->syscall_record.args.sem = sem;
-    atomic_store_explicit(&sem->value, initial_value, memory_order_relaxed);
+    rt_atomic_store_explicit(&sem->value, initial_value, memory_order_relaxed);
     sem->num_waiters = 0;
-    atomic_flag_clear_explicit(&sem->post_pending, memory_order_release);
+    rt_atomic_flag_clear_explicit(&sem->post_pending, memory_order_release);
 }
 
 void rt_sem_init(struct rt_sem *sem, int initial_value)
@@ -27,7 +27,7 @@ void rt_sem_binary_init(struct rt_sem *sem, int initial_value)
 
 void rt_sem_post(struct rt_sem *sem)
 {
-    int value = atomic_load_explicit(&sem->value, memory_order_relaxed);
+    int value = rt_atomic_load_explicit(&sem->value, memory_order_relaxed);
     do
     {
         if (value == sem->max_value)
@@ -35,10 +35,10 @@ void rt_sem_post(struct rt_sem *sem)
             /* Semaphore is saturated. */
             return;
         }
-    } while (!atomic_compare_exchange_weak_explicit(&sem->value, &value,
-                                                    value + 1,
-                                                    memory_order_release,
-                                                    memory_order_relaxed));
+    } while (!rt_atomic_compare_exchange_weak_explicit(&sem->value, &value,
+                                                       value + 1,
+                                                       memory_order_release,
+                                                       memory_order_relaxed));
 
     rt_logf("%s sem post, new value %d\n", rt_task_name(), value + 1);
 
@@ -49,8 +49,9 @@ void rt_sem_post(struct rt_sem *sem)
      * then posts made by higher priority contexts won't pend a syscall when
      * they should. This can be solved by having tasks use their own
      * syscall_record when posting. */
-    if ((value < 0) && !atomic_flag_test_and_set_explicit(&sem->post_pending,
-                                                          memory_order_acquire))
+    if ((value < 0) &&
+        !rt_atomic_flag_test_and_set_explicit(&sem->post_pending,
+                                              memory_order_acquire))
     {
         rt_syscall(&sem->syscall_record);
     }
@@ -58,7 +59,7 @@ void rt_sem_post(struct rt_sem *sem)
 
 void rt_sem_post_all(struct rt_sem *sem)
 {
-    int value = atomic_load_explicit(&sem->value, memory_order_relaxed);
+    int value = rt_atomic_load_explicit(&sem->value, memory_order_relaxed);
     do
     {
         if (value >= 0)
@@ -66,9 +67,9 @@ void rt_sem_post_all(struct rt_sem *sem)
             /* Semaphore has no waiters. */
             return;
         }
-    } while (!atomic_compare_exchange_weak_explicit(&sem->value, &value, 0,
-                                                    memory_order_release,
-                                                    memory_order_relaxed));
+    } while (!rt_atomic_compare_exchange_weak_explicit(&sem->value, &value, 0,
+                                                       memory_order_release,
+                                                       memory_order_relaxed));
 
     /* If the value was less than zero, then there was at least one waiter when
      * we successfully posted. If there isn't already a post system call
@@ -77,8 +78,8 @@ void rt_sem_post_all(struct rt_sem *sem)
      * then posts made by higher priority contexts won't pend a syscall when
      * they should. This can be solved by having tasks use their own
      * syscall_record when posting. */
-    if (!atomic_flag_test_and_set_explicit(&sem->post_pending,
-                                           memory_order_acquire))
+    if (!rt_atomic_flag_test_and_set_explicit(&sem->post_pending,
+                                              memory_order_acquire))
     {
         rt_syscall(&sem->syscall_record);
     }
@@ -86,27 +87,27 @@ void rt_sem_post_all(struct rt_sem *sem)
 
 bool rt_sem_trywait(struct rt_sem *sem)
 {
-    int value = atomic_load_explicit(&sem->value, memory_order_relaxed);
+    int value = rt_atomic_load_explicit(&sem->value, memory_order_relaxed);
     do
     {
         if (value <= 0)
         {
             return false;
         }
-    } while (!atomic_compare_exchange_weak_explicit(&sem->value, &value,
-                                                    value - 1,
-                                                    memory_order_acquire,
-                                                    memory_order_relaxed));
+    } while (!rt_atomic_compare_exchange_weak_explicit(&sem->value, &value,
+                                                       value - 1,
+                                                       memory_order_acquire,
+                                                       memory_order_relaxed));
     return true;
 }
 
 void rt_sem_wait(struct rt_sem *sem)
 {
-    int value = atomic_load_explicit(&sem->value, memory_order_relaxed);
-    while (!atomic_compare_exchange_weak_explicit(&sem->value, &value,
-                                                  value - 1,
-                                                  memory_order_acquire,
-                                                  memory_order_relaxed))
+    int value = rt_atomic_load_explicit(&sem->value, memory_order_relaxed);
+    while (!rt_atomic_compare_exchange_weak_explicit(&sem->value, &value,
+                                                     value - 1,
+                                                     memory_order_acquire,
+                                                     memory_order_relaxed))
     {
     }
 

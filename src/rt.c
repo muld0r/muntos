@@ -1,5 +1,6 @@
 #include <rt/rt.h>
 
+#include <rt/atomic.h>
 #include <rt/container.h>
 #include <rt/context.h>
 #include <rt/list.h>
@@ -8,8 +9,6 @@
 #include <rt/syscall.h>
 #include <rt/task.h>
 #include <rt/tick.h>
-
-#include <stdatomic.h>
 
 #define task_from_list(list_) (rt_container_of((list_), struct rt_task, list))
 
@@ -51,7 +50,7 @@ void rt_yield(void)
     syscall_simple(RT_SYSCALL_YIELD);
 }
 
-static atomic_flag sched_pending = ATOMIC_FLAG_INIT;
+static rt_atomic_flag sched_pending = RT_ATOMIC_FLAG_INIT;
 
 void rt_sched(void)
 {
@@ -59,8 +58,8 @@ void rt_sched(void)
         .syscall = RT_SYSCALL_SCHED,
     };
 
-    if (!atomic_flag_test_and_set_explicit(&sched_pending,
-                                           memory_order_relaxed))
+    if (!rt_atomic_flag_test_and_set_explicit(&sched_pending,
+                                              memory_order_relaxed))
     {
         rt_logf("syscall: sched\n");
         rt_syscall(&sched);
@@ -238,20 +237,21 @@ static void tick_syscall(void)
     }
 }
 
-static atomic_ulong rt_ticks;
-static atomic_flag tick_pending = ATOMIC_FLAG_INIT;
+static rt_atomic_ulong rt_ticks;
+static rt_atomic_flag tick_pending = RT_ATOMIC_FLAG_INIT;
 
 void rt_tick_advance(void)
 {
     const unsigned long oldticks =
-        atomic_fetch_add_explicit(&rt_ticks, 1, memory_order_relaxed);
+        rt_atomic_fetch_add_explicit(&rt_ticks, 1, memory_order_relaxed);
 
     static struct rt_syscall_record tick_syscall_record = {
         .next = NULL,
         .syscall = RT_SYSCALL_TICK,
     };
 
-    if (!atomic_flag_test_and_set_explicit(&tick_pending, memory_order_relaxed))
+    if (!rt_atomic_flag_test_and_set_explicit(&tick_pending,
+                                              memory_order_relaxed))
     {
         rt_logf("syscall: tick %lu\n", oldticks + 1);
         rt_syscall(&tick_syscall_record);
@@ -260,19 +260,19 @@ void rt_tick_advance(void)
 
 unsigned long rt_tick(void)
 {
-    return atomic_load_explicit(&rt_ticks, memory_order_relaxed);
+    return rt_atomic_load_explicit(&rt_ticks, memory_order_relaxed);
 }
 
 void rt_syscall(struct rt_syscall_record *syscall_record)
 {
     syscall_record->task = active_task;
     syscall_record->next =
-        atomic_load_explicit(&pending_syscalls, memory_order_relaxed);
-    while (!atomic_compare_exchange_weak_explicit(&pending_syscalls,
-                                                  &syscall_record->next,
-                                                  syscall_record,
-                                                  memory_order_release,
-                                                  memory_order_relaxed))
+        rt_atomic_load_explicit(&pending_syscalls, memory_order_relaxed);
+    while (!rt_atomic_compare_exchange_weak_explicit(&pending_syscalls,
+                                                     &syscall_record->next,
+                                                     syscall_record,
+                                                     memory_order_release,
+                                                     memory_order_relaxed))
     {
     }
     rt_syscall_post();
@@ -280,7 +280,7 @@ void rt_syscall(struct rt_syscall_record *syscall_record)
 
 static void wake_sem_waiters(struct rt_sem *sem)
 {
-    int waiters = -atomic_load_explicit(&sem->value, memory_order_acquire);
+    int waiters = -rt_atomic_load_explicit(&sem->value, memory_order_acquire);
     if (waiters < 0)
     {
         waiters = 0;
@@ -297,7 +297,8 @@ static void wake_mutex_waiter(struct rt_mutex *mutex)
     /* TODO: should probably just ready the task and let it compete with any
      * already-running tasks that might want the mutex. */
     if (!rt_list_is_empty(&mutex->wait_list) &&
-        !atomic_flag_test_and_set_explicit(&mutex->lock, memory_order_acquire))
+        !rt_atomic_flag_test_and_set_explicit(&mutex->lock,
+                                              memory_order_acquire))
     {
         insert_by_priority(&ready_list, rt_list_pop_front(&mutex->wait_list));
     }
@@ -317,7 +318,8 @@ void *rt_syscall_run(void)
      * just keep handling system calls from the same stack, even if they're out
      * of order. */
     struct rt_syscall_record *syscall_record =
-        atomic_exchange_explicit(&pending_syscalls, NULL, memory_order_acquire);
+        rt_atomic_exchange_explicit(&pending_syscalls, NULL,
+                                    memory_order_acquire);
     while (syscall_record)
     {
         switch (syscall_record->syscall)
@@ -325,10 +327,10 @@ void *rt_syscall_run(void)
         case RT_SYSCALL_NONE:
             break;
         case RT_SYSCALL_SCHED:
-            atomic_flag_clear_explicit(&sched_pending, memory_order_release);
+            rt_atomic_flag_clear_explicit(&sched_pending, memory_order_release);
             break;
         case RT_SYSCALL_TICK:
-            atomic_flag_clear_explicit(&tick_pending, memory_order_release);
+            rt_atomic_flag_clear_explicit(&tick_pending, memory_order_release);
             tick_syscall();
             break;
         case RT_SYSCALL_YIELD:
@@ -369,8 +371,8 @@ void *rt_syscall_run(void)
             struct rt_sem *const sem = syscall_record->args.sem;
             /* Allow another post syscall to occur while wakes are evaluated so
              * that no posts are missed. */
-            atomic_flag_clear_explicit(&sem->post_pending,
-                                       memory_order_release);
+            rt_atomic_flag_clear_explicit(&sem->post_pending,
+                                          memory_order_release);
             wake_sem_waiters(sem);
             break;
         }
@@ -379,8 +381,8 @@ void *rt_syscall_run(void)
             struct rt_mutex *mutex = syscall_record->args.mutex;
             /* Allow another unlock syscall to occur while wakes are evaluated
              * so that no unlocks are missed. */
-            atomic_flag_clear_explicit(&mutex->unlock_pending,
-                                       memory_order_release);
+            rt_atomic_flag_clear_explicit(&mutex->unlock_pending,
+                                          memory_order_release);
             wake_mutex_waiter(mutex);
             break;
         }

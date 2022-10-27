@@ -1,13 +1,12 @@
+#include <rt/atomic.h>
 #include <rt/log.h>
 #include <rt/rt.h>
 #include <rt/sleep.h>
 #include <rt/task.h>
 #include <rt/tick.h>
 
-#include <stdatomic.h>
-
 static const int nloops = 5;
-static atomic_bool wrong_tick = false;
+static rt_atomic_bool wrong_tick = false;
 
 static void sleep(void *arg)
 {
@@ -21,7 +20,7 @@ static void sleep(void *arg)
         {
             rt_logf("expected to wake at %lu, instead woke at %lu\n",
                     last_wake_tick, wake_tick);
-            atomic_store(&wrong_tick, true);
+            rt_atomic_store(&wrong_tick, true);
         }
     }
 
@@ -42,7 +41,7 @@ int main(void)
     RT_TASK(sleep, &period1, stack1, 1);
     rt_start();
 
-    if (atomic_load(&wrong_tick))
+    if (rt_atomic_load(&wrong_tick))
     {
         return 1;
     }

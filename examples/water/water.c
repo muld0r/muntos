@@ -1,36 +1,36 @@
 #include "water.h"
 
+#include <rt/atomic.h>
 #include <rt/rt.h>
 #include <rt/sleep.h>
 #include <rt/task.h>
 
-#include <stdatomic.h>
 #include <stdbool.h>
 
-static volatile atomic_uint hydrogen_bonded = 0;
-static volatile atomic_uint oxygen_bonded = 0;
-static volatile atomic_uint water_formed = 0;
+static volatile rt_atomic_uint hydrogen_bonded = 0;
+static volatile rt_atomic_uint oxygen_bonded = 0;
+static volatile rt_atomic_uint water_formed = 0;
 
 void make_water(void)
 {
-    atomic_fetch_add(&water_formed, 1);
+    rt_atomic_fetch_add(&water_formed, 1);
 }
 
 static void hydrogen_fn(void *arg)
 {
     hydrogen(arg);
-    atomic_fetch_add(&hydrogen_bonded, 1);
+    rt_atomic_fetch_add(&hydrogen_bonded, 1);
 }
 
 static void oxygen_fn(void *arg)
 {
     oxygen(arg);
-    atomic_fetch_add(&oxygen_bonded, 1);
+    rt_atomic_fetch_add(&oxygen_bonded, 1);
 }
 
-static bool check(volatile atomic_uint *p, unsigned expected)
+static bool check(volatile rt_atomic_uint *p, unsigned expected)
 {
-    return atomic_load(p) == expected;
+    return rt_atomic_load(p) == expected;
 }
 
 static void timeout(void *arg)

@@ -1,11 +1,11 @@
 #ifndef RT_SEM_H
 #define RT_SEM_H
 
+#include <rt/atomic.h>
 #include <rt/list.h>
 #include <rt/syscall.h>
 
 #include <limits.h>
-#include <stdatomic.h>
 #include <stddef.h>
 #include <stdint.h>
 
@@ -27,10 +27,10 @@ struct rt_sem
 {
     struct rt_list wait_list;
     struct rt_syscall_record syscall_record;
-    atomic_int value;
+    rt_atomic_int value;
     int max_value;
     size_t num_waiters;
-    atomic_flag post_pending;
+    rt_atomic_flag post_pending;
 };
 
 #define RT_SEM_INIT_WITH_MAX(name, initial_value, max_value_)                  \
@@ -43,7 +43,7 @@ struct rt_sem
                 .args.sem = &name,                                             \
             },                                                                 \
         .value = initial_value, .max_value = max_value_, .num_waiters = 0,     \
-        .post_pending = ATOMIC_FLAG_INIT,                                      \
+        .post_pending = RT_ATOMIC_FLAG_INIT,                                   \
     }
 
 #define RT_SEM_INIT(name, initial_value)                                       \

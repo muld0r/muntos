@@ -1,10 +1,9 @@
 #ifndef RT_MUTEX_H
 #define RT_MUTEX_H
 
+#include <rt/atomic.h>
 #include <rt/list.h>
 #include <rt/syscall.h>
-
-#include <stdatomic.h>
 
 struct rt_mutex;
 
@@ -20,8 +19,8 @@ struct rt_mutex
 {
     struct rt_list wait_list;
     struct rt_syscall_record syscall_record;
-    atomic_flag lock;
-    atomic_flag unlock_pending;
+    rt_atomic_flag lock;
+    rt_atomic_flag unlock_pending;
 };
 
 #define RT_MUTEX_INIT(name)                                                    \
@@ -33,7 +32,7 @@ struct rt_mutex
                 .syscall = RT_SYSCALL_MUTEX_UNLOCK,                            \
                 .args.mutex = &name,                                           \
             },                                                                 \
-        .lock = ATOMIC_FLAG_INIT, .unlock_pending = ATOMIC_FLAG_INIT,          \
+        .lock = RT_ATOMIC_FLAG_INIT, .unlock_pending = RT_ATOMIC_FLAG_INIT,    \
     }
 
 #define RT_MUTEX(name) struct rt_mutex name = RT_MUTEX_INIT(name)
