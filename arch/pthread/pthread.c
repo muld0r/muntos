@@ -13,7 +13,6 @@
 #include <sys/time.h>
 
 #include <stdarg.h>
-#include <stdatomic.h>
 #include <stdio.h>
 
 #define SIGTICK SIGALRM
