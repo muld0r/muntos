@@ -43,7 +43,7 @@ struct rt_task
     {                                                                          \
         static struct rt_task fn##_task;                                       \
         rt_task_init(&fn##_task, fn, arg,                                      \
-                     ((arg != NULL) ? #fn "(" #arg ")" : #fn "()"), priority,  \
+                     ((arg != NULL) ? #fn "(" #arg ")" : #fn), priority,       \
                      stack, sizeof(stack));                                    \
     } while (0)
 
