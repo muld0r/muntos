@@ -5,9 +5,11 @@
 #include <stdbool.h>
 
 #define rt_atomic_bool atomic_bool
+#define rt_atomic_char atomic_char
 #define rt_atomic_int atomic_int
 #define rt_atomic_uint atomic_uint
 #define rt_atomic_ulong atomic_ulong
+#define rt_atomic_size_t atomic_size_t
 
 #define rt_atomic_load atomic_load
 #define rt_atomic_store atomic_store
@@ -17,9 +19,14 @@
 #define rt_atomic_fetch_add atomic_fetch_add
 #define rt_atomic_fetch_add_explicit atomic_fetch_add_explicit
 
+#define rt_atomic_fetch_sub atomic_fetch_sub
+#define rt_atomic_fetch_sub_explicit atomic_fetch_sub_explicit
+
 #define rt_atomic_exchange_explicit atomic_exchange_explicit
 #define rt_atomic_compare_exchange_weak_explicit                               \
     atomic_compare_exchange_weak_explicit
+#define rt_atomic_compare_exchange_strong_explicit                             \
+    atomic_compare_exchange_strong_explicit
 
 /* Work around a bug in gcc where atomic_flag operations silently don't
  * generate atomic code on armv6-m rather than failing to link. The equivalent

@@ -1,58 +1,57 @@
 #ifndef RT_QUEUE_H
 #define RT_QUEUE_H
 
-#include <rt/cond.h>
-#include <rt/mutex.h>
+#include <rt/atomic.h>
+#include <rt/list.h>
+#include <rt/syscall.h>
 
+#include <stdbool.h>
 #include <stddef.h>
-
-struct rt_queue;
-
-void rt_queue_init(struct rt_queue *queue, void *buf, size_t num_elems,
-                   size_t elem_len);
-
-void rt_queue_recv(struct rt_queue *queue, void *elem);
-
-void rt_queue_send(struct rt_queue *queue, const void *elem);
 
 struct rt_queue
 {
-    struct rt_mutex mutex;
-    struct rt_cond recv_ready;
-    struct rt_cond send_ready;
-    void *buf;
-    size_t len;
-    size_t recv_offset;
-    size_t send_offset;
-    size_t capacity;
-    size_t elem_len;
+    atomic_long level;
+    rt_atomic_size_t enq, deq;
+    rt_atomic_char *slots;
+    void *data;
+    size_t num_elems, elem_size;
+    struct rt_list send_list, recv_list;
+    struct rt_syscall_record wake_record;
+    size_t num_senders, num_recvers;
+    rt_atomic_flag wake_pending;
 };
 
-#define RT_QUEUE_FROM_ARRAY(name, array)                                       \
-    struct rt_queue name = {                                                   \
-        .mutex = RT_MUTEX_INIT(name.mutex),                                    \
-        .recv_ready = RT_COND_INIT(name.recv_ready),                           \
-        .send_ready = RT_COND_INIT(name.send_ready),                           \
-        .buf = array,                                                          \
-        .len = 0,                                                              \
-        .recv_offset = 0,                                                      \
-        .send_offset = 0,                                                      \
-        .capacity = sizeof(array),                                             \
-        .elem_len = sizeof((array)[0]),                                        \
+#define RT_QUEUE_STATIC(name, type, num)                                       \
+    static type name##_elems[(num)];                                           \
+    static rt_atomic_char name##_slots[(num)];                                 \
+    static struct rt_queue name = {                                            \
+        .level = 0,                                                            \
+        .enq = 0,                                                              \
+        .deq = 0,                                                              \
+        .slots = name##_slots,                                                 \
+        .data = name##_elems,                                                  \
+        .num_elems = (num),                                                    \
+        .elem_size = sizeof(type),                                             \
+        .send_list = RT_LIST_INIT(name.send_list),                             \
+        .recv_list = RT_LIST_INIT(name.recv_list),                             \
+        .wake_record =                                                         \
+            {                                                                  \
+                .next = NULL,                                                  \
+                .task = NULL,                                                  \
+                .syscall = RT_SYSCALL_QUEUE_WAKE,                              \
+                .args.queue = &name,                                           \
+            },                                                                 \
+        .num_senders = 0,                                                      \
+        .num_recvers = 0,                                                      \
+        .wake_pending = RT_ATOMIC_FLAG_INIT,                                   \
     }
 
-#define RT_QUEUE_STATIC(name, type, nelems)                                    \
-    static type name##_elems[(nelems)];                                        \
-    static struct rt_queue name = {                                            \
-        .mutex = RT_MUTEX_INIT(name.mutex),                                    \
-        .recv_ready = RT_COND_INIT(name.recv_ready),                           \
-        .send_ready = RT_COND_INIT(name.send_ready),                           \
-        .buf = name##_elems,                                                   \
-        .len = 0,                                                              \
-        .recv_offset = 0,                                                      \
-        .send_offset = 0,                                                      \
-        .capacity = sizeof name##_elems,                                       \
-        .elem_len = sizeof(type),                                              \
-    }
+void rt_queue_send(struct rt_queue *queue, const void *elem);
+
+void rt_queue_recv(struct rt_queue *queue, void *elem);
+
+bool rt_queue_trysend(struct rt_queue *queue, const void *elem);
+
+bool rt_queue_tryrecv(struct rt_queue *queue, void *elem);
 
 #endif /* RT_QUEUE_H */

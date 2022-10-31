@@ -5,6 +5,7 @@
 #include <rt/context.h>
 #include <rt/list.h>
 #include <rt/log.h>
+#include <rt/queue.h>
 #include <rt/sleep.h>
 #include <rt/syscall.h>
 #include <rt/task.h>
@@ -298,6 +299,33 @@ static void wake_mutex_waiter(struct rt_mutex *mutex)
     }
 }
 
+static void wake_queue_waiters(struct rt_queue *queue)
+{
+    long level = rt_atomic_load_explicit(&queue->level, memory_order_relaxed);
+
+    size_t waiters = 0;
+    if (level < 0)
+    {
+        waiters = (size_t)-level;
+    }
+    while (queue->num_senders > waiters)
+    {
+        insert_by_priority(&ready_list, rt_list_pop_front(&queue->send_list));
+        --queue->num_senders;
+    }
+
+    waiters = 0;
+    if (level > (long)queue->num_elems)
+    {
+        waiters = (size_t)level - queue->num_elems;
+    }
+    while (queue->num_recvers > waiters)
+    {
+        insert_by_priority(&ready_list, rt_list_pop_front(&queue->recv_list));
+        --queue->num_recvers;
+    }
+}
+
 void *rt_syscall_run(void)
 {
     /*
@@ -372,12 +400,38 @@ void *rt_syscall_run(void)
         }
         case RT_SYSCALL_MUTEX_UNLOCK:
         {
-            struct rt_mutex *mutex = syscall_record->args.mutex;
+            struct rt_mutex *const mutex = syscall_record->args.mutex;
             /* Allow another unlock syscall to occur while wakes are evaluated
              * so that no unlocks are missed. */
             rt_atomic_flag_clear_explicit(&mutex->unlock_pending,
                                           memory_order_release);
             wake_mutex_waiter(mutex);
+            break;
+        }
+        case RT_SYSCALL_QUEUE_SEND:
+        {
+            struct rt_queue *const queue = syscall_record->args.queue;
+            insert_by_priority(&queue->send_list, &syscall_record->task->list);
+            ++queue->num_senders;
+            wake_queue_waiters(queue);
+            break;
+        }
+        case RT_SYSCALL_QUEUE_RECV:
+        {
+            struct rt_queue *const queue = syscall_record->args.queue;
+            insert_by_priority(&queue->recv_list, &syscall_record->task->list);
+            ++queue->num_recvers;
+            wake_queue_waiters(queue);
+            break;
+        }
+        case RT_SYSCALL_QUEUE_WAKE:
+        {
+            struct rt_queue *const queue = syscall_record->args.queue;
+            /* Allow another queue wake syscall to occur while wakes are
+             * evaluated so that no wakes are missed. */
+            rt_atomic_flag_clear_explicit(&queue->wake_pending,
+                                          memory_order_release);
+            wake_queue_waiters(queue);
             break;
         }
         }

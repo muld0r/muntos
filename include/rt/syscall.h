@@ -13,17 +13,34 @@ enum rt_syscall
     /* Processes a tick. */
     RT_SYSCALL_TICK,
 
-    /* syscalls invoked on tasks */
+    /* Yield from a task. */
     RT_SYSCALL_YIELD,
+
+    /* Exit from a task. */
     RT_SYSCALL_EXIT,
+
+    /* Sleep from a task. */
     RT_SYSCALL_SLEEP,
     RT_SYSCALL_SLEEP_PERIODIC,
+
+    /* Wait on a semaphore from a task. */
     RT_SYSCALL_SEM_WAIT,
+
+    /* Lock a mutex from a task. */
     RT_SYSCALL_MUTEX_LOCK,
 
-    /* syscalls invoked on other objects */
+    /* Post a semaphore from a task or interrupt. */
     RT_SYSCALL_SEM_POST,
+
+    /* Unlock a mutex from a task or interrupt. */
     RT_SYSCALL_MUTEX_UNLOCK,
+
+    /* Send or receive to a queue from a task. */
+    RT_SYSCALL_QUEUE_SEND,
+    RT_SYSCALL_QUEUE_RECV,
+
+    /* Wake up tasks that were blocked on queue operations. */
+    RT_SYSCALL_QUEUE_WAKE,
 };
 
 union rt_syscall_args
@@ -36,6 +53,7 @@ union rt_syscall_args
     } sleep_periodic;
     struct rt_sem *sem;
     struct rt_mutex *mutex;
+    struct rt_queue *queue;
 };
 
 struct rt_syscall_record
