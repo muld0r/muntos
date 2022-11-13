@@ -1,12 +1,13 @@
 #include <rt/queue.h>
 
+#include <rt/log.h>
 #include <rt/syscall.h>
 
 #include <string.h>
 
 #define SLOT_EMPTY '\0' /* An empty slot, ready to receive new data. */
-#define SLOT_RECV 'r'   /* A full slot that has been claimed by a receiver. */
 #define SLOT_SEND 's'   /* An empty slot that has been claimed by a sender. */
+#define SLOT_RECV 'r'   /* A full slot that has been claimed by a receiver. */
 #define SLOT_FULL 'f'   /* A full slot ready to be received. */
 
 static void send(struct rt_queue *queue, const void *elem)
@@ -47,6 +48,7 @@ static void recv(struct rt_queue *queue, void *elem)
 {
     size_t deq = rt_atomic_load_explicit(&queue->deq, memory_order_relaxed);
     size_t start_deq = deq;
+    bool reserved_send = false;
     for (;;)
     {
         size_t next_deq = deq + 1;
@@ -56,6 +58,10 @@ static void recv(struct rt_queue *queue, void *elem)
         }
         char slot =
             rt_atomic_load_explicit(&queue->slots[deq], memory_order_relaxed);
+        if (slot == SLOT_SEND)
+        {
+            reserved_send = true;
+        }
         if ((slot == SLOT_FULL) &&
             rt_atomic_compare_exchange_strong_explicit(&queue->slots[deq],
                                                        &slot, SLOT_RECV,
@@ -66,11 +72,16 @@ static void recv(struct rt_queue *queue, void *elem)
             memcpy(elem, &p[queue->elem_size * deq], queue->elem_size);
             rt_atomic_store_explicit(&queue->slots[deq], SLOT_EMPTY,
                                      memory_order_relaxed);
-            /* Update dequeue index if no one has yet. */
-            rt_atomic_compare_exchange_strong_explicit(&queue->deq, &start_deq,
-                                                       next_deq,
-                                                       memory_order_relaxed,
-                                                       memory_order_relaxed);
+            /* Update dequeue index if no one has yet and we didn't have to skip
+             * over any in-progress sends. If there was a send in progress near
+             * the dequeue index, leave the index unchanged to give subsequent
+             * dequeuers the opportunity to read that element. */
+            if (!reserved_send)
+            {
+                rt_atomic_compare_exchange_strong_explicit(
+                    &queue->deq, &start_deq, next_deq, memory_order_relaxed,
+                    memory_order_relaxed);
+            }
             return;
         }
         deq = next_deq;
