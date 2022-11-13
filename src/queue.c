@@ -48,7 +48,7 @@ static void recv(struct rt_queue *queue, void *elem)
 {
     size_t deq = rt_atomic_load_explicit(&queue->deq, memory_order_relaxed);
     size_t start_deq = deq;
-    bool reserved_send = false;
+    bool send_in_progress = false;
     for (;;)
     {
         size_t next_deq = deq + 1;
@@ -60,7 +60,7 @@ static void recv(struct rt_queue *queue, void *elem)
             rt_atomic_load_explicit(&queue->slots[deq], memory_order_relaxed);
         if (slot == SLOT_SEND)
         {
-            reserved_send = true;
+            send_in_progress = true;
         }
         if ((slot == SLOT_FULL) &&
             rt_atomic_compare_exchange_strong_explicit(&queue->slots[deq],
@@ -75,8 +75,9 @@ static void recv(struct rt_queue *queue, void *elem)
             /* Update dequeue index if no one has yet and we didn't have to skip
              * over any in-progress sends. If there was a send in progress near
              * the dequeue index, leave the index unchanged to give subsequent
-             * dequeuers the opportunity to read that element. */
-            if (!reserved_send)
+             * dequeuers the opportunity to receive that element once the send
+             * is complete. */
+            if (!send_in_progress)
             {
                 rt_atomic_compare_exchange_strong_explicit(
                     &queue->deq, &start_deq, next_deq, memory_order_relaxed,
