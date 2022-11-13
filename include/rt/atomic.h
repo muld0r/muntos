@@ -23,7 +23,10 @@
 
 /* Work around a bug in gcc where atomic_flag operations silently don't
  * generate atomic code on armv6-m rather than failing to link. The equivalent
- * operations on an atomic_bool work. */
+ * atomic_exchange operations on an atomic_bool work.
+ *
+ * https://gcc.gnu.org/bugzilla/show_bug.cgi?id=107567
+ */
 #define rt_atomic_flag atomic_bool
 #define RT_ATOMIC_FLAG_INIT false
 #define rt_atomic_flag_test_and_set_explicit(f, mo)                            \
