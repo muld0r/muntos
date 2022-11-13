@@ -2,7 +2,7 @@
 #include <rt/rt.h>
 #include <rt/task.h>
 
-static const int n = 10;
+static const int n = 1000;
 
 static void sender(void *arg)
 {
@@ -26,7 +26,7 @@ static void receiver(void *arg)
 
 int main(void)
 {
-    RT_QUEUE_STATIC(queue, int, 2);
+    RT_QUEUE_STATIC(queue, int, 40);
     __attribute__((aligned(STACK_ALIGN))) static char
         sender_stack[TASK_STACK_SIZE],
         receiver_stack[TASK_STACK_SIZE];
