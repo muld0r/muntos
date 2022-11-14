@@ -66,7 +66,7 @@ struct rt_syscall_record
     enum rt_syscall syscall;
 };
 
-void rt_syscall(struct rt_syscall_record *syscall);
+void rt_syscall(struct rt_syscall_record *record);
 
 /*
  * Architecture-dependent handler for syscalls. This will call rt_syscall_run

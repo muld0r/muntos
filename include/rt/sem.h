@@ -26,7 +26,7 @@ bool rt_sem_trywait(struct rt_sem *sem);
 struct rt_sem
 {
     struct rt_list wait_list;
-    struct rt_syscall_record syscall_record;
+    struct rt_syscall_record post_record;
     rt_atomic_int value;
     int max_value;
     size_t num_waiters;
@@ -36,7 +36,7 @@ struct rt_sem
 #define RT_SEM_INIT_WITH_MAX(name, initial_value, max_value_)                  \
     {                                                                          \
         .wait_list = RT_LIST_INIT(name.wait_list),                             \
-        .syscall_record =                                                      \
+        .post_record =                                                         \
             {                                                                  \
                 .next = NULL,                                                  \
                 .syscall = RT_SYSCALL_SEM_POST,                                \

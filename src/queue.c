@@ -106,11 +106,11 @@ void rt_queue_send(struct rt_queue *queue, const void *elem)
     if (level >= (long)queue->num_elems)
     {
         /* Queue is full, syscall. */
-        struct rt_syscall_record syscall_record = {
+        struct rt_syscall_record send_record = {
             .syscall = RT_SYSCALL_QUEUE_SEND,
             .args.queue = queue,
         };
-        rt_syscall(&syscall_record);
+        rt_syscall(&send_record);
     }
     send(queue, elem);
     if (level < 0)
@@ -126,11 +126,11 @@ void rt_queue_recv(struct rt_queue *queue, void *elem)
     if (level <= 0)
     {
         /* Queue is empty, syscall. */
-        struct rt_syscall_record syscall_record = {
+        struct rt_syscall_record recv_record = {
             .syscall = RT_SYSCALL_QUEUE_RECV,
             .args.queue = queue,
         };
-        rt_syscall(&syscall_record);
+        rt_syscall(&recv_record);
     }
     recv(queue, elem);
     if (level > (long)queue->num_elems)

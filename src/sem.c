@@ -6,8 +6,8 @@
 static void sem_init_common(struct rt_sem *sem, int initial_value)
 {
     rt_list_init(&sem->wait_list);
-    sem->syscall_record.syscall = RT_SYSCALL_SEM_POST;
-    sem->syscall_record.args.sem = sem;
+    sem->post_record.syscall = RT_SYSCALL_SEM_POST;
+    sem->post_record.args.sem = sem;
     rt_atomic_store_explicit(&sem->value, initial_value, memory_order_relaxed);
     sem->num_waiters = 0;
     rt_atomic_flag_clear_explicit(&sem->post_pending, memory_order_release);
@@ -48,12 +48,12 @@ void rt_sem_post(struct rt_sem *sem)
     /* TODO: if pre-empted after test_and_set but before pushing the syscall,
      * then posts made by higher priority contexts won't pend a syscall when
      * they should. This can be solved by having tasks use their own
-     * syscall_record when posting. */
+     * syscall record when posting. */
     if ((value < 0) &&
         !rt_atomic_flag_test_and_set_explicit(&sem->post_pending,
                                               memory_order_acquire))
     {
-        rt_syscall(&sem->syscall_record);
+        rt_syscall(&sem->post_record);
     }
 }
 
@@ -77,11 +77,11 @@ void rt_sem_post_all(struct rt_sem *sem)
     /* TODO: if pre-empted after test_and_set but before pushing the syscall,
      * then posts made by higher priority contexts won't pend a syscall when
      * they should. This can be solved by having tasks use their own
-     * syscall_record when posting. */
+     * syscall record when posting. */
     if (!rt_atomic_flag_test_and_set_explicit(&sem->post_pending,
                                               memory_order_acquire))
     {
-        rt_syscall(&sem->syscall_record);
+        rt_syscall(&sem->post_record);
     }
 }
 
@@ -115,10 +115,10 @@ void rt_sem_wait(struct rt_sem *sem)
 
     if (value <= 0)
     {
-        struct rt_syscall_record syscall_record = {
+        struct rt_syscall_record wait_record = {
             .syscall = RT_SYSCALL_SEM_WAIT,
             .args.sem = sem,
         };
-        rt_syscall(&syscall_record);
+        rt_syscall(&wait_record);
     }
 }
