@@ -1,10 +1,9 @@
 #ifndef RT_TASK_H
 #define RT_TASK_H
 
-#include <rt/mutex.h>
-#include <rt/sem.h>
-#include <rt/syscall.h>
+#include <rt/list.h>
 
+#include <limits.h>
 #include <stdbool.h>
 #include <stddef.h>
 
@@ -28,6 +27,11 @@ void rt_task_exit(void);
  * Get the name of the current task.
  */
 const char *rt_task_name(void);
+
+/*
+ * Get the current task.
+ */
+struct rt_task *rt_task_self(void);
 
 struct rt_task
 {

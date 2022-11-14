@@ -1,5 +1,6 @@
 #include <rt/mutex.h>
 #include <rt/rt.h>
+#include <rt/sem.h>
 #include <rt/task.h>
 
 static const int n = 50;

@@ -1,7 +1,9 @@
 #ifndef RT_SYSCALL_H
 #define RT_SYSCALL_H
 
-struct rt_task;
+#include <rt/task.h>
+
+#include <stdbool.h>
 
 enum rt_syscall
 {

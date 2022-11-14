@@ -1,6 +1,7 @@
 #include <rt/atomic.h>
 #include <rt/log.h>
 #include <rt/rt.h>
+#include <rt/sem.h>
 #include <rt/sleep.h>
 #include <rt/task.h>
 #include <rt/tick.h>

@@ -5,7 +5,9 @@
 #include <rt/context.h>
 #include <rt/list.h>
 #include <rt/log.h>
+#include <rt/mutex.h>
 #include <rt/queue.h>
+#include <rt/sem.h>
 #include <rt/sleep.h>
 #include <rt/syscall.h>
 #include <rt/task.h>
@@ -70,6 +72,11 @@ void rt_sched(void)
 const char *rt_task_name(void)
 {
     return active_task->name;
+}
+
+struct rt_task *rt_task_self(void)
+{
+    return active_task;
 }
 
 void rt_task_exit(void)
@@ -172,28 +179,28 @@ static void sleep_until(struct rt_task *task, unsigned long wake_tick)
     }
 }
 
-static void sleep_syscall(struct rt_syscall_record *syscall_record)
+static void sleep_syscall(struct rt_syscall_record *record)
 {
-    const unsigned long ticks = syscall_record->args.sleep_ticks;
+    const unsigned long ticks = record->args.sleep_ticks;
     /* Only check for 0 ticks in the syscall so that rt_sleep(0) becomes a
      * synonym for rt_yield(). */
     if (ticks > 0)
     {
-        sleep_until(syscall_record->task, woken_tick + ticks);
+        sleep_until(record->task, woken_tick + ticks);
     }
 }
 
-static void sleep_periodic_syscall(struct rt_syscall_record *syscall_record)
+static void sleep_periodic_syscall(struct rt_syscall_record *record)
 {
     const unsigned long last_wake_tick =
-        syscall_record->args.sleep_periodic.last_wake_tick;
-    const unsigned long period = syscall_record->args.sleep_periodic.period;
+        record->args.sleep_periodic.last_wake_tick;
+    const unsigned long period = record->args.sleep_periodic.period;
     const unsigned long ticks_since_last_wake = woken_tick - last_wake_tick;
     /* If there have been at least as many ticks as the period since the last
      * wake, then the desired wake up tick has already occurred. */
     if (ticks_since_last_wake < period)
     {
-        sleep_until(syscall_record->task, last_wake_tick + period);
+        sleep_until(record->task, last_wake_tick + period);
     }
 }
 

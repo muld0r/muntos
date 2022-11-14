@@ -1,7 +1,7 @@
 #include <rt/mutex.h>
 
-#include <rt/task.h>
 #include <rt/log.h>
+#include <rt/task.h>
 
 void rt_mutex_init(struct rt_mutex *mutex)
 {
