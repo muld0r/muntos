@@ -53,22 +53,6 @@ void rt_yield(void)
     syscall_simple(RT_SYSCALL_YIELD);
 }
 
-static rt_atomic_flag sched_pending = RT_ATOMIC_FLAG_INIT;
-
-void rt_sched(void)
-{
-    static struct rt_syscall_record sched_record = {
-        .syscall = RT_SYSCALL_SCHED,
-    };
-
-    if (!rt_atomic_flag_test_and_set_explicit(&sched_pending,
-                                              memory_order_relaxed))
-    {
-        rt_logf("syscall: sched\n");
-        rt_syscall(&sched_record);
-    }
-}
-
 const char *rt_task_name(void)
 {
     return active_task->name;
@@ -353,9 +337,6 @@ void *rt_syscall_run(void)
         switch (record->syscall)
         {
         case RT_SYSCALL_NONE:
-            break;
-        case RT_SYSCALL_SCHED:
-            rt_atomic_flag_clear_explicit(&sched_pending, memory_order_release);
             break;
         case RT_SYSCALL_TICK:
             rt_atomic_flag_clear_explicit(&tick_pending, memory_order_release);
