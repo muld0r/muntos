@@ -1,5 +1,4 @@
     .syntax unified
-    .arch armv6-m
     .thumb
     .p2align 1
     .section .text.rt_syscall_handler
