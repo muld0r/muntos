@@ -109,7 +109,10 @@ __attribute__((noreturn)) void rt_start(void)
 
 void rt_stop(void)
 {
-    __asm__("bkpt");
+    for (;;)
+    {
+        __asm__("bkpt");
+    }
 }
 
 #define PENDSVSET (1U << 28)
