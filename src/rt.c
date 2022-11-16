@@ -279,11 +279,7 @@ static void wake_sem_waiters(struct rt_sem *sem)
 
 static void wake_mutex_waiter(struct rt_mutex *mutex)
 {
-    /* TODO: should probably just ready the task and let it compete with any
-     * already-running tasks that might want the mutex. */
-    if (!rt_list_is_empty(&mutex->wait_list) &&
-        !rt_atomic_flag_test_and_set_explicit(&mutex->lock,
-                                              memory_order_acquire))
+    if (!rt_list_is_empty(&mutex->wait_list))
     {
         insert_by_priority(&ready_list, rt_list_pop_front(&mutex->wait_list));
     }
@@ -387,12 +383,7 @@ void *rt_syscall_run(void)
         }
         case RT_SYSCALL_MUTEX_UNLOCK:
         {
-            struct rt_mutex *const mutex = record->args.mutex;
-            /* Allow another unlock syscall to occur while wakes are evaluated
-             * so that no unlocks are missed. */
-            rt_atomic_flag_clear_explicit(&mutex->unlock_pending,
-                                          memory_order_release);
-            wake_mutex_waiter(mutex);
+            wake_mutex_waiter(record->args.mutex);
             break;
         }
         case RT_SYSCALL_QUEUE_SEND:

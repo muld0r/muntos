@@ -8,44 +8,52 @@ void rt_mutex_init(struct rt_mutex *mutex)
     rt_list_init(&mutex->wait_list);
     mutex->unlock_record.syscall = RT_SYSCALL_MUTEX_UNLOCK;
     mutex->unlock_record.args.mutex = mutex;
-    rt_atomic_flag_clear_explicit(&mutex->unlock_pending, memory_order_relaxed);
-    rt_atomic_flag_clear_explicit(&mutex->lock, memory_order_release);
+    rt_atomic_store_explicit(&mutex->lock, 1, memory_order_release);
 }
 
 void rt_mutex_lock(struct rt_mutex *mutex)
 {
-    if (rt_mutex_trylock(mutex))
-    {
-        /* Acquired the lock. */
-        rt_logf("%s lock\n", rt_task_name());
-        return;
-    }
+    const int lock =
+        rt_atomic_fetch_sub_explicit(&mutex->lock, 1, memory_order_acquire);
 
-    struct rt_syscall_record lock_record = {
-        .syscall = RT_SYSCALL_MUTEX_LOCK,
-        .args.mutex = mutex,
-    };
-    rt_logf("syscall: %s mutex lock\n", rt_task_name());
-    rt_syscall(&lock_record);
+    if (lock < 1)
+    {
+        struct rt_syscall_record lock_record = {
+            .syscall = RT_SYSCALL_MUTEX_LOCK,
+            .args.mutex = mutex,
+        };
+        rt_logf("syscall: %s mutex lock\n", rt_task_name());
+        rt_syscall(&lock_record);
+    }
+    else
+    {
+        rt_logf("%s mutex lock\n", rt_task_name());
+    }
 }
 
 bool rt_mutex_trylock(struct rt_mutex *mutex)
 {
-    return !rt_atomic_flag_test_and_set_explicit(&mutex->lock,
-                                                 memory_order_acquire);
+    int lock = 1;
+    return rt_atomic_compare_exchange_strong_explicit(&mutex->lock, &lock, 0,
+                                                      memory_order_acquire,
+                                                      memory_order_relaxed);
 }
 
 void rt_mutex_unlock(struct rt_mutex *mutex)
 {
-    /* TODO: make the lock go to the highest priority waiter, rather than
-     * whoever gets to the test_and_set first. */
-    rt_atomic_flag_clear_explicit(&mutex->lock, memory_order_release);
+    const int lock =
+        rt_atomic_fetch_add_explicit(&mutex->lock, 1, memory_order_release);
+
     rt_logf("%s unlock\n", rt_task_name());
 
-    /* If there isn't already an unlock system call pending, then create one. */
-    if (!rt_atomic_flag_test_and_set_explicit(&mutex->unlock_pending,
-                                              memory_order_acquire))
+    if (lock < 0)
     {
+        /*
+         * There are waiters, so syscall to wake them.
+         * NOTE: a trylock from a higher priority context than any of the
+         * waiters can spuriously fail here even though the mutex is logically
+         * unlocked at this point.
+         */
         rt_logf("syscall: %s mutex unlock\n", rt_task_name());
         rt_syscall(&mutex->unlock_record);
     }
