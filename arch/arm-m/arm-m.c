@@ -141,5 +141,5 @@ void rt_logf(const char *fmt, ...)
 }
 
 #if (__ARM_ARCH == 6)
-#include "v6-atomic.c"
+#include "atomic-v6.c"
 #endif

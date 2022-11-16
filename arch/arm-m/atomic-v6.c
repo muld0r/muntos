@@ -75,8 +75,8 @@ bool __atomic_compare_exchange_1(volatile void *ptr, void *exp,
 {
     (void)weak;
 
-    volatile unsigned *const p = ptr;
-    unsigned *const e = exp;
+    volatile unsigned char *const p = ptr;
+    unsigned char *const e = exp;
 
     atomic_start(success_memorder);
     const unsigned old = *p;
