@@ -8,6 +8,7 @@
 #define rt_atomic_char atomic_char
 #define rt_atomic_int atomic_int
 #define rt_atomic_uint atomic_uint
+#define rt_atomic_long atomic_long
 #define rt_atomic_ulong atomic_ulong
 #define rt_atomic_size_t atomic_size_t
 

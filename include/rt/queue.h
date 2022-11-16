@@ -10,7 +10,7 @@
 
 struct rt_queue
 {
-    atomic_long level;
+    rt_atomic_long level;
     rt_atomic_size_t enq, deq;
     rt_atomic_char *slots;
     void *data;
