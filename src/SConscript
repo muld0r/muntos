@@ -8,7 +8,6 @@ librt = env.StaticLibrary(
         "mutex.c",
         "queue.c",
         "rt.c",
-        "sbheap.c",
         "sem.c",
     ],
 )
