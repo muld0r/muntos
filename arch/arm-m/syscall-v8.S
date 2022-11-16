@@ -1,13 +1,3 @@
-    .syntax unified
-    .thumb
-    .p2align 1
-    .section .text.rt_syscall_handler
-    .global rt_syscall_handler
-    .type rt_syscall_handler, %function
-rt_syscall_handler:
-
-#if defined(__ARM_FP)
-
     push {r3, lr}
     bl rt_syscall_run
     pop {r3, lr}
@@ -39,29 +29,3 @@ rt_syscall_handler:
 
 .Lreturn:
     bx lr
-
-#else /* no FP */
-
-    bl rt_syscall_run
-    cbz r0, .Lreturn
-
-    mrs r1, psp
-    mrs r3, psplim
-    stmdb r1!, {r3-r11}
-
-    ldr r2, =rt_prev_context
-    ldr r2, [r2]
-    str r1, [r2]
-
-    ldmia r0!, {r3-r11}
-    msr psp, r0
-    msr psplim, r3
-
-.Lreturn:
-    /* The thread exception return value is always -68 == 0xFFFFFFBC. */
-    mov r0, -68
-    bx r0
-
-#endif
-
-    .size rt_syscall_handler, .-rt_syscall_handler

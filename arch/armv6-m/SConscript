@@ -1,7 +1,0 @@
-Import("env")
-
-# Return a list of Objects instead of a StaticLibrary, otherwise ld can't find
-# the atomic builtins implemented in atomic.c when LTO is enabled.
-libarmv6_m = [env.Object(s) for s in ["armv6-m.c", "armv6-m_asm.S", "atomic.c"]]
-
-Return("libarmv6_m")

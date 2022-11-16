@@ -57,6 +57,40 @@ unsigned __atomic_fetch_add_4(volatile void *ptr, unsigned val, int memorder)
     return old;
 }
 
+unsigned __atomic_fetch_sub_4(volatile void *ptr, unsigned val, int memorder)
+{
+    volatile unsigned *const p = ptr;
+
+    atomic_start(memorder);
+    const unsigned old = *p;
+    *p = old - val;
+    atomic_end(memorder);
+
+    return old;
+}
+
+bool __atomic_compare_exchange_1(volatile void *ptr, void *exp,
+                                 unsigned char val, bool weak,
+                                 int success_memorder, int fail_memorder)
+{
+    (void)weak;
+
+    volatile unsigned *const p = ptr;
+    unsigned *const e = exp;
+
+    atomic_start(success_memorder);
+    const unsigned old = *p;
+    if (old == *e)
+    {
+        *p = val;
+        atomic_end(success_memorder);
+        return true;
+    }
+    *e = old;
+    atomic_end(fail_memorder);
+    return false;
+}
+
 bool __atomic_compare_exchange_4(volatile void *ptr, void *exp, unsigned val,
                                  bool weak, int success_memorder,
                                  int fail_memorder)

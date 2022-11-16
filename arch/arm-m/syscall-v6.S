@@ -1,10 +1,3 @@
-    .syntax unified
-    .thumb
-    .p2align 1
-    .section .text.rt_syscall_handler
-    .global rt_syscall_handler
-    .type rt_syscall_handler, %function
-rt_syscall_handler:
     bl rt_syscall_run
     /* If there's no new context to switch to, return early. */
     cmp r0, 0
@@ -48,5 +41,3 @@ rt_syscall_handler:
     movs r0, 3
     negs r0, r0
     bx r0
-
-    .size rt_syscall_handler, .-rt_syscall_handler

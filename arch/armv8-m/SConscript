@@ -1,5 +1,0 @@
-Import("env")
-
-libarmv8_m = env.StaticLibrary("armv8-m", source=["armv8-m.c", "armv8-m_asm.S"])
-
-Return("libarmv8_m")
