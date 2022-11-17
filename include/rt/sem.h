@@ -39,8 +39,8 @@ struct rt_sem
         .post_record =                                                         \
             {                                                                  \
                 .next = NULL,                                                  \
+                .args.sem_post.sem = &name,                                    \
                 .syscall = RT_SYSCALL_SEM_POST,                                \
-                .args.sem = &name,                                             \
             },                                                                 \
         .value = initial_value, .max_value = max_value_, .num_waiters = 0,     \
         .post_pending = RT_ATOMIC_FLAG_INIT,                                   \

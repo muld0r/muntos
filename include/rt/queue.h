@@ -37,9 +37,8 @@ struct rt_queue
         .wake_record =                                                         \
             {                                                                  \
                 .next = NULL,                                                  \
-                .task = NULL,                                                  \
+                .args.queue_wake.queue = &name,                                \
                 .syscall = RT_SYSCALL_QUEUE_WAKE,                              \
-                .args.queue = &name,                                           \
             },                                                                 \
         .num_senders = 0,                                                      \
         .num_recvers = 0,                                                      \

@@ -6,8 +6,8 @@
 static void sem_init_common(struct rt_sem *sem, int initial_value)
 {
     rt_list_init(&sem->wait_list);
+    sem->post_record.args.sem_post.sem = sem;
     sem->post_record.syscall = RT_SYSCALL_SEM_POST;
-    sem->post_record.args.sem = sem;
     rt_atomic_store_explicit(&sem->value, initial_value, memory_order_relaxed);
     sem->num_waiters = 0;
     rt_atomic_flag_clear_explicit(&sem->post_pending, memory_order_release);
@@ -110,10 +110,10 @@ void rt_sem_wait(struct rt_sem *sem)
 
     if (value <= 0)
     {
-        struct rt_syscall_record wait_record = {
-            .syscall = RT_SYSCALL_SEM_WAIT,
-            .args.sem = sem,
-        };
+        struct rt_syscall_record wait_record;
+        wait_record.args.sem_wait.task = rt_task_self();
+        wait_record.args.sem_wait.sem = sem;
+        wait_record.syscall = RT_SYSCALL_SEM_WAIT;
         rt_syscall(&wait_record);
     }
 }

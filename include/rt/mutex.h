@@ -20,6 +20,7 @@ struct rt_mutex
     struct rt_list wait_list;
     struct rt_syscall_record unlock_record;
     rt_atomic_int lock;
+    int num_waiters;
 };
 
 #define RT_MUTEX_INIT(name)                                                    \
@@ -28,10 +29,10 @@ struct rt_mutex
         .unlock_record =                                                       \
             {                                                                  \
                 .next = NULL,                                                  \
+                .args.mutex_unlock.mutex = &name,                              \
                 .syscall = RT_SYSCALL_MUTEX_UNLOCK,                            \
-                .args.mutex = &name,                                           \
             },                                                                 \
-        .lock = 1,                                                             \
+        .lock = 1, .num_waiters = 0,                                           \
     }
 
 #define RT_MUTEX(name) struct rt_mutex name = RT_MUTEX_INIT(name)

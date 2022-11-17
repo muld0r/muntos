@@ -12,8 +12,8 @@ void rt_start(void);
 void rt_stop(void);
 
 /*
- * Yield control of the processor to another runnable task.
+ * Schedule a new task to run.
  */
-void rt_yield(void);
+void rt_sched(void);
 
 #endif /* RT_H */

@@ -6,8 +6,9 @@
 void rt_mutex_init(struct rt_mutex *mutex)
 {
     rt_list_init(&mutex->wait_list);
+    mutex->unlock_record.args.mutex_unlock.mutex = mutex;
     mutex->unlock_record.syscall = RT_SYSCALL_MUTEX_UNLOCK;
-    mutex->unlock_record.args.mutex = mutex;
+    mutex->num_waiters = 0;
     rt_atomic_store_explicit(&mutex->lock, 1, memory_order_release);
 }
 
@@ -18,10 +19,10 @@ void rt_mutex_lock(struct rt_mutex *mutex)
 
     if (lock < 1)
     {
-        struct rt_syscall_record lock_record = {
-            .syscall = RT_SYSCALL_MUTEX_LOCK,
-            .args.mutex = mutex,
-        };
+        struct rt_syscall_record lock_record;
+        lock_record.args.mutex_lock.task = rt_task_self();
+        lock_record.args.mutex_lock.mutex = mutex;
+        lock_record.syscall = RT_SYSCALL_MUTEX_LOCK;
         rt_logf("syscall: %s mutex lock\n", rt_task_name());
         rt_syscall(&lock_record);
     }
@@ -52,7 +53,8 @@ void rt_mutex_unlock(struct rt_mutex *mutex)
          * There are waiters, so syscall to wake them.
          * NOTE: a trylock from a higher priority context than any of the
          * waiters can spuriously fail here even though the mutex is logically
-         * unlocked at this point.
+         * unlocked at this point. A normal lock will suspend itself and then
+         * be resumed by the unlock syscall.
          */
         rt_logf("syscall: %s mutex unlock\n", rt_task_name());
         rt_syscall(&mutex->unlock_record);

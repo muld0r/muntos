@@ -7,7 +7,7 @@ static void simple(void *arg)
     (void)arg;
     for (int i = 0; i < 100; ++i)
     {
-        rt_yield();
+        rt_sched();
     }
 
     /* Only the second task to finish will call rt_stop. */

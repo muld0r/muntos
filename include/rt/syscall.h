@@ -7,13 +7,11 @@
 
 enum rt_syscall
 {
-    RT_SYSCALL_NONE,
+    /* Reschedule. */
+    RT_SYSCALL_SCHED,
 
     /* Processes a tick. */
     RT_SYSCALL_TICK,
-
-    /* Yield from a task. */
-    RT_SYSCALL_YIELD,
 
     /* Exit from a task. */
     RT_SYSCALL_EXIT,
@@ -44,21 +42,53 @@ enum rt_syscall
 
 union rt_syscall_args
 {
-    unsigned long sleep_ticks;
     struct
     {
+        struct rt_task *task;
+    } exit;
+    struct
+    {
+        struct rt_task *task;
+        unsigned long ticks;
+    } sleep;
+    struct
+    {
+        struct rt_task *task;
         unsigned long last_wake_tick;
         unsigned long period;
     } sleep_periodic;
-    struct rt_sem *sem;
-    struct rt_mutex *mutex;
-    struct rt_queue *queue;
+    struct
+    {
+        struct rt_sem *sem;
+    } sem_post;
+    struct
+    {
+        struct rt_task *task;
+        struct rt_sem *sem;
+    } sem_wait;
+    struct
+    {
+        struct rt_task *task;
+        struct rt_mutex *mutex;
+    } mutex_lock;
+    struct
+    {
+        struct rt_mutex *mutex;
+    } mutex_unlock;
+    struct
+    {
+        struct rt_task *task;
+        struct rt_queue *queue;
+    } queue_send, queue_recv;
+    struct
+    {
+        struct rt_queue *queue;
+    } queue_wake;
 };
 
 struct rt_syscall_record
 {
     struct rt_syscall_record *next;
-    struct rt_task *task;
     union rt_syscall_args args;
     enum rt_syscall syscall;
 };
