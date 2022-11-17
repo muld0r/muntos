@@ -103,13 +103,8 @@ bool rt_sem_trywait(struct rt_sem *sem)
 
 void rt_sem_wait(struct rt_sem *sem)
 {
-    int value = rt_atomic_load_explicit(&sem->value, memory_order_relaxed);
-    while (!rt_atomic_compare_exchange_weak_explicit(&sem->value, &value,
-                                                     value - 1,
-                                                     memory_order_acquire,
-                                                     memory_order_relaxed))
-    {
-    }
+    const int value =
+        rt_atomic_fetch_sub_explicit(&sem->value, 1, memory_order_acquire);
 
     rt_logf("%s sem wait, new value %d\n", rt_task_name(), value - 1);
 
