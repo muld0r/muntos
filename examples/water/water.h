@@ -1,13 +1,9 @@
 #ifndef WATER_H
 #define WATER_H
 
-struct reaction;
+void hydrogen(void);
 
-void reaction_init(struct reaction *rxn);
-
-void hydrogen(struct reaction *rxn);
-
-void oxygen(struct reaction *rxn);
+void oxygen(void);
 
 void make_water(void);
 

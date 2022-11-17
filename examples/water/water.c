@@ -18,13 +18,15 @@ void make_water(void)
 
 static void hydrogen_fn(void *arg)
 {
-    hydrogen(arg);
+    (void)arg;
+    hydrogen();
     rt_atomic_fetch_add(&hydrogen_bonded, 1);
 }
 
 static void oxygen_fn(void *arg)
 {
-    oxygen(arg);
+    (void)arg;
+    oxygen();
     rt_atomic_fetch_add(&oxygen_bonded, 1);
 }
 
@@ -36,24 +38,20 @@ static bool check(volatile rt_atomic_uint *p, unsigned expected)
 static void timeout(void *arg)
 {
     (void)arg;
-    rt_sleep(1000);
+    rt_sleep(2000);
     rt_stop();
 }
 
 #define TOTAL_ATOMS 200
 
+static struct rt_task atom_tasks[TOTAL_ATOMS];
+static char atom_stacks[TOTAL_ATOMS][TASK_STACK_SIZE]
+    __attribute__((aligned(STACK_ALIGN)));
+
 int main(void)
 {
     unsigned hydrogen_atoms = 0;
     unsigned oxygen_atoms = 0;
-
-    __attribute__((aligned(8))) static char rxnbuf[1024];
-    struct reaction *rxn = (void *)rxnbuf;
-    reaction_init(rxn);
-
-    static struct rt_task atoms[TOTAL_ATOMS];
-    __attribute__((aligned(STACK_ALIGN))) static char stacks[TOTAL_ATOMS]
-                                                            [TASK_STACK_SIZE];
 
     bool hydrogen = true;
     for (unsigned i = 0; i < TOTAL_ATOMS; i++)
@@ -61,14 +59,14 @@ int main(void)
         if (hydrogen)
         {
             ++hydrogen_atoms;
-            rt_task_init(&atoms[i], hydrogen_fn, rxn, "hydrogen", i + 1,
-                         stacks[i], TASK_STACK_SIZE);
+            rt_task_init(&atom_tasks[i], hydrogen_fn, NULL, "hydrogen", i + 1,
+                         atom_stacks[i], TASK_STACK_SIZE);
         }
         else
         {
             ++oxygen_atoms;
-            rt_task_init(&atoms[i], oxygen_fn, rxn, "oxygen", i + 1, stacks[i],
-                         TASK_STACK_SIZE);
+            rt_task_init(&atom_tasks[i], oxygen_fn, NULL, "oxygen", i + 1,
+                         atom_stacks[i], TASK_STACK_SIZE);
         }
         hydrogen = !hydrogen;
     }
