@@ -127,11 +127,9 @@ void rt_syscall_post(void)
     else
     {
         ICSR = PENDSVSET;
-        /* TODO: are these needed? This code path is run from an exception with
-         * higher priority than PendSV, and that exception must execute an
-         * exception return before the PendSV handler gets to run. */
-        __asm__("dsb\n"
-                "isb\n");
+        /* NOTE: Normally a synchronization barrier is needed after setting
+         * ICSR, but an exception return implicitly synchronizes, and this
+         * path is only run from a higher priority exception than PendSV. */
     }
 }
 
