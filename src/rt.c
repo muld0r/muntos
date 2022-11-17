@@ -96,6 +96,14 @@ static void *sched(void)
     /* The next task will be used, so remove it from the ready list. */
     rt_list_remove(node);
 
+    /* If a task made a system call to suspend itself but was then woken up by
+     * its own or another system call and is still the highest priority task,
+     * it should continue running, so don't context switch. */
+    if (active_task == next_task)
+    {
+        return NULL;
+    }
+
     /* If the active task is not already waiting for some other event, re-add
      * it to the ready list. */
     if (active_is_runnable)
