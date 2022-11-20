@@ -68,10 +68,11 @@ static void send(struct rt_queue *queue, const void *elem)
                                                        next_enq,
                                                        memory_order_release,
                                                        memory_order_relaxed);
-            return;
+            break;
         }
         enq = next_enq;
     }
+    rt_sem_post(&queue->recv_sem);
 }
 
 static void recv(struct rt_queue *queue, void *elem)
@@ -110,24 +111,23 @@ static void recv(struct rt_queue *queue, void *elem)
                                                        next_deq,
                                                        memory_order_relaxed,
                                                        memory_order_relaxed);
-            return;
+            break;
         }
         deq = next_deq;
     }
+    rt_sem_post(&queue->send_sem);
 }
 
 void rt_queue_send(struct rt_queue *queue, const void *elem)
 {
     rt_sem_wait(&queue->send_sem);
     send(queue, elem);
-    rt_sem_post(&queue->recv_sem);
 }
 
 void rt_queue_recv(struct rt_queue *queue, void *elem)
 {
     rt_sem_wait(&queue->recv_sem);
     recv(queue, elem);
-    rt_sem_post(&queue->send_sem);
 }
 
 bool rt_queue_trysend(struct rt_queue *queue, const void *elem)
@@ -137,7 +137,6 @@ bool rt_queue_trysend(struct rt_queue *queue, const void *elem)
         return false;
     }
     send(queue, elem);
-    rt_sem_post(&queue->recv_sem);
     return true;
 }
 
@@ -148,6 +147,26 @@ bool rt_queue_tryrecv(struct rt_queue *queue, void *elem)
         return false;
     }
     recv(queue, elem);
-    rt_sem_post(&queue->send_sem);
+    return true;
+}
+
+bool rt_queue_timedsend(struct rt_queue *queue, const void *elem,
+                        unsigned long ticks)
+{
+    if (!rt_sem_timedwait(&queue->send_sem, ticks))
+    {
+        return false;
+    }
+    send(queue, elem);
+    return true;
+}
+
+bool rt_queue_timedrecv(struct rt_queue *queue, void *elem, unsigned long ticks)
+{
+    if (!rt_sem_timedwait(&queue->recv_sem, ticks))
+    {
+        return false;
+    }
+    recv(queue, elem);
     return true;
 }
