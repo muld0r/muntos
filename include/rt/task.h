@@ -36,10 +36,12 @@ struct rt_task *rt_task_self(void);
 struct rt_task
 {
     struct rt_list list;
+    struct rt_list sleep_list;
     void *ctx;
     unsigned long wake_tick;
     const char *name;
     unsigned priority;
+    int syscall_result;
 };
 
 #define RT_TASK(fn, arg, stack, priority)                                      \

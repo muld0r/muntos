@@ -108,12 +108,42 @@ void rt_sem_wait(struct rt_sem *sem)
 
     rt_logf("%s sem wait, new value %d\n", rt_task_name(), value - 1);
 
-    if (value <= 0)
+    if (value > 0)
     {
-        struct rt_syscall_record wait_record;
-        wait_record.args.sem_wait.task = rt_task_self();
-        wait_record.args.sem_wait.sem = sem;
-        wait_record.syscall = RT_SYSCALL_SEM_WAIT;
-        rt_syscall(&wait_record);
+        return;
     }
+
+    struct rt_syscall_record wait_record;
+    wait_record.args.sem_wait.task = rt_task_self();
+    wait_record.args.sem_wait.sem = sem;
+    wait_record.syscall = RT_SYSCALL_SEM_WAIT;
+    rt_syscall(&wait_record);
+}
+
+bool rt_sem_timedwait(struct rt_sem *sem, unsigned long ticks)
+{
+    const int value =
+        rt_atomic_fetch_sub_explicit(&sem->value, 1, memory_order_acquire);
+
+    rt_logf("%s sem timed wait, new value %d\n", rt_task_name(), value - 1);
+
+    if (value > 0)
+    {
+        return true;
+    }
+
+    if (ticks == 0)
+    {
+        return false;
+    }
+
+    struct rt_syscall_record wait_record;
+    wait_record.args.sem_timedwait.task = rt_task_self();
+    wait_record.args.sem_timedwait.sem = sem;
+    wait_record.args.sem_timedwait.ticks = ticks;
+    wait_record.syscall = RT_SYSCALL_SEM_TIMEDWAIT;
+    rt_task_self()->syscall_result = 0;
+    rt_syscall(&wait_record);
+
+    return rt_task_self()->syscall_result == 1;
 }

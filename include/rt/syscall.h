@@ -22,6 +22,7 @@ enum rt_syscall
 
     /* Wait on a semaphore from a task. */
     RT_SYSCALL_SEM_WAIT,
+    RT_SYSCALL_SEM_TIMEDWAIT,
 
     /* Post a semaphore from a task or interrupt. */
     RT_SYSCALL_SEM_POST,
@@ -55,6 +56,12 @@ union rt_syscall_args
         struct rt_task *task;
         struct rt_sem *sem;
     } sem_wait;
+    struct
+    {
+        struct rt_task *task;
+        struct rt_sem *sem;
+        unsigned long ticks;
+    } sem_timedwait;
     struct
     {
         struct rt_sem *sem;

@@ -23,6 +23,8 @@ void rt_sem_wait(struct rt_sem *sem);
 
 bool rt_sem_trywait(struct rt_sem *sem);
 
+bool rt_sem_timedwait(struct rt_sem *sem, unsigned long ticks);
+
 struct rt_sem
 {
     struct rt_list wait_list;
