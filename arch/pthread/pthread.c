@@ -13,6 +13,7 @@
 #include <sys/time.h>
 
 #include <stdarg.h>
+#include <stdatomic.h>
 #include <stdio.h>
 
 #define SIGTICK SIGALRM
@@ -137,6 +138,7 @@ void rt_syscall_handler(void)
         /* Block signals on the suspending thread. */
         block_all_signals(NULL);
 
+        atomic_thread_fence(memory_order_release);
         pthread_kill((pthread_t)newctx, SIGRESUME);
 
         *rt_prev_context = (void *)pthread_self();
