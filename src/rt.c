@@ -288,33 +288,6 @@ static void wake_mutex_waiter(struct rt_mutex *mutex)
     }
 }
 
-static void wake_queue_waiters(struct rt_queue *queue)
-{
-    long level = rt_atomic_load_explicit(&queue->level, memory_order_relaxed);
-
-    size_t waiters = 0;
-    if (level < 0)
-    {
-        waiters = (size_t)-level;
-    }
-    while (queue->num_senders > waiters)
-    {
-        insert_by_priority(&ready_list, rt_list_pop_front(&queue->send_list));
-        --queue->num_senders;
-    }
-
-    waiters = 0;
-    if (level > (long)queue->num_elems)
-    {
-        waiters = (size_t)level - queue->num_elems;
-    }
-    while (queue->num_recvers > waiters)
-    {
-        insert_by_priority(&ready_list, rt_list_pop_front(&queue->recv_list));
-        --queue->num_recvers;
-    }
-}
-
 void *rt_syscall_run(void)
 {
     /*
@@ -364,6 +337,16 @@ void *rt_syscall_run(void)
             wake_sem_waiters(sem);
             break;
         }
+        case RT_SYSCALL_SEM_POST:
+        {
+            struct rt_sem *const sem = record->args.sem_post.sem;
+            /* Allow another post syscall to occur while wakes are evaluated so
+             * that no posts are missed. */
+            rt_atomic_flag_clear_explicit(&sem->post_pending,
+                                          memory_order_release);
+            wake_sem_waiters(sem);
+            break;
+        }
         case RT_SYSCALL_MUTEX_LOCK:
         {
             struct rt_mutex *const mutex = record->args.mutex_lock.mutex;
@@ -375,49 +358,9 @@ void *rt_syscall_run(void)
             wake_mutex_waiter(mutex);
             break;
         }
-        case RT_SYSCALL_SEM_POST:
-        {
-            struct rt_sem *const sem = record->args.sem_post.sem;
-            /* Allow another post syscall to occur while wakes are evaluated so
-             * that no posts are missed. */
-            rt_atomic_flag_clear_explicit(&sem->post_pending,
-                                          memory_order_release);
-            wake_sem_waiters(sem);
-            break;
-        }
         case RT_SYSCALL_MUTEX_UNLOCK:
-        {
             wake_mutex_waiter(record->args.mutex_unlock.mutex);
             break;
-        }
-        case RT_SYSCALL_QUEUE_SEND:
-        {
-            struct rt_queue *const queue = record->args.queue_send.queue;
-            insert_by_priority(&queue->send_list,
-                               &record->args.queue_send.task->list);
-            ++queue->num_senders;
-            wake_queue_waiters(queue);
-            break;
-        }
-        case RT_SYSCALL_QUEUE_RECV:
-        {
-            struct rt_queue *const queue = record->args.queue_recv.queue;
-            insert_by_priority(&queue->recv_list,
-                               &record->args.queue_recv.task->list);
-            ++queue->num_recvers;
-            wake_queue_waiters(queue);
-            break;
-        }
-        case RT_SYSCALL_QUEUE_WAKE:
-        {
-            struct rt_queue *const queue = record->args.queue_wake.queue;
-            /* Allow another queue wake syscall to occur while wakes are
-             * evaluated so that no wakes are missed. */
-            rt_atomic_flag_clear_explicit(&queue->wake_pending,
-                                          memory_order_release);
-            wake_queue_waiters(queue);
-            break;
-        }
         }
         record = record->next;
     }

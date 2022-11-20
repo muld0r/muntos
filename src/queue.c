@@ -1,27 +1,44 @@
 #include <rt/queue.h>
 
 #include <rt/log.h>
-#include <rt/syscall.h>
 #include <rt/task.h>
 
 #include <string.h>
 
-#define SLOT_EMPTY '\0' /* An empty slot, ready to receive new data. */
-#define SLOT_SEND 's'   /* An empty slot that has been claimed by a sender. */
-#define SLOT_RECV 'r'   /* A full slot that has been claimed by a receiver. */
-#define SLOT_FULL 'f'   /* A full slot ready to be received. */
+/* An empty slot, ready to receive new data. */
+#define SLOT_EMPTY '\0'
+
+/* An empty slot that has been claimed by a sender. */
+#define SLOT_SEND 's'
+
+/* A full slot that has been claimed by a receiver. */
+#define SLOT_RECV 'r'
+
+/* A full slot ready to be received. */
+#define SLOT_FULL 'f'
+
+/* An empty slot claimed by a sender and canceled by a receiver. The slot is
+ * still exclusively owned by the sender, but the sender must clear it and
+ * re-attempt inserting at the new enqueue index. */
+#define SLOT_CANCELED 'x'
+
+static size_t next(const struct rt_queue *queue, size_t i)
+{
+    i += 1;
+    if (i == queue->num_elems)
+    {
+        return 0;
+    }
+    return i;
+}
 
 static void send(struct rt_queue *queue, const void *elem)
 {
-    size_t enq = rt_atomic_load_explicit(&queue->enq, memory_order_relaxed);
-    size_t start_enq = enq;
+    size_t enq = rt_atomic_load_explicit(&queue->enq, memory_order_acquire);
+    size_t start_enq = start_enq;
     for (;;)
     {
-        size_t next_enq = enq + 1;
-        if (next_enq == queue->num_elems)
-        {
-            next_enq = 0;
-        }
+        size_t next_enq = next(queue, enq);
         char slot =
             rt_atomic_load_explicit(&queue->slots[enq], memory_order_relaxed);
         if ((slot == SLOT_EMPTY) &&
@@ -32,12 +49,24 @@ static void send(struct rt_queue *queue, const void *elem)
         {
             unsigned char *const p = queue->data;
             memcpy(&p[queue->elem_size * enq], elem, queue->elem_size);
-            rt_atomic_store_explicit(&queue->slots[enq], SLOT_FULL,
-                                     memory_order_release);
+            slot = SLOT_SEND;
+            if (!rt_atomic_compare_exchange_strong_explicit(
+                    &queue->slots[enq], &slot, SLOT_FULL, memory_order_release,
+                    memory_order_relaxed))
+            {
+                /* If our slot has been canceled by a reader, then restore it
+                 * back to empty and start over. */
+                rt_atomic_store_explicit(&queue->slots[enq], SLOT_EMPTY,
+                                         memory_order_release);
+                start_enq =
+                    rt_atomic_load_explicit(&queue->enq, memory_order_acquire);
+                enq = start_enq;
+                continue;
+            }
             /* Update enqueue index if no one has yet. */
             rt_atomic_compare_exchange_strong_explicit(&queue->enq, &start_enq,
                                                        next_enq,
-                                                       memory_order_relaxed,
+                                                       memory_order_release,
                                                        memory_order_relaxed);
             return;
         }
@@ -49,136 +78,76 @@ static void recv(struct rt_queue *queue, void *elem)
 {
     size_t deq = rt_atomic_load_explicit(&queue->deq, memory_order_relaxed);
     size_t start_deq = deq;
-    bool send_in_progress = false;
     for (;;)
     {
-        size_t next_deq = deq + 1;
-        if (next_deq == queue->num_elems)
-        {
-            next_deq = 0;
-        }
+        size_t next_deq = next(queue, deq);
         char slot =
             rt_atomic_load_explicit(&queue->slots[deq], memory_order_relaxed);
         if (slot == SLOT_SEND)
         {
-            send_in_progress = true;
-        }
-        if ((slot == SLOT_FULL) &&
+            /* If we encounter an in-progress send, attempt to cancel it and
+             * retry. The send may have completed on retry. If not, there will
+             * be full slots to receive after this slot, because the level
+             * allowing receivers to run is only incremented after each send is
+             * complete. */
             rt_atomic_compare_exchange_strong_explicit(&queue->slots[deq],
-                                                       &slot, SLOT_RECV,
-                                                       memory_order_acquire,
-                                                       memory_order_relaxed))
+                                                       &slot, SLOT_CANCELED,
+                                                       memory_order_relaxed,
+                                                       memory_order_relaxed);
+            continue;
+        }
+        else if ((slot == SLOT_FULL) &&
+                 rt_atomic_compare_exchange_strong_explicit(
+                     &queue->slots[deq], &slot, SLOT_RECV, memory_order_acquire,
+                     memory_order_relaxed))
         {
             const unsigned char *const p = queue->data;
             memcpy(elem, &p[queue->elem_size * deq], queue->elem_size);
             rt_atomic_store_explicit(&queue->slots[deq], SLOT_EMPTY,
                                      memory_order_relaxed);
-            /* Update dequeue index if no one has yet and we didn't have to skip
-             * over any in-progress sends. If there was a send in progress near
-             * the dequeue index, leave the index unchanged to give subsequent
-             * dequeuers the opportunity to receive that element once the send
-             * is complete. */
-            if (!send_in_progress)
-            {
-                rt_atomic_compare_exchange_strong_explicit(
-                    &queue->deq, &start_deq, next_deq, memory_order_relaxed,
-                    memory_order_relaxed);
-            }
+            /* Update dequeue index if no one has yet. */
+            rt_atomic_compare_exchange_strong_explicit(&queue->deq, &start_deq,
+                                                       next_deq,
+                                                       memory_order_relaxed,
+                                                       memory_order_relaxed);
             return;
         }
         deq = next_deq;
     }
 }
 
-static void wake(struct rt_queue *queue)
-{
-    if (!rt_atomic_flag_test_and_set_explicit(&queue->wake_pending,
-                                              memory_order_acquire))
-    {
-        rt_syscall(&queue->wake_record);
-    }
-}
-
 void rt_queue_send(struct rt_queue *queue, const void *elem)
 {
-    const long level =
-        rt_atomic_fetch_add_explicit(&queue->level, 1, memory_order_relaxed);
-    if (level >= (long)queue->num_elems)
-    {
-        /* Queue is full, syscall. */
-        struct rt_syscall_record send_record;
-        send_record.args.queue_send.task = rt_task_self();
-        send_record.args.queue_send.queue = queue;
-        send_record.syscall = RT_SYSCALL_QUEUE_SEND;
-        rt_syscall(&send_record);
-    }
+    rt_sem_wait(&queue->send_sem);
     send(queue, elem);
-    if (level < 0)
-    {
-        wake(queue);
-    }
+    rt_sem_post(&queue->recv_sem);
 }
 
 void rt_queue_recv(struct rt_queue *queue, void *elem)
 {
-    const long level =
-        rt_atomic_fetch_sub_explicit(&queue->level, 1, memory_order_relaxed);
-    if (level <= 0)
-    {
-        /* Queue is empty, syscall. */
-        struct rt_syscall_record recv_record;
-        recv_record.args.queue_recv.task = rt_task_self();
-        recv_record.args.queue_recv.queue = queue;
-        recv_record.syscall = RT_SYSCALL_QUEUE_RECV;
-        rt_syscall(&recv_record);
-    }
+    rt_sem_wait(&queue->recv_sem);
     recv(queue, elem);
-    if (level > (long)queue->num_elems)
-    {
-        wake(queue);
-    }
+    rt_sem_post(&queue->send_sem);
 }
 
 bool rt_queue_trysend(struct rt_queue *queue, const void *elem)
 {
-    long level = rt_atomic_load_explicit(&queue->level, memory_order_relaxed);
-    do
+    if (!rt_sem_trywait(&queue->send_sem))
     {
-        if (level >= (long)queue->num_elems)
-        {
-            /* Queue is full. */
-            return false;
-        }
-    } while (!rt_atomic_compare_exchange_weak_explicit(&queue->level, &level,
-                                                       level + 1,
-                                                       memory_order_relaxed,
-                                                       memory_order_relaxed));
-    send(queue, elem);
-    if (level < 0)
-    {
-        wake(queue);
+        return false;
     }
+    send(queue, elem);
+    rt_sem_post(&queue->recv_sem);
     return true;
 }
 
 bool rt_queue_tryrecv(struct rt_queue *queue, void *elem)
 {
-    long level = rt_atomic_load_explicit(&queue->level, memory_order_relaxed);
-    do
+    if (!rt_sem_trywait(&queue->recv_sem))
     {
-        if (level <= 0)
-        {
-            /* Queue is empty. */
-            return false;
-        }
-    } while (!rt_atomic_compare_exchange_weak_explicit(&queue->level, &level,
-                                                       level - 1,
-                                                       memory_order_relaxed,
-                                                       memory_order_relaxed));
-    recv(queue, elem);
-    if (level > (long)queue->num_elems)
-    {
-        wake(queue);
+        return false;
     }
+    recv(queue, elem);
+    rt_sem_post(&queue->send_sem);
     return true;
 }

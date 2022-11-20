@@ -23,21 +23,14 @@ enum rt_syscall
     /* Wait on a semaphore from a task. */
     RT_SYSCALL_SEM_WAIT,
 
-    /* Lock a mutex from a task. */
-    RT_SYSCALL_MUTEX_LOCK,
-
     /* Post a semaphore from a task or interrupt. */
     RT_SYSCALL_SEM_POST,
 
+    /* Lock a mutex from a task. */
+    RT_SYSCALL_MUTEX_LOCK,
+
     /* Unlock a mutex from a task or interrupt. */
     RT_SYSCALL_MUTEX_UNLOCK,
-
-    /* Send or receive to a queue from a task. */
-    RT_SYSCALL_QUEUE_SEND,
-    RT_SYSCALL_QUEUE_RECV,
-
-    /* Wake up tasks that were blocked on queue operations. */
-    RT_SYSCALL_QUEUE_WAKE,
 };
 
 union rt_syscall_args
@@ -59,13 +52,13 @@ union rt_syscall_args
     } sleep_periodic;
     struct
     {
-        struct rt_sem *sem;
-    } sem_post;
-    struct
-    {
         struct rt_task *task;
         struct rt_sem *sem;
     } sem_wait;
+    struct
+    {
+        struct rt_sem *sem;
+    } sem_post;
     struct
     {
         struct rt_task *task;
@@ -75,15 +68,6 @@ union rt_syscall_args
     {
         struct rt_mutex *mutex;
     } mutex_unlock;
-    struct
-    {
-        struct rt_task *task;
-        struct rt_queue *queue;
-    } queue_send, queue_recv;
-    struct
-    {
-        struct rt_queue *queue;
-    } queue_wake;
 };
 
 struct rt_syscall_record
