@@ -35,7 +35,7 @@ static size_t next(const struct rt_queue *queue, size_t i)
 static void send(struct rt_queue *queue, const void *elem)
 {
     size_t enq = rt_atomic_load_explicit(&queue->enq, memory_order_relaxed);
-    size_t start_enq = start_enq;
+    size_t start_enq = enq;
     for (;;)
     {
         size_t next_enq = next(queue, enq);
