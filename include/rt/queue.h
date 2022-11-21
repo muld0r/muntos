@@ -35,14 +35,21 @@ void rt_queue_send(struct rt_queue *queue, const void *elem);
 
 void rt_queue_recv(struct rt_queue *queue, void *elem);
 
+void rt_queue_peek(struct rt_queue *queue, void *elem);
+
 bool rt_queue_trysend(struct rt_queue *queue, const void *elem);
 
 bool rt_queue_tryrecv(struct rt_queue *queue, void *elem);
+
+bool rt_queue_trypeek(struct rt_queue *queue, void *elem);
 
 bool rt_queue_timedsend(struct rt_queue *queue, const void *elem,
                         unsigned long ticks);
 
 bool rt_queue_timedrecv(struct rt_queue *queue, void *elem,
+                        unsigned long ticks);
+
+bool rt_queue_timedpeek(struct rt_queue *queue, void *elem,
                         unsigned long ticks);
 
 #endif /* RT_QUEUE_H */

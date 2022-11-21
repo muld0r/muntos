@@ -14,9 +14,12 @@
 /* A full slot ready to be received. */
 #define SLOT_FULL 'f'
 
-/* An empty slot claimed by a sender and canceled by a receiver. The slot is
- * still exclusively owned by the sender, but the sender must clear it and
- * re-attempt inserting at the new enqueue index. */
+/* A full slot that has been claimed by a receiver/peeker. */
+#define SLOT_RECV 'p'
+
+/* An empty slot claimed by a sender and canceled by a receiver/peeker. The
+ * slot is still exclusively owned by the sender, but the sender must clear it
+ * and re-attempt inserting at the new enqueue index. */
 #define SLOT_CANCELED 'x'
 
 static size_t next(const struct rt_queue *queue, size_t i)
@@ -80,7 +83,7 @@ static void recv(struct rt_queue *queue, void *elem)
     {
         size_t next_deq = next(queue, deq);
         char slot =
-            rt_atomic_load_explicit(&queue->slots[deq], memory_order_acquire);
+            rt_atomic_load_explicit(&queue->slots[deq], memory_order_relaxed);
         if (slot == SLOT_SEND)
         {
             /* If we encounter an in-progress send, attempt to cancel it. The
@@ -91,27 +94,61 @@ static void recv(struct rt_queue *queue, void *elem)
             rt_atomic_compare_exchange_strong_explicit(&queue->slots[deq],
                                                        &slot, SLOT_CANCELED,
                                                        memory_order_relaxed,
-                                                       memory_order_acquire);
+                                                       memory_order_relaxed);
         }
-        if (slot == SLOT_FULL)
+        if ((slot == SLOT_FULL) &&
+            rt_atomic_compare_exchange_strong_explicit(&queue->slots[deq],
+                                                       &slot, SLOT_RECV,
+                                                       memory_order_acquire,
+                                                       memory_order_relaxed))
+        {
+            /* Update dequeue index if no one has yet. */
+            rt_atomic_compare_exchange_strong_explicit(&queue->deq, &start_deq,
+                                                       next_deq,
+                                                       memory_order_relaxed,
+                                                       memory_order_relaxed);
+            const unsigned char *const p = queue->data;
+            memcpy(elem, &p[queue->elem_size * deq], queue->elem_size);
+            rt_atomic_store_explicit(&queue->slots[deq], SLOT_EMPTY,
+                                     memory_order_relaxed);
+            rt_sem_post(&queue->send_sem);
+            return;
+        }
+        deq = next_deq;
+    }
+}
+
+static void peek(struct rt_queue *queue, void *elem)
+{
+    /* Similar to recv, but don't update the dequeue index and set the slot
+     * back to SLOT_FULL after reading it so another receiver can read it. */
+    size_t deq = rt_atomic_load_explicit(&queue->deq, memory_order_relaxed);
+    for (;;)
+    {
+        char slot =
+            rt_atomic_load_explicit(&queue->slots[deq], memory_order_relaxed);
+        if (slot == SLOT_SEND)
+        {
+            rt_atomic_compare_exchange_strong_explicit(&queue->slots[deq],
+                                                       &slot, SLOT_CANCELED,
+                                                       memory_order_relaxed,
+                                                       memory_order_relaxed);
+        }
+        if ((slot == SLOT_FULL) &&
+            rt_atomic_compare_exchange_strong_explicit(&queue->slots[deq],
+                                                       &slot, SLOT_RECV,
+                                                       memory_order_acquire,
+                                                       memory_order_relaxed))
         {
             const unsigned char *const p = queue->data;
             memcpy(elem, &p[queue->elem_size * deq], queue->elem_size);
-            if (rt_atomic_compare_exchange_strong_explicit(
-                    &queue->slots[deq], &slot, SLOT_EMPTY, memory_order_relaxed,
-                    memory_order_relaxed))
-            {
-                /* Update dequeue index if no one has yet. */
-                rt_atomic_compare_exchange_strong_explicit(
-                    &queue->deq, &start_deq, next_deq, memory_order_relaxed,
-                    memory_order_relaxed);
-                rt_sem_post(&queue->send_sem);
-                return;
-            }
-
-            /* Failed to receive from this slot first, keep looking. */
+            rt_atomic_store_explicit(&queue->slots[deq], SLOT_FULL,
+                                     memory_order_relaxed);
+            /* After we've peeked, another receiver may run. */
+            rt_sem_post(&queue->recv_sem);
+            return;
         }
-        deq = next_deq;
+        deq = next(queue, deq);
     }
 }
 
@@ -125,6 +162,12 @@ void rt_queue_recv(struct rt_queue *queue, void *elem)
 {
     rt_sem_wait(&queue->recv_sem);
     recv(queue, elem);
+}
+
+void rt_queue_peek(struct rt_queue *queue, void *elem)
+{
+    rt_sem_wait(&queue->recv_sem);
+    peek(queue, elem);
 }
 
 bool rt_queue_trysend(struct rt_queue *queue, const void *elem)
@@ -147,6 +190,16 @@ bool rt_queue_tryrecv(struct rt_queue *queue, void *elem)
     return true;
 }
 
+bool rt_queue_trypeek(struct rt_queue *queue, void *elem)
+{
+    if (!rt_sem_trywait(&queue->recv_sem))
+    {
+        return false;
+    }
+    peek(queue, elem);
+    return true;
+}
+
 bool rt_queue_timedsend(struct rt_queue *queue, const void *elem,
                         unsigned long ticks)
 {
@@ -165,5 +218,15 @@ bool rt_queue_timedrecv(struct rt_queue *queue, void *elem, unsigned long ticks)
         return false;
     }
     recv(queue, elem);
+    return true;
+}
+
+bool rt_queue_timedpeek(struct rt_queue *queue, void *elem, unsigned long ticks)
+{
+    if (!rt_sem_timedwait(&queue->recv_sem, ticks))
+    {
+        return false;
+    }
+    peek(queue, elem);
     return true;
 }
