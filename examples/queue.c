@@ -7,19 +7,25 @@ static const int n = 1000;
 static void sender(void *arg)
 {
     struct rt_queue *queue = arg;
-    for (int i = 1; i <= n; ++i)
+    for (int i = 0; i < n; ++i)
     {
         rt_queue_send(queue, &i);
     }
 }
 
+static volatile bool out_of_order = false;
+
 static void receiver(void *arg)
 {
     struct rt_queue *queue = arg;
     int x;
-    for (int i = 1; i <= n; ++i)
+    for (int i = 0; i < n; ++i)
     {
         rt_queue_recv(queue, &x);
+        if (x != i)
+        {
+            out_of_order = true;
+        }
     }
     rt_stop();
 }
@@ -33,4 +39,8 @@ int main(void)
     RT_TASK(sender, &queue, sender_stack, 1);
     RT_TASK(receiver, &queue, receiver_stack, 1);
     rt_start();
+    if (out_of_order)
+    {
+        return 1;
+    }
 }
