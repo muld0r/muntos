@@ -137,16 +137,17 @@ void rt_syscall_handler(void)
     {
         /* Block signals on the suspending thread. */
         block_all_signals(NULL);
+        *rt_prev_context = (void *)pthread_self();
 
         atomic_thread_fence(memory_order_release);
         pthread_kill((pthread_t)newctx, SIGRESUME);
 
-        *rt_prev_context = (void *)pthread_self();
         sigset_t resume_sigset;
         sigemptyset(&resume_sigset);
         sigaddset(&resume_sigset, SIGRESUME);
         int sig;
         sigwait(&resume_sigset, &sig);
+        unblock_all_signals();
     }
 }
 
