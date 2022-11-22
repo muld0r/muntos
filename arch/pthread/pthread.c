@@ -21,7 +21,7 @@
 #define SIGRESUME SIGUSR2
 
 #ifndef RT_LOG_ENABLE
-#define RT_LOG_ENABLE 1
+#define RT_LOG_ENABLE 0
 #endif
 
 struct pthread_arg
