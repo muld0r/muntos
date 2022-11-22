@@ -145,5 +145,15 @@ bool rt_sem_timedwait(struct rt_sem *sem, unsigned long ticks)
     rt_task_self()->syscall_result = 0;
     rt_syscall(&wait_record);
 
-    return rt_task_self()->syscall_result == 1;
+    /* post to the semaphore if the timedwait fails in order to correct the
+     * semaphore value and make sure the correct number of waiters are still
+     * waiting.
+     * TODO: a more efficient way to do this. */
+
+    if (rt_task_self()->syscall_result != 1)
+    {
+        rt_sem_post(sem);
+        return false;
+    }
+    return true;
 }
