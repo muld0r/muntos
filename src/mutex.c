@@ -26,18 +26,49 @@ void rt_mutex_lock(struct rt_mutex *mutex)
         rt_logf("syscall: %s mutex lock\n", rt_task_name());
         rt_syscall(&lock_record);
     }
-    else
-    {
-        rt_logf("%s mutex lock\n", rt_task_name());
-    }
+    rt_logf("%s mutex locked\n", rt_task_name());
 }
 
 bool rt_mutex_trylock(struct rt_mutex *mutex)
 {
     int lock = 1;
-    return rt_atomic_compare_exchange_strong_explicit(&mutex->lock, &lock, 0,
-                                                      memory_order_acquire,
-                                                      memory_order_relaxed);
+    if (rt_atomic_compare_exchange_strong_explicit(&mutex->lock, &lock, 0,
+                                                   memory_order_acquire,
+                                                   memory_order_relaxed))
+    {
+        rt_logf("%s mutex locked\n", rt_task_name());
+        return true;
+    }
+    else
+    {
+        rt_logf("%s mutex trylock failed\n", rt_task_name());
+        return false;
+    }
+}
+
+bool rt_mutex_timedlock(struct rt_mutex *mutex, unsigned long ticks)
+{
+    const int lock =
+        rt_atomic_fetch_sub_explicit(&mutex->lock, 1, memory_order_acquire);
+
+    if (lock < 1)
+    {
+        struct rt_syscall_record lock_record;
+        lock_record.args.mutex_timedlock.task = rt_task_self();
+        lock_record.args.mutex_timedlock.mutex = mutex;
+        lock_record.args.mutex_timedlock.ticks = ticks;
+        lock_record.syscall = RT_SYSCALL_MUTEX_TIMEDLOCK;
+        rt_task_self()->record = &lock_record;
+        rt_logf("syscall: %s mutex timedlock\n", rt_task_name());
+        rt_syscall(&lock_record);
+        if (lock_record.syscall != RT_SYSCALL_MUTEX_TIMEDLOCK)
+        {
+            rt_logf("%s mutex timedlock failed\n", rt_task_name());
+            return false;
+        }
+    }
+    rt_logf("%s mutex locked\n", rt_task_name());
+    return true;
 }
 
 void rt_mutex_unlock(struct rt_mutex *mutex)
@@ -45,7 +76,7 @@ void rt_mutex_unlock(struct rt_mutex *mutex)
     const int lock =
         rt_atomic_fetch_add_explicit(&mutex->lock, 1, memory_order_release);
 
-    rt_logf("%s unlock\n", rt_task_name());
+    rt_logf("%s mutex unlocked\n", rt_task_name());
 
     if (lock < 0)
     {

@@ -11,9 +11,11 @@ void rt_mutex_init(struct rt_mutex *mutex);
 
 void rt_mutex_lock(struct rt_mutex *mutex);
 
+void rt_mutex_unlock(struct rt_mutex *mutex);
+
 bool rt_mutex_trylock(struct rt_mutex *mutex);
 
-void rt_mutex_unlock(struct rt_mutex *mutex);
+bool rt_mutex_timedlock(struct rt_mutex *mutex, unsigned long ticks);
 
 struct rt_mutex
 {
