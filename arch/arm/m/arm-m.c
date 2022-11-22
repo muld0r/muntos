@@ -56,9 +56,13 @@ void *rt_context_create(void (*fn)(void *), void *arg, void *stack,
 }
 
 #define STK_CTRL (*(volatile uint32_t *)0xE000E010U)
+#define STK_CURRENT (*(volatile uint32_t *)0xE000E018U)
 #define STK_CTRL_ENABLE 0x1U
 #define STK_CTRL_TICKINT 0x2U
-#define STK_CURRENT (*(volatile uint32_t *)0xE000E018U)
+
+#define SHPR ((volatile uint32_t *)0xE000ED18U)
+#define SHPR2 (SHPR[1])
+#define SHPR3 (SHPR[2])
 
 #define STACK_ALIGN 8UL
 #define STACK_SIZE(x) (((x) + (STACK_ALIGN - 1)) & ~(STACK_ALIGN - 1))
@@ -79,6 +83,17 @@ __attribute__((noreturn)) void rt_start(void)
     // Switch to the process stack pointer.
     __asm__("msr control, %0" : : "r"(2));
     __asm__("isb");
+
+    /*
+     * Set SVCall and PendSV to the lowest exception priority, and SysTick to
+     * one higher. Write the priority as 0xFF, then read it back to determine
+     * how many bits of priority are implemented, and subtract one from that
+     * value to get the tick priority.
+     */
+    SHPR2 = UINT32_C(0xFF) << 24;
+    const uint32_t syscall_prio = SHPR2 >> 24;
+    const uint32_t tick_prio = syscall_prio - 1;
+    SHPR3 = (tick_prio << 24) | (syscall_prio << 16);
 
     // Reset SysTick and enable its interrupt.
     STK_CURRENT = 0;
