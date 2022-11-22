@@ -11,7 +11,7 @@
 struct gp_context
 {
     // Saved by task context switch.
-#if (__ARM_ARCH == 8)
+#if RT_ARM_M_PSPLIM
     void *psplim;
 #endif
     uint32_t r4, r5, r6, r7, r8, r9, r10, r11;
@@ -36,7 +36,7 @@ void *rt_context_create(void (*fn)(void *), void *arg, void *stack,
     void *const stack_end = (char *)stack + stack_size;
     struct gp_context *ctx = stack_end;
     ctx -= 1;
-#if (__ARM_ARCH == 8)
+#if RT_ARM_M_PSPLIM
     ctx->psplim = stack;
 #endif
 #if defined(__ARM_FP)

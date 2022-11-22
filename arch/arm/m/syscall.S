@@ -20,6 +20,10 @@ rt_syscall_handler:
 
 #elif (__ARM_ARCH == 8)
 
+#if defined(__ARM_ARCH_8M_BASE__)
+#error "armv8-m base is not yet supported"
+#endif
+
 #if defined(__ARM_FP)
 #include "syscall-v8.S"
 #else
