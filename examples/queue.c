@@ -1,3 +1,4 @@
+#include <rt/log.h>
 #include <rt/queue.h>
 #include <rt/rt.h>
 #include <rt/task.h>
@@ -10,6 +11,7 @@ static void sender(void *arg)
     struct rt_queue *queue = arg;
     for (int i = 0; i < n; ++i)
     {
+        rt_logf("sender: %d\n", i);
         rt_queue_send(queue, &i);
     }
 }
@@ -23,6 +25,7 @@ static void receiver(void *arg)
     for (int i = 0; i < n; ++i)
     {
         rt_queue_recv(queue, &x);
+        rt_logf("receiver: %d, %d\n", i, x);
         if (x != i)
         {
             out_of_order = true;
