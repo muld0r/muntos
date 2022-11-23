@@ -38,7 +38,7 @@ static bool check(volatile rt_atomic_uint *p, unsigned expected)
 static void timeout(void *arg)
 {
     (void)arg;
-    rt_sleep(2000);
+    rt_sleep(1000);
     rt_stop();
 }
 
