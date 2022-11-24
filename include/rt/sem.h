@@ -17,8 +17,6 @@ void rt_sem_binary_init(struct rt_sem *sem, int initial_value);
 
 void rt_sem_post(struct rt_sem *sem);
 
-void rt_sem_post_all(struct rt_sem *sem);
-
 void rt_sem_wait(struct rt_sem *sem);
 
 bool rt_sem_trywait(struct rt_sem *sem);
