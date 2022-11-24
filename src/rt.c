@@ -35,7 +35,7 @@ static struct rt_task idle_task = {
     .ctx = NULL,
     .list = RT_LIST_INIT(idle_task.list),
     .sleep_list = RT_LIST_INIT(idle_task.sleep_list),
-    .syscall_result = 0,
+    .record = NULL,
     .name = "idle",
     .priority = UINT_MAX,
 };
@@ -153,17 +153,42 @@ static void suspend_with_timeout(struct rt_list *list, struct rt_task *task,
     sleep_until(task, woken_tick + ticks);
 }
 
-static void resume(struct rt_task *task)
+static void wake_if_sleeping(struct rt_task *task)
 {
-    if (!rt_list_is_empty(&task->list))
-    {
-        rt_list_remove(&task->list);
-    }
     if (!rt_list_is_empty(&task->sleep_list))
     {
         rt_list_remove(&task->sleep_list);
     }
-    insert_by_priority(&ready_list, &task->list);
+}
+
+static void wake_sem_waiters(struct rt_sem *sem)
+{
+    int waiters = -rt_atomic_load_explicit(&sem->value, memory_order_acquire);
+    if (waiters < 0)
+    {
+        waiters = 0;
+    }
+    while (sem->num_waiters > (size_t)waiters)
+    {
+        struct rt_task *task =
+            task_from_list(rt_list_pop_front(&sem->wait_list));
+        wake_if_sleeping(task);
+        insert_by_priority(&ready_list, &task->list);
+        --sem->num_waiters;
+    }
+}
+
+static void wake_mutex_waiter(struct rt_mutex *mutex)
+{
+    int waiters = -rt_atomic_load_explicit(&mutex->lock, memory_order_acquire);
+    if (mutex->num_waiters > waiters)
+    {
+        struct rt_task *task =
+            task_from_list(rt_list_pop_front(&mutex->wait_list));
+        wake_if_sleeping(task);
+        insert_by_priority(&ready_list, &task->list);
+        --mutex->num_waiters;
+    }
 }
 
 static void tick_syscall(void)
@@ -189,7 +214,21 @@ static void tick_syscall(void)
                  */
                 break;
             }
-            resume(task);
+            if (task->record)
+            {
+                if (task->record->syscall == RT_SYSCALL_SEM_TIMEDWAIT)
+                {
+                    struct rt_sem *sem = task->record->args.sem_timedwait.sem;
+                    rt_atomic_fetch_add_explicit(&sem->value, 1,
+                                                 memory_order_relaxed);
+                    rt_list_remove(&task->list);
+                    --sem->num_waiters;
+                    wake_sem_waiters(sem);
+                    task->record->syscall = RT_SYSCALL_SLEEP;
+                }
+            }
+            rt_list_remove(&task->sleep_list);
+            insert_by_priority(&ready_list, &task->list);
         }
     }
 }
@@ -231,35 +270,6 @@ void rt_syscall(struct rt_syscall_record *record)
     {
     }
     rt_syscall_post();
-}
-
-static void wake_sem_waiters(struct rt_sem *sem)
-{
-    int waiters = -rt_atomic_load_explicit(&sem->value, memory_order_acquire);
-    if (waiters < 0)
-    {
-        waiters = 0;
-    }
-    while (sem->num_waiters > (size_t)waiters)
-    {
-        struct rt_task *task =
-            task_from_list(rt_list_pop_front(&sem->wait_list));
-        resume(task);
-        /* Inform the resuming task that it succeeded in waiting for the
-         * semaphore. (Only used for timedwait.) */
-        task->syscall_result = 1;
-        --sem->num_waiters;
-    }
-}
-
-static void wake_mutex_waiter(struct rt_mutex *mutex)
-{
-    int waiters = -rt_atomic_load_explicit(&mutex->lock, memory_order_acquire);
-    if (mutex->num_waiters > waiters)
-    {
-        resume(task_from_list(rt_list_pop_front(&mutex->wait_list)));
-        --mutex->num_waiters;
-    }
 }
 
 void *rt_syscall_run(void)
@@ -377,7 +387,7 @@ void rt_task_init(struct rt_task *task, void (*fn)(void *), void *arg,
     rt_logf("%s created\n", name);
     task->priority = priority;
     task->wake_tick = 0;
-    task->syscall_result = 0;
+    task->record = NULL;
     task->name = name;
     rt_list_init(&task->sleep_list);
     insert_by_priority(&ready_list, &task->list);

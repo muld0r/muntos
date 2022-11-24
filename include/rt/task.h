@@ -41,7 +41,7 @@ struct rt_task
     unsigned long wake_tick;
     const char *name;
     unsigned priority;
-    int syscall_result;
+    struct rt_syscall_record *record;
 };
 
 #define RT_TASK(fn, arg, stack, priority)                                      \

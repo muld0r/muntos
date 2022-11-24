@@ -142,18 +142,8 @@ bool rt_sem_timedwait(struct rt_sem *sem, unsigned long ticks)
     wait_record.args.sem_timedwait.sem = sem;
     wait_record.args.sem_timedwait.ticks = ticks;
     wait_record.syscall = RT_SYSCALL_SEM_TIMEDWAIT;
-    rt_task_self()->syscall_result = 0;
+    rt_task_self()->record = &wait_record;
     rt_syscall(&wait_record);
 
-    /* post to the semaphore if the timedwait fails in order to correct the
-     * semaphore value and make sure the correct number of waiters are still
-     * waiting.
-     * TODO: a more efficient way to do this. */
-
-    if (rt_task_self()->syscall_result != 1)
-    {
-        rt_sem_post(sem);
-        return false;
-    }
-    return true;
+    return wait_record.syscall == RT_SYSCALL_SEM_TIMEDWAIT;
 }
