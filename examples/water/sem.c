@@ -1,32 +1,34 @@
 #include "water.h"
 
+#include <rt/atomic.h>
 #include <rt/mutex.h>
 #include <rt/sem.h>
 
 struct reaction
 {
-    struct rt_sem hready, hdone;
-    struct rt_mutex m;
+    struct rt_sem h2ready, hdone;
+    rt_atomic_int h;
 };
 
 static struct reaction rxn = {
-    .hready = RT_SEM_INIT(rxn.hready, 0),
+    .h2ready = RT_SEM_INIT(rxn.h2ready, 0),
     .hdone = RT_SEM_INIT(rxn.hdone, 0),
-    .m = RT_MUTEX_INIT(rxn.m),
+    .h = 0,
 };
 
 void hydrogen(void)
 {
-    rt_sem_post(&rxn.hready);
+    int oldh = rt_atomic_fetch_add_explicit(&rxn.h, 1, memory_order_relaxed);
+    if ((oldh % 2) == 1)
+    {
+        rt_sem_post(&rxn.h2ready);
+    }
     rt_sem_wait(&rxn.hdone);
 }
 
 void oxygen(void)
 {
-    rt_mutex_lock(&rxn.m);
-    rt_sem_wait(&rxn.hready);
-    rt_sem_wait(&rxn.hready);
-    rt_mutex_unlock(&rxn.m);
+    rt_sem_wait(&rxn.h2ready);
     make_water();
     rt_sem_post(&rxn.hdone);
     rt_sem_post(&rxn.hdone);

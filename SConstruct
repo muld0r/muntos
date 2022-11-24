@@ -31,6 +31,7 @@ env.Append(
         "-Wno-declaration-after-statement",
         "-Wno-disabled-macro-expansion",
         "-Wno-bad-function-cast",
+        "-Wno-gcc-compat",
     ],
 )
 

@@ -4,88 +4,67 @@
 #include <rt/rt.h>
 #include <rt/sleep.h>
 #include <rt/task.h>
+#include <rt/tick.h>
 
 #include <stdbool.h>
 
-static volatile rt_atomic_uint hydrogen_bonded = 0;
-static volatile rt_atomic_uint oxygen_bonded = 0;
-static volatile rt_atomic_uint water_formed = 0;
+static rt_atomic_uint hydrogen_bonded = 0;
+static rt_atomic_uint oxygen_bonded = 0;
+static rt_atomic_uint water_formed = 0;
 
 void make_water(void)
 {
-    rt_atomic_fetch_add(&water_formed, 1);
+    rt_atomic_fetch_add_explicit(&water_formed, 1, memory_order_relaxed);
 }
 
-static void hydrogen_fn(void *arg)
-{
-    (void)arg;
-    hydrogen();
-    rt_atomic_fetch_add(&hydrogen_bonded, 1);
-}
-
-static void oxygen_fn(void *arg)
-{
-    (void)arg;
-    oxygen();
-    rt_atomic_fetch_add(&oxygen_bonded, 1);
-}
-
-static bool check(volatile rt_atomic_uint *p, unsigned expected)
-{
-    return rt_atomic_load(p) == expected;
-}
+#define TICKS_TO_RUN 1000
 
 static void timeout(void *arg)
 {
     (void)arg;
-    rt_sleep(1000);
+    rt_sleep(TICKS_TO_RUN + 5);
     rt_stop();
 }
 
-#define TOTAL_ATOMS 200
+static void oxygen_loop(void *arg)
+{
+    (void)arg;
+    while (rt_tick() < TICKS_TO_RUN)
+    {
+        oxygen();
+        rt_atomic_fetch_add_explicit(&oxygen_bonded, 1, memory_order_relaxed);
+    }
+}
 
-static struct rt_task atom_tasks[TOTAL_ATOMS];
-static char atom_stacks[TOTAL_ATOMS][TASK_STACK_SIZE]
-    __attribute__((aligned(STACK_ALIGN)));
+static void hydrogen_loop(void *arg)
+{
+    (void)arg;
+    while (rt_tick() < TICKS_TO_RUN)
+    {
+        hydrogen();
+        rt_atomic_fetch_add_explicit(&hydrogen_bonded, 1, memory_order_relaxed);
+    }
+}
 
 int main(void)
 {
-    unsigned hydrogen_atoms = 0;
-    unsigned oxygen_atoms = 0;
-
-    bool hydrogen = true;
-    for (unsigned i = 0; i < TOTAL_ATOMS; i++)
-    {
-        if (hydrogen)
-        {
-            ++hydrogen_atoms;
-            rt_task_init(&atom_tasks[i], hydrogen_fn, NULL, "hydrogen", i + 1,
-                         atom_stacks[i], TASK_STACK_SIZE);
-        }
-        else
-        {
-            ++oxygen_atoms;
-            rt_task_init(&atom_tasks[i], oxygen_fn, NULL, "oxygen", i + 1,
-                         atom_stacks[i], TASK_STACK_SIZE);
-        }
-        hydrogen = !hydrogen;
-    }
-
-    __attribute__((aligned(STACK_ALIGN))) static char
-        timeout_stack[TASK_STACK_SIZE];
+    static char timeout_stack[TASK_STACK_SIZE]
+        __attribute__((aligned(STACK_ALIGN)));
     RT_TASK(timeout, NULL, timeout_stack, 0);
 
-    unsigned expected_water = hydrogen_atoms / 2;
-    if (expected_water > oxygen_atoms)
-    {
-        expected_water = oxygen_atoms;
-    }
+    static char atom_stacks[3][TASK_STACK_SIZE]
+        __attribute__((aligned(STACK_ALIGN)));
+    RT_TASK(hydrogen_loop, NULL, atom_stacks[0], 0);
+    RT_TASK(hydrogen_loop, NULL, atom_stacks[1], 0);
+    RT_TASK(oxygen_loop, NULL, atom_stacks[2], 0);
 
     rt_start();
 
-    if (!check(&water_formed, expected_water) ||
-        !check(&hydrogen_bonded, expected_water * 2) ||
-        !check(&oxygen_bonded, expected_water))
+    unsigned w = rt_atomic_load(&water_formed);
+    unsigned h = rt_atomic_load(&hydrogen_bonded);
+    unsigned o = rt_atomic_load(&oxygen_bonded);
+
+    if ((w != o) || (w * 2 != h))
     {
         return 1;
     }
