@@ -43,11 +43,10 @@ static void waiter(void *arg)
 int main(void)
 {
     static RT_SEM(sem, 0);
-    __attribute__((aligned(STACK_ALIGN))) static char
-        poster_stack[TASK_STACK_SIZE],
-        waiter_stack[TASK_STACK_SIZE];
-    RT_TASK(poster, &sem, poster_stack, 1);
-    RT_TASK(waiter, &sem, waiter_stack, 1);
+    static char task_stacks[2][TASK_STACK_SIZE]
+        __attribute__((aligned(STACK_ALIGN)));
+    RT_TASK(poster, &sem, task_stacks[0], 1);
+    RT_TASK(waiter, &sem, task_stacks[1], 1);
     rt_start();
     if (wait_failed)
     {

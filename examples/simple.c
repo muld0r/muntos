@@ -20,9 +20,9 @@ static void simple(void *arg)
 
 int main(void)
 {
-    __attribute__((aligned(STACK_ALIGN))) static char stack0[TASK_STACK_SIZE],
-        stack1[TASK_STACK_SIZE];
-    RT_TASK(simple, NULL, stack0, 1);
-    RT_TASK(simple, NULL, stack1, 1);
+    static char task_stacks[2][TASK_STACK_SIZE]
+        __attribute__((aligned(STACK_ALIGN)));
+    RT_TASK(simple, NULL, task_stacks[0], 1);
+    RT_TASK(simple, NULL, task_stacks[1], 1);
     rt_start();
 }

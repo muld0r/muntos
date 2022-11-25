@@ -1,8 +1,8 @@
 #include <rt/log.h>
 #include <rt/queue.h>
 #include <rt/rt.h>
-#include <rt/task.h>
 #include <rt/sleep.h>
+#include <rt/task.h>
 
 static const int n = 1000;
 
@@ -47,13 +47,11 @@ static void timeout(void *arg)
 int main(void)
 {
     RT_QUEUE_STATIC(queue, int, 5);
-    __attribute__((aligned(STACK_ALIGN))) static char
-        sender_stack[TASK_STACK_SIZE],
-        receiver_stack[TASK_STACK_SIZE],
-        timeout_stack[TASK_STACK_SIZE];
-    RT_TASK(sender, &queue, sender_stack, 2);
-    RT_TASK(receiver, &queue, receiver_stack, 2);
-    RT_TASK(timeout, NULL, timeout_stack, 1);
+    static char task_stacks[3][TASK_STACK_SIZE]
+        __attribute__((aligned(STACK_ALIGN)));
+    RT_TASK(sender, &queue, task_stacks[0], 2);
+    RT_TASK(receiver, &queue, task_stacks[1], 2);
+    RT_TASK(timeout, NULL, task_stacks[2], 1);
     rt_start();
     if (out_of_order)
     {

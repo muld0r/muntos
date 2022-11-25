@@ -35,11 +35,11 @@ static void sleep(void *arg)
 
 int main(void)
 {
-    __attribute__((aligned(STACK_ALIGN))) static char stack0[TASK_STACK_SIZE],
-        stack1[TASK_STACK_SIZE];
+    static char task_stacks[2][TASK_STACK_SIZE]
+        __attribute__((aligned(STACK_ALIGN)));
     static unsigned long period0 = 5, period1 = 10;
-    RT_TASK(sleep, &period0, stack0, 0);
-    RT_TASK(sleep, &period1, stack1, 1);
+    RT_TASK(sleep, &period0, task_stacks[0], 0);
+    RT_TASK(sleep, &period1, task_stacks[1], 1);
     rt_start();
 
     if (rt_atomic_load(&wrong_tick))

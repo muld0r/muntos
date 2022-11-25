@@ -9,7 +9,8 @@ static void empty(void *arg)
 
 int main(void)
 {
-    __attribute__((aligned(STACK_ALIGN))) static char stack[TASK_STACK_SIZE];
-    RT_TASK(empty, NULL, stack, 1);
+    static char task_stack[TASK_STACK_SIZE]
+        __attribute__((aligned(STACK_ALIGN)));
+    RT_TASK(empty, NULL, task_stack, 1);
     rt_start();
 }
