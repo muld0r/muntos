@@ -55,8 +55,8 @@ void rt_logf(const char *format, ...)
     va_start(vlist, format);
     sigset_t old_sigset;
     block_all_signals(&old_sigset);
-    vfprintf(stderr, format, vlist);
-    fflush(stderr);
+    vprintf(format, vlist);
+    fflush(stdout);
     pthread_sigmask(SIG_SETMASK, &old_sigset, NULL);
 #else
     (void)format;
