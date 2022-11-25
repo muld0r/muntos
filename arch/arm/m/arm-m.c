@@ -67,7 +67,7 @@ void *rt_context_create(void (*fn)(void *), void *arg, void *stack,
 #define STACK_ALIGN 8UL
 #define STACK_SIZE(x) (((x) + (STACK_ALIGN - 1)) & ~(STACK_ALIGN - 1))
 
-__attribute__((noreturn)) void rt_start(void)
+void rt_start(void)
 {
     // The idle stack needs to be large enough to store a register context.
     static char idle_stack[STACK_SIZE(sizeof(struct gp_context))]
