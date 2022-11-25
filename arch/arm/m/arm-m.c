@@ -67,6 +67,12 @@ void *rt_context_create(void (*fn)(void *), void *arg, void *stack,
 #define STACK_ALIGN 8UL
 #define STACK_SIZE(x) (((x) + (STACK_ALIGN - 1)) & ~(STACK_ALIGN - 1))
 
+#if defined(__ARM_FP)
+#define CPACR (*(volatile uint32_t *)0xE000ED88U)
+#define CPACR_10_FULL_ACCESS (3U << 20)
+#define CPACR_11_FULL_ACCESS (3U << 22)
+#endif
+
 void rt_start(void)
 {
     // The idle stack needs to be large enough to store a register context.
@@ -78,6 +84,11 @@ void rt_start(void)
 #if (__ARM_ARCH == 8)
     // If supported, set the process stack pointer limit.
     __asm__("msr psplim, %0" : : "r"(idle_stack));
+#endif
+
+#if (__ARM_FP)
+    CPACR |= CPACR_10_FULL_ACCESS | CPACR_11_FULL_ACCESS;
+    __asm__("dsb");
 #endif
 
     // Switch to the process stack pointer.
