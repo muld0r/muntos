@@ -99,6 +99,9 @@ __attribute__((noreturn)) void rt_start(void)
     STK_CURRENT = 0;
     STK_CTRL = STK_CTRL_ENABLE | STK_CTRL_TICKINT;
 
+    // Enable interrupts.
+    __asm__("cpsie i");
+
     // Execute a supervisor call to switch into the first task.
     __asm__("svc 0");
 
