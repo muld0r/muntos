@@ -56,7 +56,7 @@ void *rt_context_create(void (*fn)(void *), void *arg, void *stack,
 }
 
 #define STK_CTRL (*(volatile uint32_t *)0xE000E010U)
-#define STK_CURRENT (*(volatile uint32_t *)0xE000E018U)
+#define STK_VAL (*(volatile uint32_t *)0xE000E018U)
 #define STK_CTRL_ENABLE 0x1U
 #define STK_CTRL_TICKINT 0x2U
 
@@ -96,7 +96,7 @@ __attribute__((noreturn)) void rt_start(void)
     SHPR3 = (tick_prio << 24) | (syscall_prio << 16);
 
     // Reset SysTick and enable its interrupt.
-    STK_CURRENT = 0;
+    STK_VAL = 0;
     STK_CTRL = STK_CTRL_ENABLE | STK_CTRL_TICKINT;
 
     // Enable interrupts.
