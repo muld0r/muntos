@@ -1,7 +1,6 @@
 #include "water.h"
 
 #include <rt/atomic.h>
-#include <rt/mutex.h>
 #include <rt/sem.h>
 
 struct reaction
