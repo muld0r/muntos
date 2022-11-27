@@ -24,8 +24,8 @@
     vldmiaeq r0!, {s16-s31}
 
     /* Set the new stack pointer. */
-    msr psp, r0
     msr psplim, r3
+    msr psp, r0
 
 .Lreturn:
     bx lr

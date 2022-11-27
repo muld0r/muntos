@@ -12,8 +12,8 @@
     str r1, [r2]
 
     ldmia r0!, {r3-r11}
-    msr psp, r0
     msr psplim, r3
+    msr psp, r0
 
 .Lreturn:
     mov r0, TASK_INITIAL_EXC_RETURN
