@@ -408,7 +408,7 @@ void *rt_syscall_run(void)
     return sched();
 }
 
-void rt_task_init(struct rt_task *task, void (*fn)(void *), void *arg,
+void rt_task_init(struct rt_task *task, void (*fn)(uintptr_t), uintptr_t arg,
                   const char *name, unsigned priority, void *stack,
                   size_t stack_size)
 {

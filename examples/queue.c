@@ -6,25 +6,29 @@
 
 static const int n = 1000;
 
-static void sender(void *arg)
+RT_QUEUE_STATIC(queue, int, 5);
+
+static void sender(uintptr_t arg)
 {
-    struct rt_queue *queue = arg;
+    (void)arg;
+
     for (int i = 0; i < n; ++i)
     {
         rt_logf("sender: %d\n", i);
-        rt_queue_send(queue, &i);
+        rt_queue_send(&queue, &i);
     }
 }
 
 static volatile bool out_of_order = false;
 
-static void receiver(void *arg)
+static void receiver(uintptr_t arg)
 {
-    struct rt_queue *queue = arg;
+    (void)arg;
+
     int x;
     for (int i = 0; i < n; ++i)
     {
-        rt_queue_recv(queue, &x);
+        rt_queue_recv(&queue, &x);
         rt_logf("receiver: %d, %d\n", i, x);
         if (x != i)
         {
@@ -36,7 +40,7 @@ static void receiver(void *arg)
 
 static volatile bool timed_out = false;
 
-static void timeout(void *arg)
+static void timeout(uintptr_t arg)
 {
     (void)arg;
     rt_sleep(500);
@@ -46,12 +50,11 @@ static void timeout(void *arg)
 
 int main(void)
 {
-    RT_QUEUE_STATIC(queue, int, 5);
     static char task_stacks[3][TASK_STACK_SIZE]
         __attribute__((aligned(STACK_ALIGN)));
-    RT_TASK(sender, &queue, task_stacks[0], 2);
-    RT_TASK(receiver, &queue, task_stacks[1], 2);
-    RT_TASK(timeout, NULL, task_stacks[2], 1);
+    RT_TASK(sender, task_stacks[0], 2);
+    RT_TASK(receiver, task_stacks[1], 2);
+    RT_TASK(timeout, task_stacks[2], 1);
     rt_start();
     if (out_of_order)
     {

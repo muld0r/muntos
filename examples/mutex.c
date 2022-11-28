@@ -5,6 +5,7 @@
 #include <rt/task.h>
 
 static RT_MUTEX(mutex);
+static unsigned long x = 0;
 
 #define NUM_TASKS 3
 #define ITERATIONS 100000UL
@@ -19,42 +20,45 @@ static void stop_last(void)
     }
 }
 
-static void increment_lock(void *arg)
+static void increment_lock(uintptr_t arg)
 {
-    unsigned long *x = arg;
+    (void)arg;
+
     for (unsigned long i = 0; i < ITERATIONS; ++i)
     {
         rt_mutex_lock(&mutex);
-        ++*x;
+        ++x;
         rt_mutex_unlock(&mutex);
     }
     stop_last();
 }
 
-static void increment_trylock(void *arg)
+static void increment_trylock(uintptr_t arg)
 {
-    unsigned long *x = arg;
+    (void)arg;
+
     for (unsigned long i = 0; i < ITERATIONS; ++i)
     {
         while (!rt_mutex_trylock(&mutex))
         {
             rt_sleep(1);
         }
-        ++*x;
+        ++x;
         rt_mutex_unlock(&mutex);
     }
     stop_last();
 }
 
-static void increment_timedlock(void *arg)
+static void increment_timedlock(uintptr_t arg)
 {
-    unsigned long *x = arg;
+    (void)arg;
+
     for (unsigned long i = 0; i < ITERATIONS; ++i)
     {
         while (!rt_mutex_timedlock(&mutex, 1))
         {
         }
-        ++*x;
+        ++x;
         rt_mutex_unlock(&mutex);
     }
     stop_last();
@@ -62,12 +66,11 @@ static void increment_timedlock(void *arg)
 
 int main(void)
 {
-    unsigned long x = 0;
     static char task_stacks[NUM_TASKS][TASK_STACK_SIZE]
         __attribute__((aligned(STACK_ALIGN)));
-    RT_TASK(increment_lock, &x, task_stacks[0], 1);
-    RT_TASK(increment_trylock, &x, task_stacks[1], 1);
-    RT_TASK(increment_timedlock, &x, task_stacks[2], 1);
+    RT_TASK(increment_lock, task_stacks[0], 1);
+    RT_TASK(increment_trylock, task_stacks[1], 1);
+    RT_TASK(increment_timedlock, task_stacks[2], 1);
     rt_start();
 
     if (x != ITERATIONS * NUM_TASKS)

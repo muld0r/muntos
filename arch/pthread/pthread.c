@@ -26,8 +26,8 @@
 
 struct pthread_arg
 {
-    void (*fn)(void *);
-    void *arg;
+    void (*fn)(uintptr_t);
+    uintptr_t arg;
 };
 
 static pthread_t main_thread;
@@ -66,8 +66,8 @@ void rt_logf(const char *format, ...)
 static void *pthread_fn(void *arg)
 {
     struct pthread_arg *parg = arg;
-    void (*fn)(void *) = parg->fn;
-    arg = parg->arg;
+    void (*fn)(uintptr_t) = parg->fn;
+    uintptr_t task_arg = parg->arg;
     free(parg);
     int sig;
     sigset_t resume_sigset;
@@ -75,12 +75,12 @@ static void *pthread_fn(void *arg)
     sigaddset(&resume_sigset, SIGRESUME);
     sigwait(&resume_sigset, &sig);
     unblock_all_signals();
-    fn(arg);
+    fn(task_arg);
     rt_task_exit();
     return NULL;
 }
 
-void *rt_context_create(void (*fn)(void *), void *arg, void *stack,
+void *rt_context_create(void (*fn)(uintptr_t), uintptr_t arg, void *stack,
                         size_t stack_size)
 {
     pthread_attr_t attr;
@@ -157,7 +157,7 @@ static void tick_handler(int sig)
     rt_tick_advance();
 }
 
-__attribute__((noreturn)) static void idle_fn(void *arg)
+__attribute__((noreturn)) static void idle_fn(uintptr_t arg)
 {
     (void)arg;
     sigset_t sigset;
@@ -183,8 +183,7 @@ void rt_start(void)
 
     static char idle_stack[PTHREAD_STACK_MIN];
     pthread_t idle_thread =
-        (pthread_t)rt_context_create(idle_fn, NULL, idle_stack,
-                                     sizeof idle_stack);
+        (pthread_t)rt_context_create(idle_fn, 0, idle_stack, sizeof idle_stack);
 
     /* The tick handler must block SIGSYSCALL. */
     struct sigaction tick_action = {

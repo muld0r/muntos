@@ -23,14 +23,13 @@ struct gp_context
 #endif
 
     // Saved automatically on exception entry.
-    void *r0;
-    uint32_t r1, r2, r3, r12;
+    uint32_t r0, r1, r2, r3, r12;
     void (*lr)(void);
-    void (*pc)(void *);
+    void (*pc)(uintptr_t);
     uint32_t psr;
 };
 
-void *rt_context_create(void (*fn)(void *), void *arg, void *stack,
+void *rt_context_create(void (*fn)(uintptr_t), uintptr_t arg, void *stack,
                         size_t stack_size)
 {
     void *const stack_end = (char *)stack + stack_size;

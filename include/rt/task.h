@@ -6,6 +6,7 @@
 #include <limits.h>
 #include <stdbool.h>
 #include <stddef.h>
+#include <stdint.h>
 
 struct rt_task;
 
@@ -13,7 +14,7 @@ struct rt_task;
  * Initialize a task that runs fn(arg) on the given stack, and make it runnable.
  * Must be called before rt_start().
  */
-void rt_task_init(struct rt_task *task, void (*fn)(void *), void *arg,
+void rt_task_init(struct rt_task *task, void (*fn)(uintptr_t), uintptr_t arg,
                   const char *name, unsigned priority, void *stack,
                   size_t stack_size);
 
@@ -44,13 +45,19 @@ struct rt_task
     struct rt_syscall_record *record;
 };
 
-#define RT_TASK(fn, arg, stack, priority)                                      \
+#define RT_TASK(fn, stack, priority)                                           \
     do                                                                         \
     {                                                                          \
         static struct rt_task fn##_task;                                       \
-        rt_task_init(&fn##_task, fn, arg,                                      \
-                     ((arg != NULL) ? #fn "(" #arg ")" : #fn), priority,       \
-                     stack, sizeof(stack));                                    \
+        rt_task_init(&fn##_task, fn, 0, #fn, priority, stack, sizeof(stack));  \
+    } while (0)
+
+#define RT_TASK_ARG(fn, arg, stack, priority)                                  \
+    do                                                                         \
+    {                                                                          \
+        static struct rt_task fn##_task;                                       \
+        rt_task_init(&fn##_task, fn, arg, #fn "(" #arg ")", priority, stack,   \
+                     sizeof(stack));                                           \
     } while (0)
 
 /*

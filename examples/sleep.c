@@ -9,13 +9,12 @@
 static const int nloops = 5;
 static rt_atomic_bool wrong_tick = false;
 
-static void sleep(void *arg)
+static void sleep_periodic(uintptr_t period)
 {
     unsigned long last_wake_tick = 0;
-    unsigned long *period = arg;
     for (int i = 0; i < nloops; ++i)
     {
-        rt_sleep_periodic(&last_wake_tick, *period);
+        rt_sleep_periodic(&last_wake_tick, period);
         unsigned long wake_tick = rt_tick();
         if (wake_tick != last_wake_tick)
         {
@@ -37,9 +36,8 @@ int main(void)
 {
     static char task_stacks[2][TASK_STACK_SIZE]
         __attribute__((aligned(STACK_ALIGN)));
-    static unsigned long period0 = 5, period1 = 10;
-    RT_TASK(sleep, &period0, task_stacks[0], 0);
-    RT_TASK(sleep, &period1, task_stacks[1], 1);
+    RT_TASK_ARG(sleep_periodic, 5, task_stacks[0], 0);
+    RT_TASK_ARG(sleep_periodic, 10, task_stacks[1], 1);
     rt_start();
 
     if (rt_atomic_load(&wrong_tick))

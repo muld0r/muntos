@@ -19,14 +19,14 @@ void make_water(void)
 
 #define TICKS_TO_RUN 1000
 
-static void timeout(void *arg)
+static void timeout(uintptr_t arg)
 {
     (void)arg;
     rt_sleep(TICKS_TO_RUN + 5);
     rt_stop();
 }
 
-static void oxygen_loop(void *arg)
+static void oxygen_loop(uintptr_t arg)
 {
     (void)arg;
     while (rt_tick() < TICKS_TO_RUN)
@@ -36,7 +36,7 @@ static void oxygen_loop(void *arg)
     }
 }
 
-static void hydrogen_loop(void *arg)
+static void hydrogen_loop(uintptr_t arg)
 {
     (void)arg;
     while (rt_tick() < TICKS_TO_RUN)
@@ -50,13 +50,13 @@ int main(void)
 {
     static char timeout_stack[TASK_STACK_SIZE]
         __attribute__((aligned(STACK_ALIGN)));
-    RT_TASK(timeout, NULL, timeout_stack, 0);
+    RT_TASK(timeout, timeout_stack, 0);
 
     static char atom_stacks[3][TASK_STACK_SIZE]
         __attribute__((aligned(STACK_ALIGN)));
-    RT_TASK(hydrogen_loop, NULL, atom_stacks[0], 0);
-    RT_TASK(hydrogen_loop, NULL, atom_stacks[1], 0);
-    RT_TASK(oxygen_loop, NULL, atom_stacks[2], 0);
+    RT_TASK(hydrogen_loop, atom_stacks[0], 0);
+    RT_TASK(hydrogen_loop, atom_stacks[1], 0);
+    RT_TASK(oxygen_loop, atom_stacks[2], 0);
 
     rt_start();
 
