@@ -12,8 +12,7 @@ struct u_node
 
 static struct u_node nodes[NUM_NODES];
 
-static bool u_node_less_than(const struct rt_list *a,
-                             const struct rt_list *b)
+static bool u_node_less_than(const struct rt_list *a, const struct rt_list *b)
 {
     return rt_container_of(a, struct u_node, list)->x <
            rt_container_of(b, struct u_node, list)->x;

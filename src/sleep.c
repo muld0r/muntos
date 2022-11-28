@@ -1,7 +1,7 @@
 #include <rt/sleep.h>
 
-#include <rt/syscall.h>
 #include <rt/log.h>
+#include <rt/syscall.h>
 
 void rt_sleep(unsigned long ticks)
 {
