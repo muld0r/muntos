@@ -18,7 +18,7 @@ int main(void)
 {
     static char task_stacks[2][TASK_STACK_SIZE]
         __attribute__((aligned(STACK_ALIGN)));
-    RT_TASK_ARG(simple, 0, task_stacks[0], 1);
-    RT_TASK_ARG(simple, 1, task_stacks[1], 1);
+    RT_TASK_ARG(simple, 0, task_stacks[0], 0);
+    RT_TASK_ARG(simple, 1, task_stacks[1], 0);
     rt_start();
 }

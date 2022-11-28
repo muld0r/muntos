@@ -54,9 +54,9 @@ int main(void)
 
     static char atom_stacks[3][TASK_STACK_SIZE]
         __attribute__((aligned(STACK_ALIGN)));
-    RT_TASK(hydrogen_loop, atom_stacks[0], 0);
-    RT_TASK(hydrogen_loop, atom_stacks[1], 0);
-    RT_TASK(oxygen_loop, atom_stacks[2], 0);
+    RT_TASK(hydrogen_loop, atom_stacks[0], 1);
+    RT_TASK(hydrogen_loop, atom_stacks[1], 1);
+    RT_TASK(oxygen_loop, atom_stacks[2], 1);
 
     rt_start();
 

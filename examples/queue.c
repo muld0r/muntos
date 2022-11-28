@@ -52,9 +52,9 @@ int main(void)
 {
     static char task_stacks[3][TASK_STACK_SIZE]
         __attribute__((aligned(STACK_ALIGN)));
-    RT_TASK(sender, task_stacks[0], 2);
-    RT_TASK(receiver, task_stacks[1], 2);
-    RT_TASK(timeout, task_stacks[2], 1);
+    RT_TASK(sender, task_stacks[0], 1);
+    RT_TASK(receiver, task_stacks[1], 1);
+    RT_TASK(timeout, task_stacks[2], 0);
     rt_start();
     if (out_of_order)
     {
