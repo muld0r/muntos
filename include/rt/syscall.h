@@ -7,9 +7,6 @@
 
 enum rt_syscall
 {
-    /* Reschedule. */
-    RT_SYSCALL_SCHED,
-
     /* Processes a tick. */
     RT_SYSCALL_TICK,
 

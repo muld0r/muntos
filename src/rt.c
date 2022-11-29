@@ -44,10 +44,7 @@ static struct rt_task *active_task = &idle_task;
 
 void rt_sched(void)
 {
-    rt_logf("syscall: %s sched\n", rt_task_name());
-    struct rt_syscall_record sched_record;
-    sched_record.syscall = RT_SYSCALL_SCHED;
-    rt_syscall(&sched_record);
+    rt_syscall_post();
 }
 
 const char *rt_task_name(void)
@@ -310,8 +307,6 @@ void *rt_syscall_run(void)
     {
         switch (record->syscall)
         {
-        case RT_SYSCALL_SCHED:
-            break;
         case RT_SYSCALL_TICK:
             rt_atomic_flag_clear_explicit(&tick_pending, memory_order_release);
             tick_syscall();
