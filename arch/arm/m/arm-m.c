@@ -39,7 +39,7 @@ void *rt_context_create(void (*fn)(uintptr_t), uintptr_t arg, void *stack,
     ctx->psplim = stack;
 #endif
 #if defined(__ARM_FP)
-    ctx->exc_return = TASK_INITIAL_EXC_RETURN;
+    ctx->exc_return = (uint32_t)TASK_INITIAL_EXC_RETURN;
 #endif
     ctx->r0 = arg;
     ctx->lr = rt_task_exit;
