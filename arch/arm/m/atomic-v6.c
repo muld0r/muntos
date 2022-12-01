@@ -79,7 +79,7 @@ bool __atomic_compare_exchange_1(volatile void *ptr, void *exp,
     unsigned char *const e = exp;
 
     atomic_start(success_memorder);
-    const unsigned old = *p;
+    const unsigned char old = *p;
     if (old == *e)
     {
         *p = val;
