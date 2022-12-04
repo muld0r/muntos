@@ -1,4 +1,5 @@
 #include <rt/cond.h>
+#include <rt/log.h>
 
 void rt_cond_init(struct rt_cond *cond)
 {
@@ -42,7 +43,26 @@ void rt_cond_broadcast(struct rt_cond *cond)
 
 void rt_cond_wait(struct rt_cond *cond, struct rt_mutex *mutex)
 {
+    /* Decrement the semaphore while still holding the mutex so that
+     * signals from higher priority tasks on the same monitor can see
+     * there is a waiter. */
+    const int value =
+        rt_atomic_fetch_sub_explicit(&cond->sem.value, 1, memory_order_relaxed);
+
+    rt_logf("%s cond wait, new value %d\n", rt_task_name(), value - 1);
+
+    if (value > 0)
+    {
+        return;
+    }
+
     rt_mutex_unlock(mutex);
-    rt_sem_wait(&cond->sem);
+
+    struct rt_syscall_record wait_record;
+    wait_record.args.sem_wait.task = rt_task_self();
+    wait_record.args.sem_wait.sem = &cond->sem;
+    wait_record.syscall = RT_SYSCALL_SEM_WAIT;
+    rt_syscall(&wait_record);
+
     rt_mutex_lock(mutex);
 }
