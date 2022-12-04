@@ -80,15 +80,18 @@ bool __atomic_compare_exchange_1(volatile void *ptr, void *exp,
 
     atomic_start(success_memorder);
     const unsigned char old = *p;
-    if (old == *e)
+    const bool equal = old == *e;
+    if (equal)
     {
         *p = val;
         atomic_end(success_memorder);
-        return true;
     }
-    *e = old;
-    atomic_end(fail_memorder);
-    return false;
+    else
+    {
+        *e = old;
+        atomic_end(fail_memorder);
+    }
+    return equal;
 }
 
 bool __atomic_compare_exchange_4(volatile void *ptr, void *exp, unsigned val,
@@ -102,13 +105,16 @@ bool __atomic_compare_exchange_4(volatile void *ptr, void *exp, unsigned val,
 
     atomic_start(success_memorder);
     const unsigned old = *p;
-    if (old == *e)
+    const bool equal = old == *e;
+    if (equal)
     {
         *p = val;
         atomic_end(success_memorder);
-        return true;
     }
-    *e = old;
-    atomic_end(fail_memorder);
-    return false;
+    else
+    {
+        *e = old;
+        atomic_end(fail_memorder);
+    }
+    return equal;
 }
