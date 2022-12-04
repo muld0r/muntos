@@ -12,14 +12,14 @@ struct rt_queue
     struct rt_sem send_sem;
     struct rt_sem recv_sem;
     rt_atomic_size_t enq, deq;
-    rt_atomic_char *slots;
+    rt_atomic_uchar *slots;
     void *data;
     size_t num_elems, elem_size;
 };
 
 #define RT_QUEUE_STATIC(name, type, num)                                       \
     static type name##_elems[(num)];                                           \
-    static rt_atomic_char name##_slots[(num)];                                 \
+    static rt_atomic_uchar name##_slots[(num)];                                \
     static struct rt_queue name = {                                            \
         .send_sem = RT_SEM_INIT(name.send_sem, (num)),                         \
         .recv_sem = RT_SEM_INIT(name.recv_sem, 0),                             \
