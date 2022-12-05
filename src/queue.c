@@ -94,6 +94,7 @@ static void send(struct rt_queue *queue, const void *elem)
     for (;;)
     {
         size_t enq = rt_atomic_load_explicit(&queue->enq, memory_order_relaxed);
+        size_t last_enq = enq;
         atomic_uchar *slot;
         unsigned char s;
         for (;;)
@@ -105,7 +106,17 @@ static void send(struct rt_queue *queue, const void *elem)
             {
                 break;
             }
-            enq = next(enq, queue->num_elems);
+            const size_t new_enq =
+                rt_atomic_load_explicit(&queue->enq, memory_order_relaxed);
+            if (new_enq != last_enq)
+            {
+                enq = new_enq;
+                last_enq = new_enq;
+            }
+            else
+            {
+                enq = next(enq, queue->num_elems);
+            }
         }
 
         const unsigned char send_s = sgen(s) | SLOT_SEND;
@@ -146,6 +157,7 @@ static void recv(struct rt_queue *queue, void *elem)
     for (;;)
     {
         size_t deq = rt_atomic_load_explicit(&queue->deq, memory_order_relaxed);
+        size_t last_deq = deq;
         atomic_uchar *slot;
         unsigned char s;
         for (;;)
@@ -174,7 +186,17 @@ static void recv(struct rt_queue *queue, void *elem)
                     break;
                 }
             }
-            deq = next(deq, queue->num_elems);
+            const size_t new_deq =
+                rt_atomic_load_explicit(&queue->deq, memory_order_relaxed);
+            if (new_deq != last_deq)
+            {
+                deq = new_deq;
+                last_deq = new_deq;
+            }
+            else
+            {
+                deq = next(deq, queue->num_elems);
+            }
         }
 
         unsigned char recv_s = sgen(s) | SLOT_RECV;
@@ -210,6 +232,7 @@ static void peek(struct rt_queue *queue, void *elem)
     for (;;)
     {
         size_t deq = rt_atomic_load_explicit(&queue->deq, memory_order_relaxed);
+        size_t last_deq = deq;
         atomic_uchar *slot;
         unsigned char s;
         for (;;)
@@ -224,7 +247,17 @@ static void peek(struct rt_queue *queue, void *elem)
                     break;
                 }
             }
-            deq = next(deq, queue->num_elems);
+            const size_t new_deq =
+                rt_atomic_load_explicit(&queue->deq, memory_order_relaxed);
+            if (new_deq != last_deq)
+            {
+                deq = new_deq;
+                last_deq = new_deq;
+            }
+            else
+            {
+                deq = next(deq, queue->num_elems);
+            }
         }
 
         unsigned char recv_s = sgen(s) | SLOT_RECV;
