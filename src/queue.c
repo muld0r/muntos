@@ -57,7 +57,7 @@ static inline unsigned char qsgen(size_t q)
     return (unsigned char)(qgen(q) >> (INDEX_BITS - STATE_BITS));
 }
 
-static inline size_t index(size_t q)
+static inline size_t qindex(size_t q)
 {
     return q & Q_INDEX_MASK;
 }
@@ -82,7 +82,7 @@ static const char *state_str(unsigned char state)
 static size_t next(size_t q, size_t num_elems)
 {
     q += 1;
-    if (index(q) == num_elems)
+    if (qindex(q) == num_elems)
     {
         return qgen(q + Q_GEN_INCREMENT);
     }
@@ -98,9 +98,9 @@ static void send(struct rt_queue *queue, const void *elem)
         unsigned char s;
         for (;;)
         {
-            slot = &queue->slots[index(enq)];
+            slot = &queue->slots[qindex(enq)];
             s = rt_atomic_load_explicit(slot, memory_order_relaxed);
-            rt_logf("send: slot %zu %s\n", index(enq), state_str(state(s)));
+            rt_logf("send: slot %zu %s\n", qindex(enq), state_str(state(s)));
             if ((state(s) == SLOT_EMPTY) && (sgen(s) == qsgen(enq)))
             {
                 break;
@@ -113,28 +113,26 @@ static void send(struct rt_queue *queue, const void *elem)
                                                        memory_order_relaxed,
                                                        memory_order_relaxed))
         {
-            rt_logf("send: slot %zu claimed...\n", index(enq));
+            rt_logf("send: slot %zu claimed...\n", qindex(enq));
             rt_atomic_store_explicit(&queue->enq, next(enq, queue->num_elems),
                                      memory_order_relaxed);
 
             unsigned char *const p = queue->data;
-            memcpy(&p[queue->elem_size * index(enq)], elem, queue->elem_size);
+            memcpy(&p[queue->elem_size * qindex(enq)], elem, queue->elem_size);
 
-            /* Use release order even on failure so that the memcpy is complete
-             * before we mark the slot as empty again. */
             s = send_s;
             if (rt_atomic_compare_exchange_strong_explicit(
                     slot, &s, sgen(s) | SLOT_FULL, memory_order_release,
-                    memory_order_release))
+                    memory_order_relaxed))
             {
                 break;
             }
 
-            rt_logf("send: slot %zu skipped...\n", index(enq));
+            rt_logf("send: slot %zu skipped...\n", qindex(enq));
             /* If our slot has been skipped by a reader, then restore it
              * back to empty and keep looking. */
             while (!rt_atomic_compare_exchange_weak_explicit(
-                slot, &s, sgen(s) | SLOT_EMPTY, memory_order_relaxed,
+                slot, &s, sgen(s) | SLOT_EMPTY, memory_order_release,
                 memory_order_relaxed))
             {
             }
@@ -152,9 +150,9 @@ static void recv(struct rt_queue *queue, void *elem)
         unsigned char s;
         for (;;)
         {
-            slot = &queue->slots[index(deq)];
+            slot = &queue->slots[qindex(deq)];
             s = rt_atomic_load_explicit(slot, memory_order_relaxed);
-            rt_logf("recv: slot %zu %s\n", index(deq), state_str(state(s)));
+            rt_logf("recv: slot %zu %s\n", qindex(deq), state_str(state(s)));
             if (sgen(s) == qsgen(deq))
             {
                 if (state(s) == SLOT_SEND)
@@ -184,10 +182,10 @@ static void recv(struct rt_queue *queue, void *elem)
                                                        memory_order_acquire,
                                                        memory_order_relaxed))
         {
-            rt_logf("recv: slot %zu claimed...\n", index(deq));
+            rt_logf("recv: slot %zu claimed...\n", qindex(deq));
 
             const unsigned char *const p = queue->data;
-            memcpy(elem, &p[queue->elem_size * index(deq)], queue->elem_size);
+            memcpy(elem, &p[queue->elem_size * qindex(deq)], queue->elem_size);
 
             const unsigned char empty_s =
                 (sgen(s) + SLOT_GEN_INCREMENT) | SLOT_EMPTY;
@@ -216,9 +214,9 @@ static void peek(struct rt_queue *queue, void *elem)
         unsigned char s;
         for (;;)
         {
-            slot = &queue->slots[index(deq)];
+            slot = &queue->slots[qindex(deq)];
             s = rt_atomic_load_explicit(slot, memory_order_relaxed);
-            rt_logf("peek: slot %zu %s\n", index(deq), state_str(state(s)));
+            rt_logf("peek: slot %zu %s\n", qindex(deq), state_str(state(s)));
             if (sgen(s) == qsgen(deq))
             {
                 if ((state(s) == SLOT_FULL) || (state(s) == SLOT_RECV))
@@ -234,10 +232,10 @@ static void peek(struct rt_queue *queue, void *elem)
                                                        memory_order_acquire,
                                                        memory_order_relaxed))
         {
-            rt_logf("peek: slot %zu claimed...\n", index(deq));
+            rt_logf("peek: slot %zu claimed...\n", qindex(deq));
 
             const unsigned char *const p = queue->data;
-            memcpy(elem, &p[queue->elem_size * index(deq)], queue->elem_size);
+            memcpy(elem, &p[queue->elem_size * qindex(deq)], queue->elem_size);
 
             const unsigned char full_s =
                 (sgen(s) + SLOT_GEN_INCREMENT) | SLOT_FULL;
