@@ -17,6 +17,9 @@
 /* A full slot that has been claimed by a receiver/peeker. */
 #define SLOT_RECV 0x0AU
 
+/* An empty slot that has been skipped by a receiver. */
+#define SLOT_SKIPPED 0x0CU
+
 /* A full slot ready to be received. */
 #define SLOT_FULL 0x0FU
 
@@ -156,14 +159,14 @@ static void recv(struct rt_queue *queue, void *elem)
             {
                 if (state(s) == SLOT_SEND)
                 {
-                    const unsigned char skipped_slot = s + SLOT_GEN_INCREMENT;
-                    /* If we encounter an in-progress send, attempt to skip it
-                     * by incrementing its generation. The send may have
-                     * completed in the mean time, in which case we can attempt
-                     * to read from the slot. If not, there will be full slots
-                     * to receive after this slot, because the level allowing
-                     * receivers to run is only incremented after each send is
-                     * complete. */
+                    const unsigned char skipped_slot =
+                        (sgen(s) + SLOT_GEN_INCREMENT) | SLOT_SKIPPED;
+                    /* If we encounter an in-progress send, attempt to skip it.
+                     * The send may have completed in the mean time, in which
+                     * case we can attempt to read from the slot. If not, there
+                     * will be full slots to receive after this slot, because
+                     * the level allowing receivers to run is only incremented
+                     * after each send is complete. */
                     rt_atomic_compare_exchange_strong_explicit(
                         slot, &s, skipped_slot, memory_order_relaxed,
                         memory_order_relaxed);
