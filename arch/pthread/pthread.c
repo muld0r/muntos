@@ -26,8 +26,13 @@
 
 struct pthread_arg
 {
-    void (*fn)(uintptr_t);
+    union task_fn
+    {
+        void (*fn)(void);
+        void (*fn_with_arg)(uintptr_t);
+    } task_fn;
     uintptr_t arg;
+    bool has_arg;
 };
 
 static pthread_t main_thread;
@@ -66,8 +71,9 @@ void rt_logf(const char *format, ...)
 static void *pthread_fn(void *arg)
 {
     struct pthread_arg *parg = arg;
-    void (*fn)(uintptr_t) = parg->fn;
+    union task_fn task_fn = parg->task_fn;
     uintptr_t task_arg = parg->arg;
+    bool has_arg = parg->has_arg;
     free(parg);
     int sig;
     sigset_t resume_sigset;
@@ -75,21 +81,25 @@ static void *pthread_fn(void *arg)
     sigaddset(&resume_sigset, SIGRESUME);
     sigwait(&resume_sigset, &sig);
     unblock_all_signals();
-    fn(task_arg);
+    if (has_arg)
+    {
+        task_fn.fn_with_arg(task_arg);
+    }
+    else
+    {
+        task_fn.fn();
+    }
     rt_task_exit();
     return NULL;
 }
 
-void *rt_context_create(void (*fn)(uintptr_t), uintptr_t arg, void *stack,
-                        size_t stack_size)
+static void *context_create(struct pthread_arg *parg, void *stack,
+                            size_t stack_size)
 {
     pthread_attr_t attr;
     pthread_attr_init(&attr);
     pthread_attr_setstack(&attr, stack, stack_size);
     pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
-    struct pthread_arg *parg = malloc(sizeof *parg);
-    parg->fn = fn;
-    parg->arg = arg;
 
     /*
      * Launch each thread with interrupts disabled so only the active thread
@@ -106,6 +116,24 @@ void *rt_context_create(void (*fn)(uintptr_t), uintptr_t arg, void *stack,
     pthread_attr_destroy(&attr);
 
     return (void *)thread;
+}
+
+void *rt_context_create(void (*fn)(void), void *stack, size_t stack_size)
+{
+    struct pthread_arg *parg = malloc(sizeof *parg);
+    parg->task_fn.fn = fn;
+    parg->has_arg = false;
+    return context_create(parg, stack, stack_size);
+}
+
+void *rt_context_create_arg(void (*fn)(uintptr_t), uintptr_t arg, void *stack,
+                            size_t stack_size)
+{
+    struct pthread_arg *parg = malloc(sizeof *parg);
+    parg->task_fn.fn_with_arg = fn;
+    parg->arg = arg;
+    parg->has_arg = true;
+    return context_create(parg, stack, stack_size);
 }
 
 void rt_syscall_post(void)
@@ -157,9 +185,8 @@ static void tick_handler(int sig)
     rt_tick_advance();
 }
 
-__attribute__((noreturn)) static void idle_fn(uintptr_t arg)
+__attribute__((noreturn)) static void idle_fn(void)
 {
-    (void)arg;
     sigset_t sigset;
     sigfillset(&sigset);
     sigdelset(&sigset, SIGINT);
@@ -183,7 +210,7 @@ void rt_start(void)
 
     static char idle_stack[PTHREAD_STACK_MIN];
     pthread_t idle_thread =
-        (pthread_t)rt_context_create(idle_fn, 0, idle_stack, sizeof idle_stack);
+        (pthread_t)rt_context_create(idle_fn, idle_stack, sizeof idle_stack);
 
     /* The tick handler must block SIGSYSCALL. */
     struct sigaction tick_action = {

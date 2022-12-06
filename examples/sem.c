@@ -6,10 +6,8 @@
 static const int n = 10;
 static RT_SEM(sem, 0);
 
-static void poster(uintptr_t arg)
+static void poster(void)
 {
-    (void)arg;
-
     for (int i = 1; i <= n; ++i)
     {
         rt_sleep(5);
@@ -22,10 +20,8 @@ static void poster(uintptr_t arg)
 
 static volatile bool wait_failed = false;
 
-static void waiter(uintptr_t arg)
+static void waiter(void)
 {
-    (void)arg;
-
     for (int i = 1; i <= n; ++i)
     {
         if (!rt_sem_timedwait(&sem, 10))

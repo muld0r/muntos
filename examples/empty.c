@@ -1,9 +1,8 @@
 #include <rt/rt.h>
 #include <rt/task.h>
 
-static void empty(uintptr_t arg)
+static void empty(void)
 {
-    (void)arg;
     rt_stop();
 }
 

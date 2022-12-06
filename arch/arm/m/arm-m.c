@@ -25,12 +25,15 @@ struct gp_context
     // Saved automatically on exception entry.
     uint32_t r0, r1, r2, r3, r12;
     void (*lr)(void);
-    void (*pc)(uintptr_t);
+    union
+    {
+        void (*fn_with_arg)(uintptr_t);
+        void (*fn)(void);
+    } pc;
     uint32_t psr;
 };
 
-void *rt_context_create(void (*fn)(uintptr_t), uintptr_t arg, void *stack,
-                        size_t stack_size)
+static void *context_create(void *stack, size_t stack_size)
 {
     void *const stack_end = (char *)stack + stack_size;
     struct gp_context *ctx = stack_end;
@@ -41,10 +44,14 @@ void *rt_context_create(void (*fn)(uintptr_t), uintptr_t arg, void *stack,
 #if defined(__ARM_FP)
     ctx->exc_return = (uint32_t)TASK_INITIAL_EXC_RETURN;
 #endif
-    ctx->r0 = arg;
     ctx->lr = rt_task_exit;
-    ctx->pc = fn;
     ctx->psr = 0x01000000U; // thumb state
+
+    return ctx;
+}
+
+static void *ctx_begin(struct gp_context *ctx)
+{
 #if (__ARM_ARCH == 6)
     /* On armv6-m, the context popping process starts from r8 due to the lack of
      * stmdb. */
@@ -52,6 +59,22 @@ void *rt_context_create(void (*fn)(uintptr_t), uintptr_t arg, void *stack,
 #else
     return ctx;
 #endif
+}
+
+void *rt_context_create(void (*fn)(void), void *stack, size_t stack_size)
+{
+    struct gp_context *ctx = context_create(stack, stack_size);
+    ctx->pc.fn = fn;
+    return ctx_begin(ctx);
+}
+
+void *rt_context_create_arg(void (*fn)(uintptr_t), uintptr_t arg, void *stack,
+                            size_t stack_size)
+{
+    struct gp_context *ctx = context_create(stack, stack_size);
+    ctx->pc.fn_with_arg = fn;
+    ctx->r0 = arg;
+    return ctx_begin(ctx);
 }
 
 #define STK_CTRL (*(volatile uint32_t *)0xE000E010U)

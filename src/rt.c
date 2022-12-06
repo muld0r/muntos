@@ -403,9 +403,12 @@ void *rt_syscall_run(void)
     return sched();
 }
 
-void rt_task_init(struct rt_task *task, void (*fn)(uintptr_t), uintptr_t arg,
-                  const char *name, unsigned priority, void *stack,
-                  size_t stack_size)
+void rt_task_start(struct rt_task *task)
+{
+    insert_by_priority(&ready_list, &task->list);
+}
+
+static void task_init(struct rt_task *task, const char *name, unsigned priority)
 {
     rt_logf("%s created\n", name);
     task->priority = priority;
@@ -413,6 +416,20 @@ void rt_task_init(struct rt_task *task, void (*fn)(uintptr_t), uintptr_t arg,
     task->record = NULL;
     task->name = name;
     rt_list_init(&task->sleep_list);
-    insert_by_priority(&ready_list, &task->list);
-    task->ctx = rt_context_create(fn, arg, stack, stack_size);
+    rt_task_start(task);
+}
+
+void rt_task_init(struct rt_task *task, void (*fn)(void), const char *name,
+                  unsigned priority, void *stack, size_t stack_size)
+{
+    task->ctx = rt_context_create(fn, stack, stack_size);
+    task_init(task, name, priority);
+}
+
+void rt_task_init_arg(struct rt_task *task, void (*fn)(uintptr_t),
+                      uintptr_t arg, const char *name, unsigned priority,
+                      void *stack, size_t stack_size)
+{
+    task->ctx = rt_context_create_arg(fn, arg, stack, stack_size);
+    task_init(task, name, priority);
 }

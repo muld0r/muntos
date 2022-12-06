@@ -8,10 +8,8 @@ static const int n = 1000;
 
 RT_QUEUE_STATIC(queue, int, 5);
 
-static void sender(uintptr_t arg)
+static void sender(void)
 {
-    (void)arg;
-
     for (int i = 0; i < n; ++i)
     {
         rt_logf("sender: %d\n", i);
@@ -21,10 +19,8 @@ static void sender(uintptr_t arg)
 
 static volatile bool out_of_order = false;
 
-static void receiver(uintptr_t arg)
+static void receiver(void)
 {
-    (void)arg;
-
     int x;
     for (int i = 0; i < n; ++i)
     {
@@ -40,9 +36,8 @@ static void receiver(uintptr_t arg)
 
 static volatile bool timed_out = false;
 
-static void timeout(uintptr_t arg)
+static void timeout(void)
 {
-    (void)arg;
     rt_sleep(500);
     timed_out = true;
     rt_stop();

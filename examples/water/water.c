@@ -19,16 +19,14 @@ void make_water(void)
 
 #define TICKS_TO_RUN 1000
 
-static void timeout(uintptr_t arg)
+static void timeout(void)
 {
-    (void)arg;
     rt_sleep(TICKS_TO_RUN + 5);
     rt_stop();
 }
 
-static void oxygen_loop(uintptr_t arg)
+static void oxygen_loop(void)
 {
-    (void)arg;
     while (rt_tick() < TICKS_TO_RUN)
     {
         oxygen();
@@ -36,9 +34,8 @@ static void oxygen_loop(uintptr_t arg)
     }
 }
 
-static void hydrogen_loop(uintptr_t arg)
+static void hydrogen_loop(void)
 {
-    (void)arg;
     while (rt_tick() < TICKS_TO_RUN)
     {
         hydrogen();

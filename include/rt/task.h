@@ -1,6 +1,7 @@
 #ifndef RT_TASK_H
 #define RT_TASK_H
 
+#include <rt/context.h>
 #include <rt/list.h>
 
 #include <limits.h>
@@ -11,12 +12,22 @@
 struct rt_task;
 
 /*
+ * Initialize a task that runs fn() on the given stack, and make it runnable.
+ * Must be called before rt_start().
+ */
+void rt_task_init(struct rt_task *task, void (*fn)(void), const char *name,
+                  unsigned priority, void *stack, size_t stack_size);
+
+/*
  * Initialize a task that runs fn(arg) on the given stack, and make it runnable.
  * Must be called before rt_start().
  */
-void rt_task_init(struct rt_task *task, void (*fn)(uintptr_t), uintptr_t arg,
-                  const char *name, unsigned priority, void *stack,
-                  size_t stack_size);
+void rt_task_init_arg(struct rt_task *task, void (*fn)(uintptr_t),
+                      uintptr_t arg, const char *name, unsigned priority,
+                      void *stack, size_t stack_size);
+
+/* Make a statically-initialized task runnable. */
+void rt_task_start(struct rt_task *task);
 
 /*
  * Exit from the current task. This should be called automatically when a
@@ -45,19 +56,35 @@ struct rt_task
     struct rt_syscall_record *record;
 };
 
-#define RT_TASK(fn, stack, priority)                                           \
+#define RT_TASK(fn, stack, priority_)                                          \
     do                                                                         \
     {                                                                          \
-        static struct rt_task fn##_task;                                       \
-        rt_task_init(&fn##_task, fn, 0, #fn, priority, stack, sizeof(stack));  \
+        static struct rt_task fn##_task = {                                    \
+            .list = RT_LIST_INIT(fn##_task.list),                              \
+            .sleep_list = RT_LIST_INIT(fn##_task.sleep_list),                  \
+            .wake_tick = 0,                                                    \
+            .name = #fn,                                                       \
+            .priority = (priority_),                                           \
+            .record = NULL,                                                    \
+        };                                                                     \
+        fn##_task.ctx = rt_context_create((fn), (stack), sizeof(stack));       \
+        rt_task_start(&fn##_task);                                             \
     } while (0)
 
-#define RT_TASK_ARG(fn, arg, stack, priority)                                  \
+#define RT_TASK_ARG(fn, arg, stack, priority_)                                 \
     do                                                                         \
     {                                                                          \
-        static struct rt_task fn##_task;                                       \
-        rt_task_init(&fn##_task, fn, arg, #fn "(" #arg ")", priority, stack,   \
-                     sizeof(stack));                                           \
+        static struct rt_task fn##_task = {                                    \
+            .list = RT_LIST_INIT(fn##_task.list),                              \
+            .sleep_list = RT_LIST_INIT(fn##_task.sleep_list),                  \
+            .wake_tick = 0,                                                    \
+            .name = #fn "(" #arg ")",                                          \
+            .priority = (priority_),                                           \
+            .record = NULL,                                                    \
+        };                                                                     \
+        fn##_task.ctx =                                                        \
+            rt_context_create_arg((fn), (arg), (stack), sizeof(stack));        \
+        rt_task_start(&fn##_task);                                             \
     } while (0)
 
 /*

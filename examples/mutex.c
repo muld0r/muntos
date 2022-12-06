@@ -20,10 +20,8 @@ static void stop_last(void)
     }
 }
 
-static void increment_lock(uintptr_t arg)
+static void increment_lock(void)
 {
-    (void)arg;
-
     for (unsigned long i = 0; i < ITERATIONS; ++i)
     {
         rt_mutex_lock(&mutex);
@@ -33,10 +31,8 @@ static void increment_lock(uintptr_t arg)
     stop_last();
 }
 
-static void increment_trylock(uintptr_t arg)
+static void increment_trylock(void)
 {
-    (void)arg;
-
     for (unsigned long i = 0; i < ITERATIONS; ++i)
     {
         while (!rt_mutex_trylock(&mutex))
@@ -49,10 +45,8 @@ static void increment_trylock(uintptr_t arg)
     stop_last();
 }
 
-static void increment_timedlock(uintptr_t arg)
+static void increment_timedlock(void)
 {
-    (void)arg;
-
     for (unsigned long i = 0; i < ITERATIONS; ++i)
     {
         while (!rt_mutex_timedlock(&mutex, 1))
