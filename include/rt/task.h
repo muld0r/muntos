@@ -87,10 +87,4 @@ struct rt_task
         rt_task_start(&fn##_task);                                             \
     } while (0)
 
-/*
- * Pointer to the previous task's context field, used to store the suspending
- * context during a context switch.
- */
-extern void **rt_prev_context;
-
 #endif /* RT_TASK_H */
