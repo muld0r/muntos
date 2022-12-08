@@ -11,7 +11,7 @@
 struct gp_context
 {
     // Saved by task context switch.
-#if RT_ARM_M_PSPLIM
+#if (__ARM_ARCH == 8)
     void *psplim;
 #endif
     uint32_t r4, r5, r6, r7, r8, r9, r10, r11;
@@ -38,7 +38,7 @@ static void *context_create(void *stack, size_t stack_size)
     void *const stack_end = (char *)stack + stack_size;
     struct gp_context *ctx = stack_end;
     ctx -= 1;
-#if RT_ARM_M_PSPLIM
+#if (__ARM_ARCH == 8)
     ctx->psplim = stack;
 #endif
 #if defined(__ARM_FP)
@@ -52,9 +52,9 @@ static void *context_create(void *stack, size_t stack_size)
 
 static void *ctx_begin(struct gp_context *ctx)
 {
-#if (__ARM_ARCH == 6)
-    /* On armv6-m, the context popping process starts from r8 due to the lack of
-     * stmdb. */
+#if (__ARM_ARCH == 6) || defined(__ARM_ARCH_8M_BASE__)
+    /* On armv6-m and armv8-m base, the context popping process starts from r8
+     * due to the lack of stmdb. */
     return &ctx->r8;
 #else
     return ctx;
