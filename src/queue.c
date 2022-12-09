@@ -177,9 +177,12 @@ static void recv(struct rt_queue *queue, void *elem)
                      * will be full slots to receive after this slot, because
                      * the level allowing receivers to run is only incremented
                      * after each send is complete. */
-                    rt_atomic_compare_exchange_strong_explicit(
-                        slot, &s, skipped_slot, memory_order_relaxed,
-                        memory_order_relaxed);
+                    if (rt_atomic_compare_exchange_strong_explicit(
+                            slot, &s, skipped_slot, memory_order_relaxed,
+                            memory_order_relaxed))
+                    {
+                        rt_logf("recv: slot %zu skipped...\n", qindex(deq));
+                    }
                 }
                 if ((state(s) == SLOT_FULL) || (state(s) == SLOT_RECV))
                 {
