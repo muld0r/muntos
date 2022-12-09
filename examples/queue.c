@@ -4,59 +4,76 @@
 #include <rt/sleep.h>
 #include <rt/task.h>
 
-static const int n = 1000;
+RT_QUEUE_STATIC(queue, int, 20);
 
-RT_QUEUE_STATIC(queue, int, 5);
-
-static void sender(void)
+static void sender(uintptr_t offset)
 {
-    for (int i = 0; i < n; ++i)
+    int i = (int)offset;
+    for (;;)
     {
-        rt_logf("sender: %d\n", i);
         rt_queue_send(&queue, &i);
+        ++i;
     }
 }
 
-static volatile bool out_of_order = false;
+static bool out_of_order = false;
+static int max_elem[100] = {0};
 
 static void receiver(void)
 {
-    int x;
-    for (int i = 0; i < n; ++i)
+    int x[5];
+    for (;;)
     {
-        rt_queue_recv(&queue, &x);
-        rt_logf("receiver: %d, %d\n", i, x);
-        if (x != i)
+        for (int i = 0; i < 5; ++i)
         {
-            out_of_order = true;
+            rt_queue_recv(&queue, &x[i]);
+            int task = x[i] / 1000000;
+            int elem = x[i] % 1000000;
+            if (elem < max_elem[task])
+            {
+                out_of_order = true;
+            }
+            max_elem[task] = elem;
         }
     }
-    rt_stop();
 }
-
-static volatile bool timed_out = false;
 
 static void timeout(void)
 {
-    rt_sleep(500);
-    timed_out = true;
+    rt_sleep(1000);
     rt_stop();
 }
 
 int main(void)
 {
-    static char task_stacks[3][TASK_STACK_SIZE]
+    static char sender_stacks[100][TASK_STACK_SIZE]
         __attribute__((aligned(STACK_ALIGN)));
-    RT_TASK(sender, task_stacks[0], 1);
-    RT_TASK(receiver, task_stacks[1], 1);
-    RT_TASK(timeout, task_stacks[2], 0);
+    static struct rt_task senders[100];
+
+    for (int i = 0; i < 100; ++i)
+    {
+        rt_task_init_arg(&senders[i], sender, (uintptr_t)i * 1000000, "sender",
+                         2, sender_stacks[i], TASK_STACK_SIZE);
+    }
+
+    static char receiver_stack[TASK_STACK_SIZE]
+        __attribute__((aligned(STACK_ALIGN)));
+    RT_TASK(receiver, receiver_stack, 1);
+
+    static char timeout_stack[TASK_STACK_SIZE]
+        __attribute__((aligned(STACK_ALIGN)));
+    RT_TASK(timeout, timeout_stack, 0);
     rt_start();
+
     if (out_of_order)
     {
         return 1;
     }
-    if (timed_out)
+
+    for (size_t i = 0; i < queue.num_elems; ++i)
     {
-        return 2;
+        rt_logf("%02x ",
+                rt_atomic_load_explicit(&queue.slots[i], memory_order_relaxed));
     }
+    rt_logf("\n");
 }
