@@ -4,8 +4,16 @@
 #include <rt/atomic.h>
 #include <rt/sem.h>
 
+#include <assert.h>
+#include <limits.h>
 #include <stdbool.h>
 #include <stddef.h>
+
+#define RT_QUEUE_STATE_BITS 4
+#define RT_QUEUE_GEN_BITS (CHAR_BIT - RT_QUEUE_STATE_BITS)
+#define RT_QUEUE_SIZE_BITS (sizeof(size_t) * CHAR_BIT)
+#define RT_QUEUE_INDEX_BITS (RT_QUEUE_SIZE_BITS - RT_QUEUE_GEN_BITS)
+#define RT_QUEUE_MAX_SIZE (((size_t)1 << RT_QUEUE_INDEX_BITS) - 1)
 
 struct rt_queue
 {
@@ -18,6 +26,7 @@ struct rt_queue
 };
 
 #define RT_QUEUE_STATIC(name, type, num)                                       \
+    static_assert((num) <= RT_QUEUE_MAX_SIZE, "queue is too large");           \
     static type name##_elems[(num)];                                           \
     static rt_atomic_uchar name##_slots[(num)];                                \
     static struct rt_queue name = {                                            \

@@ -25,17 +25,13 @@
 
 #define SLOT_STATE_MASK 0x0FU
 
-#define STATE_BITS 4
-#define GEN_BITS (8 - STATE_BITS)
-
-#define SLOT_GEN_INCREMENT (1U << STATE_BITS)
+#define SLOT_GEN_INCREMENT (1U << RT_QUEUE_STATE_BITS)
 #define SLOT_GEN_MASK (0xFFU & ~SLOT_STATE_MASK)
 
-#define SIZE_BITS (sizeof(size_t) * CHAR_BIT)
-#define INDEX_BITS (SIZE_BITS - GEN_BITS)
-#define Q_GEN_INCREMENT ((size_t)1 << INDEX_BITS)
+#define Q_GEN_INCREMENT ((size_t)1 << RT_QUEUE_INDEX_BITS)
 #define Q_INDEX_MASK (Q_GEN_INCREMENT - (size_t)1)
 #define Q_GEN_MASK (~Q_INDEX_MASK)
+#define Q_SGEN_SHIFT (RT_QUEUE_INDEX_BITS - RT_QUEUE_STATE_BITS)
 
 static inline unsigned char state(unsigned char slot)
 {
@@ -54,7 +50,7 @@ static inline size_t qgen(size_t q)
 
 static inline unsigned char qsgen(size_t q)
 {
-    return (unsigned char)(qgen(q) >> (INDEX_BITS - STATE_BITS));
+    return (unsigned char)(qgen(q) >> Q_SGEN_SHIFT);
 }
 
 static inline size_t qindex(size_t q)
