@@ -163,7 +163,7 @@ static void recv(struct rt_queue *queue, void *elem)
             rt_logf("recv: slot %zu %s\n", qindex(deq), state_str(state(s)));
             if (sgen(s) == qsgen(deq))
             {
-                if (state(s) == SLOT_SEND)
+                if ((state(s) == SLOT_SEND) || (state(s) == SLOT_SKIPPED))
                 {
                     const unsigned char skipped_slot =
                         (sgen(s) + SLOT_GEN_INCREMENT) | SLOT_SKIPPED;
