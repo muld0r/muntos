@@ -4,11 +4,12 @@
 #include <rt/sleep.h>
 #include <rt/task.h>
 
-RT_QUEUE_STATIC(queue, int, 10);
+#include <stdint.h>
 
-static void sender(uintptr_t offset)
+RT_QUEUE_STATIC(queue, uint32_t, 10);
+
+static void sender(uintptr_t i)
 {
-    int i = (int)offset;
     for (;;)
     {
         rt_queue_send(&queue, &i);
@@ -19,16 +20,19 @@ static void sender(uintptr_t offset)
 #define NSENDERS 4
 
 static bool out_of_order = false;
-static int max_elem[NSENDERS] = {0};
+static uint32_t max_elem[NSENDERS] = {0};
+#define TASK_INC UINT32_C(0x1000000)
+static volatile size_t num_recv = 0;
 
 static void receiver(void)
 {
-    int x;
+    uint32_t x;
     for (;;)
     {
         rt_queue_recv(&queue, &x);
-        int task = x / 1000000;
-        int elem = x % 1000000;
+        ++num_recv;
+        uint32_t task = x / TASK_INC;
+        uint32_t elem = x % TASK_INC;
         if (elem < max_elem[task])
         {
             out_of_order = true;
@@ -49,9 +53,9 @@ int main(void)
         __attribute__((aligned(STACK_ALIGN)));
     static struct rt_task senders[NSENDERS];
 
-    for (int i = 0; i < NSENDERS; ++i)
+    for (uintptr_t i = 0; i < NSENDERS; ++i)
     {
-        rt_task_init_arg(&senders[i], sender, (uintptr_t)i * 1000000, "sender",
+        rt_task_init_arg(&senders[i], sender, i * TASK_INC, "sender",
                          2, sender_stacks[i], TASK_STACK_SIZE);
     }
 
