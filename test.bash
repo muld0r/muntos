@@ -10,8 +10,10 @@ set -x
 build/simple
 build/sleep
 build/sem
+build/list
 build/pq
 build/queue
 build/mutex
+build/rwlock
 build/water_sem
 build/water_cond
