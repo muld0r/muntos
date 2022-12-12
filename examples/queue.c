@@ -18,10 +18,10 @@ static void sender(uintptr_t i)
 }
 
 #define NSENDERS 4
-
-static bool out_of_order = false;
-static uint32_t max_elem[NSENDERS] = {0};
 #define TASK_INC UINT32_C(0x1000000)
+
+static volatile bool out_of_order = false;
+static uint32_t max_elem[NSENDERS] = {0};
 static volatile size_t num_recv = 0;
 
 static void receiver(void)
