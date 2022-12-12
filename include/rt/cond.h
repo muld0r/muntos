@@ -14,6 +14,9 @@ void rt_cond_broadcast(struct rt_cond *cond);
 
 void rt_cond_wait(struct rt_cond *cond, struct rt_mutex *mutex);
 
+bool rt_cond_timedwait(struct rt_cond *cond, struct rt_mutex *mutex,
+                       unsigned long ticks);
+
 struct rt_cond
 {
     struct rt_sem sem;

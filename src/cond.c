@@ -1,5 +1,6 @@
 #include <rt/cond.h>
 #include <rt/log.h>
+#include <rt/tick.h>
 
 void rt_cond_init(struct rt_cond *cond)
 {
@@ -65,4 +66,51 @@ void rt_cond_wait(struct rt_cond *cond, struct rt_mutex *mutex)
     rt_syscall(&wait_record);
 
     rt_mutex_lock(mutex);
+}
+
+bool rt_cond_timedwait(struct rt_cond *cond, struct rt_mutex *mutex,
+                       unsigned long ticks)
+{
+    const unsigned long start_tick = rt_tick();
+    const int value =
+        rt_atomic_fetch_sub_explicit(&cond->sem.value, 1, memory_order_relaxed);
+
+    rt_logf("%s cond wait, new value %d\n", rt_task_name(), value - 1);
+
+    if (value > 0)
+    {
+        return true;
+    }
+
+    rt_mutex_unlock(mutex);
+
+    if (ticks == 0)
+    {
+        return false;
+    }
+
+    struct rt_syscall_record wait_record;
+    wait_record.args.sem_timedwait.task = rt_task_self();
+    wait_record.args.sem_timedwait.sem = &cond->sem;
+    wait_record.args.sem_timedwait.ticks = ticks;
+    wait_record.syscall = RT_SYSCALL_SEM_TIMEDWAIT;
+    rt_task_self()->record = &wait_record;
+    rt_syscall(&wait_record);
+
+    if (wait_record.syscall != RT_SYSCALL_SEM_TIMEDWAIT)
+    {
+        return false;
+    }
+
+    const unsigned long ticks_waited = rt_tick() - start_tick;
+    if (ticks_waited >= ticks)
+    {
+        ticks = 0;
+    }
+    else
+    {
+        ticks -= ticks_waited;
+    }
+
+    return rt_mutex_timedlock(mutex, ticks);
 }
