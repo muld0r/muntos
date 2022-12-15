@@ -8,19 +8,19 @@
 #include <stdatomic.h>
 #include <string.h>
 
-/* An empty slot, ready to receive new data. */
+/* An empty slot ready to be pushed. */
 #define SLOT_EMPTY 0x00U
 
-/* An empty slot that has been claimed by a sender. */
-#define SLOT_SEND 0x05U
+/* An empty slot that has been claimed by a pusher. */
+#define SLOT_PUSH 0x05U
 
-/* A full slot that has been claimed by a receiver/peeker. */
-#define SLOT_RECV 0x0AU
+/* A full slot that has been claimed by a popper/peeker. */
+#define SLOT_POP 0x0AU
 
-/* An empty slot that has been skipped by a receiver. */
+/* An empty slot that has been skipped by a popper. */
 #define SLOT_SKIPPED 0x0CU
 
-/* A full slot ready to be received. */
+/* A full slot ready to be popped. */
 #define SLOT_FULL 0x0FU
 
 #define SLOT_STATE_MASK 0x0FU
@@ -64,10 +64,10 @@ static const char *state_str(unsigned char state)
     {
     case SLOT_EMPTY:
         return "empty";
-    case SLOT_SEND:
-        return "send";
-    case SLOT_RECV:
-        return "recv";
+    case SLOT_PUSH:
+        return "push";
+    case SLOT_POP:
+        return "pop";
     case SLOT_FULL:
         return "full";
     default:
@@ -85,7 +85,7 @@ static size_t next(size_t q, size_t num_elems)
     return q;
 }
 
-static void send(struct rt_queue *queue, const void *elem)
+static void push(struct rt_queue *queue, const void *elem)
 {
     for (;;)
     {
@@ -97,7 +97,7 @@ static void send(struct rt_queue *queue, const void *elem)
         {
             slot = &queue->slots[qindex(enq)];
             s = rt_atomic_load_explicit(slot, memory_order_relaxed);
-            rt_logf("send: slot %zu %s\n", qindex(enq), state_str(state(s)));
+            rt_logf("push: slot %zu %s\n", qindex(enq), state_str(state(s)));
             if ((state(s) == SLOT_EMPTY) && (sgen(s) == qsgen(enq)))
             {
                 break;
@@ -115,19 +115,19 @@ static void send(struct rt_queue *queue, const void *elem)
             }
         }
 
-        const unsigned char send_s = sgen(s) | SLOT_SEND;
-        if (rt_atomic_compare_exchange_strong_explicit(slot, &s, send_s,
+        const unsigned char push_s = sgen(s) | SLOT_PUSH;
+        if (rt_atomic_compare_exchange_strong_explicit(slot, &s, push_s,
                                                        memory_order_relaxed,
                                                        memory_order_relaxed))
         {
-            rt_logf("send: slot %zu claimed...\n", qindex(enq));
+            rt_logf("push: slot %zu claimed...\n", qindex(enq));
             rt_atomic_store_explicit(&queue->enq, next(enq, queue->num_elems),
                                      memory_order_relaxed);
 
             unsigned char *const p = queue->data;
             memcpy(&p[queue->elem_size * qindex(enq)], elem, queue->elem_size);
 
-            s = send_s;
+            s = push_s;
             if (rt_atomic_compare_exchange_strong_explicit(
                     slot, &s, sgen(s) | SLOT_FULL, memory_order_release,
                     memory_order_relaxed))
@@ -135,7 +135,7 @@ static void send(struct rt_queue *queue, const void *elem)
                 break;
             }
 
-            rt_logf("send: slot %zu skipped...\n", qindex(enq));
+            rt_logf("push: slot %zu skipped...\n", qindex(enq));
             /* If our slot has been skipped by a reader, then restore it
              * back to empty and keep looking. */
             while (!rt_atomic_compare_exchange_weak_explicit(
@@ -145,10 +145,10 @@ static void send(struct rt_queue *queue, const void *elem)
             }
         }
     }
-    rt_sem_post(&queue->recv_sem);
+    rt_sem_post(&queue->pop_sem);
 }
 
-static void recv(struct rt_queue *queue, void *elem)
+static void pop(struct rt_queue *queue, void *elem)
 {
     for (;;)
     {
@@ -160,27 +160,27 @@ static void recv(struct rt_queue *queue, void *elem)
         {
             slot = &queue->slots[qindex(deq)];
             s = rt_atomic_load_explicit(slot, memory_order_relaxed);
-            rt_logf("recv: slot %zu %s\n", qindex(deq), state_str(state(s)));
+            rt_logf("pop: slot %zu %s\n", qindex(deq), state_str(state(s)));
             if (sgen(s) == qsgen(deq))
             {
-                if ((state(s) == SLOT_SEND) || (state(s) == SLOT_SKIPPED))
+                if ((state(s) == SLOT_PUSH) || (state(s) == SLOT_SKIPPED))
                 {
                     const unsigned char skipped_slot =
                         (sgen(s) + SLOT_GEN_INCREMENT) | SLOT_SKIPPED;
-                    /* If we encounter an in-progress send, attempt to skip it.
-                     * The send may have completed in the mean time, in which
-                     * case we can attempt to read from the slot. If not, there
-                     * will be full slots to receive after this slot, because
-                     * the level allowing receivers to run is only incremented
-                     * after each send is complete. */
+                    /* If we encounter an in-progress push, attempt to skip it.
+                     * The push may have completed in the mean time, in which
+                     * case we can attempt to pop from the slot. If not, there
+                     * will be full slots to pop after this slot, because
+                     * the level allowing poppers to run is only incremented
+                     * after each push is complete. */
                     if (rt_atomic_compare_exchange_strong_explicit(
                             slot, &s, skipped_slot, memory_order_relaxed,
                             memory_order_relaxed))
                     {
-                        rt_logf("recv: slot %zu skipped...\n", qindex(deq));
+                        rt_logf("pop: slot %zu skipped...\n", qindex(deq));
                     }
                 }
-                if ((state(s) == SLOT_FULL) || (state(s) == SLOT_RECV))
+                if ((state(s) == SLOT_FULL) || (state(s) == SLOT_POP))
                 {
                     break;
                 }
@@ -198,12 +198,12 @@ static void recv(struct rt_queue *queue, void *elem)
             }
         }
 
-        unsigned char recv_s = sgen(s) | SLOT_RECV;
-        if (rt_atomic_compare_exchange_strong_explicit(slot, &s, recv_s,
+        unsigned char pop_s = sgen(s) | SLOT_POP;
+        if (rt_atomic_compare_exchange_strong_explicit(slot, &s, pop_s,
                                                        memory_order_acquire,
                                                        memory_order_relaxed))
         {
-            rt_logf("recv: slot %zu claimed...\n", qindex(deq));
+            rt_logf("pop: slot %zu claimed...\n", qindex(deq));
 
             const unsigned char *const p = queue->data;
             memcpy(elem, &p[queue->elem_size * qindex(deq)], queue->elem_size);
@@ -211,7 +211,7 @@ static void recv(struct rt_queue *queue, void *elem)
             const unsigned char empty_s =
                 (sgen(s) + SLOT_GEN_INCREMENT) | SLOT_EMPTY;
             if (rt_atomic_compare_exchange_strong_explicit(
-                    slot, &recv_s, empty_s, memory_order_relaxed,
+                    slot, &pop_s, empty_s, memory_order_relaxed,
                     memory_order_relaxed))
             {
                 rt_atomic_store_explicit(&queue->deq,
@@ -221,13 +221,13 @@ static void recv(struct rt_queue *queue, void *elem)
             }
         }
     }
-    rt_sem_post(&queue->send_sem);
+    rt_sem_post(&queue->push_sem);
 }
 
 static void peek(struct rt_queue *queue, void *elem)
 {
-    /* Similar to recv, but don't update the dequeue index and set the slot
-     * back to SLOT_FULL after reading it so another receiver can read it. */
+    /* Similar to pop, but don't update the dequeue index and set the slot back
+     * to SLOT_FULL after reading it so another popper/peeker can read it. */
     for (;;)
     {
         size_t deq = rt_atomic_load_explicit(&queue->deq, memory_order_relaxed);
@@ -241,7 +241,7 @@ static void peek(struct rt_queue *queue, void *elem)
             rt_logf("peek: slot %zu %s\n", qindex(deq), state_str(state(s)));
             if (sgen(s) == qsgen(deq))
             {
-                if ((state(s) == SLOT_FULL) || (state(s) == SLOT_RECV))
+                if ((state(s) == SLOT_FULL) || (state(s) == SLOT_POP))
                 {
                     break;
                 }
@@ -259,8 +259,8 @@ static void peek(struct rt_queue *queue, void *elem)
             }
         }
 
-        unsigned char recv_s = sgen(s) | SLOT_RECV;
-        if (rt_atomic_compare_exchange_strong_explicit(slot, &s, recv_s,
+        unsigned char pop_s = sgen(s) | SLOT_POP;
+        if (rt_atomic_compare_exchange_strong_explicit(slot, &s, pop_s,
                                                        memory_order_acquire,
                                                        memory_order_relaxed))
         {
@@ -271,59 +271,59 @@ static void peek(struct rt_queue *queue, void *elem)
 
             const unsigned char full_s =
                 (sgen(s) + SLOT_GEN_INCREMENT) | SLOT_FULL;
-            if (rt_atomic_compare_exchange_strong_explicit(
-                    slot, &recv_s, full_s, memory_order_relaxed,
-                    memory_order_relaxed))
+            if (rt_atomic_compare_exchange_strong_explicit(slot, &pop_s, full_s,
+                                                           memory_order_relaxed,
+                                                           memory_order_relaxed))
             {
                 break;
             }
         }
     }
-    /* After peeking, another receiver may run. */
-    rt_sem_post(&queue->recv_sem);
+    /* After peeking, another popper/peeker may run. */
+    rt_sem_post(&queue->pop_sem);
 }
 
-void rt_queue_send(struct rt_queue *queue, const void *elem)
+void rt_queue_push(struct rt_queue *queue, const void *elem)
 {
-    rt_sem_wait(&queue->send_sem);
-    send(queue, elem);
+    rt_sem_wait(&queue->push_sem);
+    push(queue, elem);
 }
 
-void rt_queue_recv(struct rt_queue *queue, void *elem)
+void rt_queue_pop(struct rt_queue *queue, void *elem)
 {
-    rt_sem_wait(&queue->recv_sem);
-    recv(queue, elem);
+    rt_sem_wait(&queue->pop_sem);
+    pop(queue, elem);
 }
 
 void rt_queue_peek(struct rt_queue *queue, void *elem)
 {
-    rt_sem_wait(&queue->recv_sem);
+    rt_sem_wait(&queue->pop_sem);
     peek(queue, elem);
 }
 
-bool rt_queue_trysend(struct rt_queue *queue, const void *elem)
+bool rt_queue_trypush(struct rt_queue *queue, const void *elem)
 {
-    if (!rt_sem_trywait(&queue->send_sem))
+    if (!rt_sem_trywait(&queue->push_sem))
     {
         return false;
     }
-    send(queue, elem);
+    push(queue, elem);
     return true;
 }
 
-bool rt_queue_tryrecv(struct rt_queue *queue, void *elem)
+bool rt_queue_trypop(struct rt_queue *queue, void *elem)
 {
-    if (!rt_sem_trywait(&queue->recv_sem))
+    if (!rt_sem_trywait(&queue->pop_sem))
     {
         return false;
     }
-    recv(queue, elem);
+    pop(queue, elem);
     return true;
 }
 
 bool rt_queue_trypeek(struct rt_queue *queue, void *elem)
 {
-    if (!rt_sem_trywait(&queue->recv_sem))
+    if (!rt_sem_trywait(&queue->pop_sem))
     {
         return false;
     }
@@ -331,30 +331,30 @@ bool rt_queue_trypeek(struct rt_queue *queue, void *elem)
     return true;
 }
 
-bool rt_queue_timedsend(struct rt_queue *queue, const void *elem,
+bool rt_queue_timedpush(struct rt_queue *queue, const void *elem,
                         unsigned long ticks)
 {
-    if (!rt_sem_timedwait(&queue->send_sem, ticks))
+    if (!rt_sem_timedwait(&queue->push_sem, ticks))
     {
         return false;
     }
-    send(queue, elem);
+    push(queue, elem);
     return true;
 }
 
-bool rt_queue_timedrecv(struct rt_queue *queue, void *elem, unsigned long ticks)
+bool rt_queue_timedpop(struct rt_queue *queue, void *elem, unsigned long ticks)
 {
-    if (!rt_sem_timedwait(&queue->recv_sem, ticks))
+    if (!rt_sem_timedwait(&queue->pop_sem, ticks))
     {
         return false;
     }
-    recv(queue, elem);
+    pop(queue, elem);
     return true;
 }
 
 bool rt_queue_timedpeek(struct rt_queue *queue, void *elem, unsigned long ticks)
 {
-    if (!rt_sem_timedwait(&queue->recv_sem, ticks))
+    if (!rt_sem_timedwait(&queue->pop_sem, ticks))
     {
         return false;
     }
