@@ -2,11 +2,13 @@
 #define RT_QUEUE_H
 
 /*
- * A bounded, multi-producer, multi-consumer lock-free queue that supports
- * blocking, timed, and non-blocking push and pop. The queue supports as many
- * threads/interrupts accessing it simultaneously as there are slots in the
- * queue. Additional queue operations will block, timeout, or fail until a
- * previous threads has completed their operations.
+ * A bounded, multi-producer, multi-consumer, lock-free queue that supports
+ * blocking, timed, and non-blocking push, pop, and peek. The queue supports as
+ * many threads/interrupts accessing it simultaneously as there are slots in
+ * the queue. Additional queue operations will block, time out, or fail until a
+ * previous thread has completed its operation. A push will block, time out, or
+ * fail if there is no space left in the queue, and likewise for pop/peek if
+ * the queue is empty.
  */
 
 #include <rt/atomic.h>
