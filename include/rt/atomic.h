@@ -26,13 +26,20 @@ typedef _Atomic uint32_t rt_atomic_uint32_t;
 #define rt_atomic_fetch_sub atomic_fetch_sub
 #define rt_atomic_fetch_sub_explicit atomic_fetch_sub_explicit
 
+#define rt_atomic_fetch_and atomic_fetch_and
+#define rt_atomic_fetch_and_explicit atomic_fetch_and_explicit
+
+#define rt_atomic_fetch_or atomic_fetch_or
+#define rt_atomic_fetch_or_explicit atomic_fetch_or_explicit
+
 #define rt_atomic_exchange_explicit atomic_exchange_explicit
 #define rt_atomic_compare_exchange_weak_explicit                               \
     atomic_compare_exchange_weak_explicit
 #define rt_atomic_compare_exchange_strong_explicit                             \
     atomic_compare_exchange_strong_explicit
 
-/* Work around a bug in gcc where atomic_flag operations silently don't
+/*
+ * Work around a bug in gcc where atomic_flag operations silently don't
  * generate atomic code on armv6-m rather than failing to link. The equivalent
  * atomic_exchange operations on an atomic_bool work.
  *

@@ -89,6 +89,34 @@ unsigned __atomic_fetch_sub_4(volatile void *ptr, unsigned val, int memorder)
     return old;
 }
 
+unsigned __atomic_fetch_and_4(volatile void *ptr, unsigned val, int memorder)
+{
+    volatile unsigned *const p = ptr;
+
+    const bool mask = disable();
+    barrier_start(memorder);
+    const unsigned old = *p;
+    *p = old & val;
+    barrier_end(memorder);
+    restore(mask);
+
+    return old;
+}
+
+unsigned __atomic_fetch_or_4(volatile void *ptr, unsigned val, int memorder)
+{
+    volatile unsigned *const p = ptr;
+
+    const bool mask = disable();
+    barrier_start(memorder);
+    const unsigned old = *p;
+    *p = old | val;
+    barrier_end(memorder);
+    restore(mask);
+
+    return old;
+}
+
 bool __atomic_compare_exchange_1(volatile void *ptr, void *exp,
                                  unsigned char val, bool weak,
                                  int success_memorder, int fail_memorder)
