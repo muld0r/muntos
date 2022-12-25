@@ -305,6 +305,9 @@ void *rt_syscall_run(void)
                                     memory_order_acquire);
     while (record)
     {
+        /* Store the next record in the list now because some syscall records may
+         * be re-enabled immediately after they are handled. */
+        struct rt_syscall_record *next_record = record->next;
         switch (record->syscall)
         {
         case RT_SYSCALL_TICK:
@@ -397,7 +400,7 @@ void *rt_syscall_run(void)
             wake_mutex_waiter(record->args.mutex_unlock.mutex);
             break;
         }
-        record = record->next;
+        record = next_record;
     }
 
     return sched();
