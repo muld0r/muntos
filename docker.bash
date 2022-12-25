@@ -5,7 +5,7 @@ set -xe
 name="rt"
 image="$name-builder"
 
-docker build --tag "$image" --build-arg "username=$name" "$(dirname $0)"
+docker build --tag "$image" "$(dirname $0)"
 
 workdir="/home/$name"
 

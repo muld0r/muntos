@@ -11,6 +11,5 @@ RUN apt-get update && \
       llvm \
       scons
 
-ARG username
-RUN useradd $username
-USER $username
+RUN useradd rt
+USER rt
