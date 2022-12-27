@@ -91,7 +91,7 @@ static void push(struct rt_queue *queue, const void *elem)
     {
         size_t enq = rt_atomic_load_explicit(&queue->enq, memory_order_relaxed);
         size_t last_enq = enq;
-        atomic_uchar *slot;
+        rt_atomic_uchar *slot;
         unsigned char s;
         for (;;)
         {
@@ -154,7 +154,7 @@ static void pop(struct rt_queue *queue, void *elem)
     {
         size_t deq = rt_atomic_load_explicit(&queue->deq, memory_order_relaxed);
         size_t last_deq = deq;
-        atomic_uchar *slot;
+        rt_atomic_uchar *slot;
         unsigned char s;
         for (;;)
         {
@@ -232,7 +232,7 @@ static void peek(struct rt_queue *queue, void *elem)
     {
         size_t deq = rt_atomic_load_explicit(&queue->deq, memory_order_relaxed);
         size_t last_deq = deq;
-        atomic_uchar *slot;
+        rt_atomic_uchar *slot;
         unsigned char s;
         for (;;)
         {
