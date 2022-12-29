@@ -6,32 +6,36 @@ void rt_list_init(struct rt_list *list)
     list->next = list;
 }
 
+static void insert(struct rt_list *node, struct rt_list *prev, struct rt_list *next)
+{
+    next->prev = node;
+    prev->next = node;
+    node->prev = prev;
+    node->next = next;
+}
+
 void rt_list_insert_before(struct rt_list *node, struct rt_list *next)
 {
-    struct rt_list *const prev = next->prev;
-    node->next = next;
-    node->prev = prev;
-    prev->next = node;
-    next->prev = node;
+    insert(node, next->prev, next);
 }
 
 void rt_list_push_front(struct rt_list *list, struct rt_list *node)
 {
-    rt_list_insert_before(node, list->next);
+    insert(node, list, list->next);
 }
 
 void rt_list_push_back(struct rt_list *list, struct rt_list *node)
 {
-    rt_list_insert_before(node, list);
+    insert(node, list->prev, list);
 }
 
 void rt_list_remove(struct rt_list *node)
 {
     struct rt_list *const next = node->next, *const prev = node->prev;
-    next->prev = prev;
-    prev->next = next;
     node->prev = node;
     node->next = node;
+    next->prev = prev;
+    prev->next = next;
 }
 
 bool rt_list_is_empty(const struct rt_list *list)
