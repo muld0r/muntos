@@ -165,7 +165,7 @@ void rt_syscall_handler(void)
     {
         /* Block signals on the suspending thread. */
         block_all_signals(NULL);
-        *rt_prev_context = (void *)pthread_self();
+        *rt_context_prev = (void *)pthread_self();
 
         atomic_thread_fence(memory_order_release);
         pthread_kill((pthread_t)newctx, SIGRESUME);

@@ -7,7 +7,7 @@
     mrs r3, psplim
     stmdb r1!, {r3-r11}
 
-    ldr r2, =rt_prev_context
+    ldr r2, =rt_context_prev
     ldr r2, [r2]
     str r1, [r2]
 

@@ -66,7 +66,7 @@ void rt_task_exit(void)
     rt_syscall(&exit_record);
 }
 
-void **rt_prev_context;
+void **rt_context_prev;
 
 static void *sched(void)
 {
@@ -110,7 +110,7 @@ static void *sched(void)
         insert_by_priority(&ready_list, &active_task->list);
     }
 
-    rt_prev_context = &active_task->ctx;
+    rt_context_prev = &active_task->ctx;
     active_task = next_task;
 
     rt_logf("sched: switching to %s with priority %u\n", rt_task_name(),

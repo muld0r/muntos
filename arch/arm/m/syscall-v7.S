@@ -12,7 +12,7 @@
     stmdb r1!, {r4-r11, lr}
 
     /* Store the new stack pointer with the saved context. */
-    ldr r2, =rt_prev_context
+    ldr r2, =rt_context_prev
     ldr r2, [r2]
     str r1, [r2]
 

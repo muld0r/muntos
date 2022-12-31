@@ -12,7 +12,7 @@
 
     /* Use the address of the saved r8-r11 registers as the context pointer so
      * they can be popped first on resume. */
-    ldr r2, =rt_prev_context
+    ldr r2, =rt_context_prev
     ldr r2, [r2]
     str r1, [r2]
 

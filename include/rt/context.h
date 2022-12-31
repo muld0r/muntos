@@ -19,6 +19,6 @@ void *rt_context_create_arg(void (*fn)(uintptr_t), uintptr_t arg, void *stack,
  * Pointer to the previous task's context field, used to store the suspending
  * context during a context switch.
  */
-extern void **rt_prev_context;
+extern void **rt_context_prev;
 
 #endif /* RT_CONTEXT_H */
