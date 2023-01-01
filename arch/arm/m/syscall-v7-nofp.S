@@ -1,3 +1,5 @@
+@ vim:ft=arm
+
     bl rt_syscall_run
     cbz r0, .Lreturn
 
@@ -12,5 +14,5 @@
     msr psp, r0
 
 .Lreturn:
-    mov r0, TASK_INITIAL_EXC_RETURN
-    bx r0
+    mov lr, TASK_INITIAL_EXC_RETURN
+    bx lr

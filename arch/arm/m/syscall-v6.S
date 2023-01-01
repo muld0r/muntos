@@ -1,3 +1,5 @@
+@ vim:ft=arm
+
     bl rt_syscall_run
     /* If there's no new context to switch to, return early. */
     cmp r0, 0

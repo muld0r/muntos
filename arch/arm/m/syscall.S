@@ -1,3 +1,5 @@
+@ vim:ft=arm
+
 #include "exc_return.h"
 
     .syntax unified

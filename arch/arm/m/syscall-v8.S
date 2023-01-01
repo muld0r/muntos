@@ -1,3 +1,5 @@
+@ vim:ft=arm
+
     push {r3, lr}
     bl rt_syscall_run
     pop {r3, lr}
