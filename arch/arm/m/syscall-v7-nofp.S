@@ -1,5 +1,3 @@
-#include "arm-m.h"
-
     bl rt_syscall_run
     cbz r0, .Lreturn
 

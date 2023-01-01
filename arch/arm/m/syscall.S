@@ -1,3 +1,5 @@
+#include "exc_return.h"
+
     .syntax unified
     .thumb
     .p2align 1

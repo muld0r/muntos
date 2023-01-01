@@ -39,7 +39,6 @@
     msr psplim, r3
 
 .Lreturn:
-    /* The thread exception return value is always -3 == 0xFFFFFFFD. */
-    movs r0, 3
+    movs r0, -TASK_INITIAL_EXC_RETURN
     negs r0, r0
     bx r0
