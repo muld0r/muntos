@@ -18,7 +18,7 @@
     ldr r2, [r2]
     str r1, [r2]
 
-    /* Load the new register context returned by rt_syscall_run. */
+    /* Load the new context returned by rt_syscall_run. */
     ldmia r0!, {r4-r11, lr}
     tst lr, 0x10
     it eq

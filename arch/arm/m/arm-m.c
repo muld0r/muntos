@@ -34,6 +34,8 @@ struct context
     uint32_t psr;
 };
 
+#define PSR_THUMB (UINT32_C(1) << 24)
+
 static struct context *context_create(void *stack, size_t stack_size)
 {
     void *const stack_end = (char *)stack + stack_size;
@@ -46,8 +48,7 @@ static struct context *context_create(void *stack, size_t stack_size)
     ctx->exc_return = (uint32_t)TASK_INITIAL_EXC_RETURN;
 #endif
     ctx->lr = rt_task_exit;
-    ctx->psr = 0x01000000U; // thumb state
-
+    ctx->psr = PSR_THUMB;
     return ctx;
 }
 
@@ -81,7 +82,7 @@ void *rt_context_create_arg(void (*fn)(uintptr_t), uintptr_t arg, void *stack,
 
 void rt_start(void)
 {
-    // The idle stack needs to be large enough to store a register context.
+    // The idle stack needs to be large enough to store a context.
     static char idle_stack[STACK_SIZE(sizeof(struct context))]
         __attribute__((aligned(STACK_ALIGN)));
 
