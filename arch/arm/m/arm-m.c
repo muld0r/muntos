@@ -51,22 +51,11 @@ static struct context *context_create(void *stack, size_t stack_size)
     return ctx;
 }
 
-static void *ctx_begin(struct gp_context *ctx)
-{
-#if (__ARM_ARCH == 6) || defined(__ARM_ARCH_8M_BASE__)
-    /* On armv6-m and armv8-m base, the context popping process starts from r8
-     * due to the lack of stmdb. */
-    return &ctx->r8;
-#else
-    return ctx;
-#endif
-}
-
 void *rt_context_create(void (*fn)(void), void *stack, size_t stack_size)
 {
     struct context *const ctx = context_create(stack, stack_size);
     ctx->pc.fn = fn;
-    return ctx_begin(ctx);
+    return ctx;
 }
 
 void *rt_context_create_arg(void (*fn)(uintptr_t), uintptr_t arg, void *stack,
@@ -75,7 +64,7 @@ void *rt_context_create_arg(void (*fn)(uintptr_t), uintptr_t arg, void *stack,
     struct context *const ctx = context_create(stack, stack_size);
     ctx->pc.fn_with_arg = fn;
     ctx->r0 = arg;
-    return ctx_begin(ctx);
+    return ctx;
 }
 
 #define STK_CTRL (*(volatile uint32_t *)0xE000E010U)
