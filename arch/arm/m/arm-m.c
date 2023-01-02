@@ -9,7 +9,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-struct gp_context
+struct context
 {
     // Saved by task context switch.
 #if (__ARM_ARCH == 8)
@@ -34,10 +34,10 @@ struct gp_context
     uint32_t psr;
 };
 
-static void *context_create(void *stack, size_t stack_size)
+static struct context *context_create(void *stack, size_t stack_size)
 {
     void *const stack_end = (char *)stack + stack_size;
-    struct gp_context *ctx = stack_end;
+    struct context *ctx = stack_end;
     ctx -= 1;
 #if (__ARM_ARCH == 8)
     ctx->psplim = stack;
@@ -64,7 +64,7 @@ static void *ctx_begin(struct gp_context *ctx)
 
 void *rt_context_create(void (*fn)(void), void *stack, size_t stack_size)
 {
-    struct gp_context *ctx = context_create(stack, stack_size);
+    struct context *const ctx = context_create(stack, stack_size);
     ctx->pc.fn = fn;
     return ctx_begin(ctx);
 }
@@ -72,7 +72,7 @@ void *rt_context_create(void (*fn)(void), void *stack, size_t stack_size)
 void *rt_context_create_arg(void (*fn)(uintptr_t), uintptr_t arg, void *stack,
                             size_t stack_size)
 {
-    struct gp_context *ctx = context_create(stack, stack_size);
+    struct context *const ctx = context_create(stack, stack_size);
     ctx->pc.fn_with_arg = fn;
     ctx->r0 = arg;
     return ctx_begin(ctx);
@@ -93,7 +93,7 @@ void *rt_context_create_arg(void (*fn)(uintptr_t), uintptr_t arg, void *stack,
 void rt_start(void)
 {
     // The idle stack needs to be large enough to store a register context.
-    static char idle_stack[STACK_SIZE(sizeof(struct gp_context))]
+    static char idle_stack[STACK_SIZE(sizeof(struct context))]
         __attribute__((aligned(STACK_ALIGN)));
 
     // Set the process stack pointer to the top of the idle stack.
