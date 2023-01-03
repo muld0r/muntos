@@ -55,17 +55,17 @@ int main(void)
 
     for (uintptr_t i = 0; i < NPUSHERS; ++i)
     {
-        rt_task_init_arg(&pushers[i], pusher, i * TASK_INC, "pusher",
-                         2, pusher_stacks[i], TASK_STACK_SIZE);
+        rt_task_init_arg(&pushers[i], pusher, i * TASK_INC, "pusher", 1,
+                         pusher_stacks[i], TASK_STACK_SIZE);
     }
 
     static char popper_stack[TASK_STACK_SIZE]
         __attribute__((aligned(STACK_ALIGN)));
-    RT_TASK(popper, popper_stack, 1);
+    RT_TASK(popper, popper_stack, 2);
 
     static char timeout_stack[TASK_STACK_SIZE]
         __attribute__((aligned(STACK_ALIGN)));
-    RT_TASK(timeout, timeout_stack, 0);
+    RT_TASK(timeout, timeout_stack, UINT_MAX);
     rt_start();
 
     if (out_of_order)

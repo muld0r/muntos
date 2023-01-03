@@ -36,7 +36,7 @@ int main(void)
 {
     static char task_stacks[2][TASK_STACK_SIZE]
         __attribute__((aligned(STACK_ALIGN)));
-    RT_TASK_ARG(sleep_periodic, 5, task_stacks[0], 0);
+    RT_TASK_ARG(sleep_periodic, 5, task_stacks[0], 2);
     RT_TASK_ARG(sleep_periodic, 10, task_stacks[1], 1);
     rt_start();
 

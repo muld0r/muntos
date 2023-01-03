@@ -16,15 +16,15 @@
 #define task_from_list(l) (task_from_member(l, list))
 #define task_from_sleep_list(l) (task_from_member(l, sleep_list))
 
-static bool task_priority_less_than(const struct rt_list *a,
-                                    const struct rt_list *b)
+static bool task_priority_greater_than(const struct rt_list *a,
+                                       const struct rt_list *b)
 {
-    return task_from_list(a)->priority < task_from_list(b)->priority;
+    return task_from_list(a)->priority > task_from_list(b)->priority;
 }
 
 static void insert_by_priority(struct rt_list *list, struct rt_list *node)
 {
-    rt_list_insert_by(list, node, task_priority_less_than);
+    rt_list_insert_by(list, node, task_priority_greater_than);
 }
 
 static RT_LIST(ready_list);
@@ -37,7 +37,7 @@ static struct rt_task idle_task = {
     .sleep_list = RT_LIST_INIT(idle_task.sleep_list),
     .record = NULL,
     .name = "idle",
-    .priority = UINT_MAX,
+    .priority = 0,
 };
 
 static struct rt_task *active_task = &idle_task;
@@ -84,9 +84,9 @@ static void *sched(void)
 
     /* If the active task is still runnable and the new task is lower priority,
      * then continue executing the active task. */
-    if (active_is_runnable && (next_task->priority > active_task->priority))
+    if (active_is_runnable && (active_task->priority > next_task->priority))
     {
-        rt_logf("sched: %s is still highest priority (%u < %u)\n",
+        rt_logf("sched: %s is still highest priority (%u > %u)\n",
                 rt_task_name(), active_task->priority, next_task->priority);
         return NULL;
     }

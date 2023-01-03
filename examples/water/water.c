@@ -47,13 +47,13 @@ int main(void)
 {
     static char timeout_stack[TASK_STACK_SIZE]
         __attribute__((aligned(STACK_ALIGN)));
-    RT_TASK(timeout, timeout_stack, 0);
+    RT_TASK(timeout, timeout_stack, UINT_MAX);
 
     static char atom_stacks[3][TASK_STACK_SIZE]
         __attribute__((aligned(STACK_ALIGN)));
-    RT_TASK(hydrogen_loop, atom_stacks[0], 3);
+    RT_TASK(hydrogen_loop, atom_stacks[0], 1);
     RT_TASK(hydrogen_loop, atom_stacks[1], 2);
-    RT_TASK(oxygen_loop, atom_stacks[2], 1);
+    RT_TASK(oxygen_loop, atom_stacks[2], 3);
 
     rt_start();
 
