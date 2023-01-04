@@ -136,7 +136,7 @@ void *rt_context_create_arg(void (*fn)(uintptr_t), uintptr_t arg, void *stack,
     return context_create(parg, stack, stack_size);
 }
 
-void rt_syscall_post(void)
+void rt_syscall_pend(void)
 {
     pthread_kill(pthread_self(), SIGSYSCALL);
 }

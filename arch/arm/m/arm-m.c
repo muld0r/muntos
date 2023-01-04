@@ -146,7 +146,7 @@ void rt_stop(void)
         ipsr;                                                                  \
     })
 
-void rt_syscall_post(void)
+void rt_syscall_pend(void)
 {
     /*
      * If no exception is active, we are in thread mode and should use svc.

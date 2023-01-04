@@ -97,9 +97,12 @@ void rt_syscall(struct rt_syscall_record *record);
 void rt_syscall_handler(void);
 
 /*
- * Trigger the syscall handler.
+ * Architecture-dependent trigger for the syscall handler. This should cause
+ * the syscall handler to run before this function returns if called from a
+ * task, or when no other interrupts are running, but before another task gets
+ * to run, if called from an interrupt.
  */
-void rt_syscall_post(void);
+void rt_syscall_pend(void);
 
 /*
  * Perform all pending system calls and return a new context to execute or NULL

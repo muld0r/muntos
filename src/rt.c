@@ -44,7 +44,7 @@ static struct rt_task *active_task = &idle_task;
 
 void rt_sched(void)
 {
-    rt_syscall_post();
+    rt_syscall_pend();
 }
 
 const char *rt_task_name(void)
@@ -284,7 +284,7 @@ void rt_syscall(struct rt_syscall_record *record)
                                                      memory_order_relaxed))
     {
     }
-    rt_syscall_post();
+    rt_syscall_pend();
 }
 
 void *rt_syscall_run(void)

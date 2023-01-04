@@ -21,4 +21,10 @@ void *rt_context_create_arg(void (*fn)(uintptr_t), uintptr_t arg, void *stack,
  */
 extern void **rt_context_prev;
 
+/*
+ * Flags for the current task context. The meaning of this value is
+ * port-specific and is not implemented for all ports.
+ */
+extern uint32_t rt_context_flags;
+
 #endif /* RT_CONTEXT_H */
