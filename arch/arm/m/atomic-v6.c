@@ -5,7 +5,7 @@ static void barrier_start(int memorder)
     if ((memorder == __ATOMIC_RELEASE) || (memorder == __ATOMIC_ACQ_REL) ||
         (memorder == __ATOMIC_SEQ_CST))
     {
-        __asm__("dmb sy");
+        __asm__("dmb sy" ::: "memory");
     }
 }
 
@@ -14,7 +14,7 @@ static void barrier_end(int memorder)
     if ((memorder == __ATOMIC_CONSUME) || (memorder == __ATOMIC_ACQUIRE) ||
         (memorder == __ATOMIC_ACQ_REL) || (memorder == __ATOMIC_SEQ_CST))
     {
-        __asm__("dmb sy");
+        __asm__("dmb sy" ::: "memory");
     }
 }
 
