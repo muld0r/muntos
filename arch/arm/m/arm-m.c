@@ -139,7 +139,7 @@ void rt_stop(void)
 #define IPSR                                                                   \
     ({                                                                         \
         uint32_t ipsr;                                                         \
-        __asm__("mrs %0, ipsr" : "=r"(ipsr));                                  \
+        __asm__ __volatile__("mrs %0, ipsr" : "=r"(ipsr));                     \
         ipsr;                                                                  \
     })
 
