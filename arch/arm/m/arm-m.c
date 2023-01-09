@@ -12,12 +12,12 @@
 struct context
 {
     // Saved by task context switch.
-#if (__ARM_ARCH == 8)
+#if __ARM_ARCH == 8
     void *psplim;
 #endif
     uint32_t r4, r5, r6, r7, r8, r9, r10, r11;
 
-#if defined(__ARM_FP)
+#ifdef __ARM_FP
     /* Only use a per-task exception return value if floating-point is enabled,
      * because otherwise the exception return value is always the same. */
     uint32_t exc_return;
@@ -41,12 +41,15 @@ static struct context *context_create(void *stack, size_t stack_size)
     void *const stack_end = (char *)stack + stack_size;
     struct context *ctx = stack_end;
     ctx -= 1;
-#if (__ARM_ARCH == 8)
+
+#if __ARM_ARCH == 8
     ctx->psplim = stack;
 #endif
-#if defined(__ARM_FP)
+
+#ifdef __ARM_FP
     ctx->exc_return = (uint32_t)TASK_INITIAL_EXC_RETURN;
 #endif
+
     ctx->lr = rt_task_exit;
     ctx->psr = PSR_THUMB;
     return ctx;
@@ -88,7 +91,7 @@ void rt_start(void)
 
     // Set the process stack pointer to the top of the idle stack.
     __asm__("msr psp, %0" : : "r"(&idle_stack[sizeof idle_stack]));
-#if (__ARM_ARCH == 8)
+#if __ARM_ARCH == 8
     // If supported, set the process stack pointer limit.
     __asm__("msr psplim, %0" : : "r"(idle_stack));
 #endif
@@ -169,6 +172,6 @@ void rt_logf(const char *fmt, ...)
     (void)fmt;
 }
 
-#if (__ARM_ARCH == 6)
+#if __ARM_ARCH == 6
 #include "atomic-v6.c"
 #endif

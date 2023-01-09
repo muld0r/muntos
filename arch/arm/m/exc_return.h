@@ -1,10 +1,10 @@
 #pragma once
 
-#if !defined(__ARM_ARCH)
+#ifndef __ARM_ARCH
 #error "__ARM_ARCH must be defined"
 #endif
 
-#if (__ARM_ARCH == 8)
+#if __ARM_ARCH == 8
 
 // non-secure stack, thread mode, no FP, use PSP, non-secure exception
 #define TASK_INITIAL_EXC_RETURN -68
