@@ -3,8 +3,6 @@
 #include "exc_return.h"
 
     .syntax unified
-    .thumb
-    .balign 2
     .section .text.rt_syscall_handler
     .global rt_syscall_handler
     .type rt_syscall_handler, %function
