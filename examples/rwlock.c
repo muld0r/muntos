@@ -1,8 +1,8 @@
-#include <rt/rwlock.h>
+#include <rt/log.h>
 #include <rt/rt.h>
+#include <rt/rwlock.h>
 #include <rt/sleep.h>
 #include <rt/task.h>
-#include <rt/log.h>
 
 static RT_RWLOCK(lock);
 static unsigned long x = 0;
@@ -53,7 +53,8 @@ int main(void)
     static struct rt_task reader_tasks[NUM_READERS];
     for (int i = 0; i < NUM_READERS; ++i)
     {
-        rt_task_init(&reader_tasks[i], reader, "reader", 1, reader_stacks[i], TASK_STACK_SIZE);
+        rt_task_init(&reader_tasks[i], reader, "reader", 1, reader_stacks[i],
+                     TASK_STACK_SIZE);
     }
 
     static char writer_stack[TASK_STACK_SIZE]

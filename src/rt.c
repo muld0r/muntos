@@ -305,8 +305,8 @@ void *rt_syscall_run(void)
                                     memory_order_acquire);
     while (record)
     {
-        /* Store the next record in the list now because some syscall records may
-         * be re-enabled immediately after they are handled. */
+        /* Store the next record in the list now because some syscall records
+         * may be re-enabled immediately after they are handled. */
         struct rt_syscall_record *next_record = record->next;
         switch (record->syscall)
         {

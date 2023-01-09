@@ -6,7 +6,8 @@ void rt_list_init(struct rt_list *list)
     list->next = list;
 }
 
-static void insert(struct rt_list *node, struct rt_list *prev, struct rt_list *next)
+static void insert(struct rt_list *node, struct rt_list *prev,
+                   struct rt_list *next)
 {
     next->prev = node;
     prev->next = node;
