@@ -10,10 +10,8 @@ rt_syscall_handler:
 
 #if __ARM_ARCH == 6 || defined(__ARM_ARCH_8M_BASE__)
 #include "syscall-v6-v8base.S"
-#elif defined(__ARM_FP)
-#include "syscall-v7-v8.S"
 #else
-#include "syscall-v7-v8-nofp.S"
+#include "syscall-v7-v8.S"
 #endif
 
     .size rt_syscall_handler, .-rt_syscall_handler
