@@ -8,9 +8,9 @@
     .type rt_syscall_handler, %function
 rt_syscall_handler:
 
-#if __ARM_ARCH == 6
+#if __ARM_ARCH == 6 || defined(__ARM_ARCH_8M_BASE__)
 
-#include "syscall-v6.S"
+#include "syscall-v6-v8base.S"
 
 #elif __ARM_ARCH == 7
 
@@ -22,9 +22,7 @@ rt_syscall_handler:
 
 #elif __ARM_ARCH == 8
 
-#ifdef __ARM_ARCH_8M_BASE__
-#include "syscall-v8-base.S"
-#elif defined(__ARM_FP)
+#ifdef __ARM_FP
 #include "syscall-v8.S"
 #else
 #include "syscall-v8-nofp.S"
