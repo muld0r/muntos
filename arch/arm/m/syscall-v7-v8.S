@@ -1,6 +1,12 @@
 @ vim:ft=arm
 
+/*
+ * This variant of the syscall handler supports armv7-m and armv8-m, with or
+ * without floating-point.
+ */
+
 #if __ARM_ARCH == 8
+/* In armv8-m, save and restore psplim using r3 as a temporary. */
 #define base r3
 #define getpsplim mrs r3, psplim
 #define setpsplim msr psplim, r3
@@ -11,6 +17,11 @@
 #endif
 
 #ifdef __ARM_FP
+/*
+ * For floating-point, save and restore lr, which contains the floating-point
+ * context bit of the exception return value, and use that bit to decide if the
+ * non-volatile fp context should be saved/loaded as well.
+ */
 #define pushlr push {r3, lr}
 #define poplr pop {r3, lr}
 #define saveregs stmdb r1!, {base-r11, lr}
@@ -19,6 +30,10 @@
 #define loadfp tst lr, 0x10; it eq; vldmiaeq r0!, {s16-s31}
 #define return bx lr
 #else
+/*
+ * With nofp, lr can be discarded and we can reload the contant exception
+ * return value and branch to it.
+ */
 #define pushlr
 #define poplr
 #define saveregs stmdb r1!, {base-r11}
