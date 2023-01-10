@@ -22,7 +22,7 @@
  * context bit of the exception return value, and use that bit to decide if the
  * non-volatile fp context should be saved/loaded as well.
  */
-#define pushlr push {r3, lr}
+#define pushlr push {r3, lr} /* push r3 as well to keep sp 8-byte aligned */
 #define poplr pop {r3, lr}
 #define saveregs stmdb r1!, {base-r11, lr}
 #define loadregs ldmia r0!, {base-r11, lr}
