@@ -1,21 +1,31 @@
 @ vim:ft=arm
 
-#ifdef __ARM_ARCH_8M_BASE__
+/*
+ * This variant of the syscall handler supports armv6-m and armv8-m-base. As
+ * with the v7-v8 version, if using v8, we need to save/restore psplim.
+ *
+ * v8-m-base also supports cbz while v6-m does not, but otherwise they support
+ * the same subset of v7/v8 that make the save/restore procedure different,
+ * mainly due to the lack of stmdb and ldm.w/stm.w.
+ */
+
+#if __ARM_ARCH == 8
 #define CONTEXT_SIZE 36
 #define base r3
 #define getpsplim mrs r3, psplim
 #define setpsplim msr psplim, r3
+#define returnifnull cbz r0, .Lreturn
 #else /* v6 */
 #define CONTEXT_SIZE 32
 #define base r4
 #define getpsplim
 #define setpsplim
+#define returnifnull cmp r0, 0; beq .Lreturn
 #endif
 
     bl rt_syscall_run
     /* If there's no new context to switch to, return early. */
-    cmp r0, 0
-    beq .Lreturn
+    returnifnull
 
     /* Store the suspending task's context to its stack. */
     mrs r1, psp
