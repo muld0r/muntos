@@ -1,9 +1,7 @@
 #ifndef RT_MUTEX_H
 #define RT_MUTEX_H
 
-#include <rt/atomic.h>
-#include <rt/list.h>
-#include <rt/syscall.h>
+#include <rt/sem.h>
 
 struct rt_mutex;
 
@@ -19,22 +17,12 @@ bool rt_mutex_timedlock(struct rt_mutex *mutex, unsigned long ticks);
 
 struct rt_mutex
 {
-    struct rt_list wait_list;
-    struct rt_syscall_record unlock_record;
-    rt_atomic_int lock;
-    int num_waiters;
+    struct rt_sem sem;
 };
 
 #define RT_MUTEX_INIT(name)                                                    \
     {                                                                          \
-        .wait_list = RT_LIST_INIT(name.wait_list),                             \
-        .unlock_record =                                                       \
-            {                                                                  \
-                .next = NULL,                                                  \
-                .args.mutex_unlock.mutex = &name,                              \
-                .syscall = RT_SYSCALL_MUTEX_UNLOCK,                            \
-            },                                                                 \
-        .lock = 1, .num_waiters = 0,                                           \
+        .sem = RT_SEM_BINARY_INIT(name.sem, 1),                                \
     }
 
 #define RT_MUTEX(name) struct rt_mutex name = RT_MUTEX_INIT(name)

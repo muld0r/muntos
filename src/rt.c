@@ -175,23 +175,6 @@ static void wake_sem_waiters(struct rt_sem *sem)
     }
 }
 
-static void wake_mutex_waiter(struct rt_mutex *mutex)
-{
-    int waiters = -rt_atomic_load_explicit(&mutex->lock, memory_order_acquire);
-    if (waiters < 0)
-    {
-        waiters = 0;
-    }
-    if (mutex->num_waiters > waiters)
-    {
-        struct rt_task *task =
-            task_from_list(rt_list_pop_front(&mutex->wait_list));
-        wake_if_sleeping(task);
-        insert_by_priority(&ready_list, &task->list);
-        --mutex->num_waiters;
-    }
-}
-
 static void tick_syscall(void)
 {
     /*
@@ -228,17 +211,6 @@ static void tick_syscall(void)
                     rt_list_remove(&task->list);
                     --sem->num_waiters;
                     wake_sem_waiters(sem);
-                    task->record->syscall = RT_SYSCALL_SLEEP;
-                }
-                else if (task->record->syscall == RT_SYSCALL_MUTEX_TIMEDLOCK)
-                {
-                    struct rt_mutex *mutex =
-                        task->record->args.mutex_timedlock.mutex;
-                    rt_atomic_fetch_add_explicit(&mutex->lock, 1,
-                                                 memory_order_relaxed);
-                    rt_list_remove(&task->list);
-                    --mutex->num_waiters;
-                    wake_mutex_waiter(mutex);
                     task->record->syscall = RT_SYSCALL_SLEEP;
                 }
             }
@@ -376,29 +348,6 @@ void *rt_syscall_run(void)
             wake_sem_waiters(sem);
             break;
         }
-        case RT_SYSCALL_MUTEX_LOCK:
-        {
-            struct rt_mutex *const mutex = record->args.mutex_lock.mutex;
-            suspend(&mutex->wait_list, record->args.mutex_lock.task);
-            ++mutex->num_waiters;
-            /* Evaluate mutex wakes here as well in case an unlock occurred
-             * before the wait syscall was handled. */
-            wake_mutex_waiter(mutex);
-            break;
-        }
-        case RT_SYSCALL_MUTEX_TIMEDLOCK:
-        {
-            struct rt_mutex *const mutex = record->args.mutex_timedlock.mutex;
-            suspend_with_timeout(&mutex->wait_list,
-                                 record->args.mutex_timedlock.task,
-                                 record->args.mutex_timedlock.ticks);
-            ++mutex->num_waiters;
-            wake_mutex_waiter(mutex);
-            break;
-        }
-        case RT_SYSCALL_MUTEX_UNLOCK:
-            wake_mutex_waiter(record->args.mutex_unlock.mutex);
-            break;
         }
         record = next_record;
     }

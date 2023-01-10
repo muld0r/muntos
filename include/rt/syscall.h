@@ -23,13 +23,6 @@ enum rt_syscall
 
     /* Post a semaphore from a task or interrupt. */
     RT_SYSCALL_SEM_POST,
-
-    /* Lock a mutex from a task. */
-    RT_SYSCALL_MUTEX_LOCK,
-    RT_SYSCALL_MUTEX_TIMEDLOCK,
-
-    /* Unlock a mutex from a task or interrupt. */
-    RT_SYSCALL_MUTEX_UNLOCK,
 };
 
 union rt_syscall_args
@@ -64,21 +57,6 @@ union rt_syscall_args
     {
         struct rt_sem *sem;
     } sem_post;
-    struct
-    {
-        struct rt_task *task;
-        struct rt_mutex *mutex;
-    } mutex_lock;
-    struct
-    {
-        struct rt_task *task;
-        struct rt_mutex *mutex;
-        unsigned long ticks;
-    } mutex_timedlock;
-    struct
-    {
-        struct rt_mutex *mutex;
-    } mutex_unlock;
 };
 
 struct rt_syscall_record
