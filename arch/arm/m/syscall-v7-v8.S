@@ -1,8 +1,7 @@
 @ vim:ft=arm
 
 /*
- * This variant of the syscall handler supports armv7-m and armv8-m, with or
- * without floating-point.
+ * This variant of the syscall handler supports armv{7,8}-m{,+nofp}.
  */
 
 #if __ARM_ARCH == 8
@@ -31,8 +30,8 @@
 #define return bx lr
 #else
 /*
- * With nofp, lr can be discarded and we can reload the contant exception
- * return value and branch to it.
+ * With nofp, lr can be clobbered and reloaded from an immediate because the
+ * exception return value for tasks is a constant.
  */
 #define pushlr
 #define poplr

@@ -1,15 +1,15 @@
 @ vim:ft=arm
 
 /*
- * This variant of the syscall handler supports armv6-m and armv8-m-base. As
- * with the v7-v8 version, if using v8, we need to save/restore psplim.
+ * This variant of the syscall handler supports armv6-m and armv8-m.base.
  *
- * v8-m-base also supports cbz while v6-m does not, but otherwise they support
- * the same subset of v7/v8 that make the save/restore procedure different,
- * mainly due to the lack of stmdb and ldm.w/stm.w.
+ * armv8-m.base also supports cbz while armv6-m does not, but otherwise they
+ * support the same subset of armv{7,8}-m that makes the save/restore procedure
+ * different, mainly due to the lack of stmdb and ldm.w/stm.w.
  */
 
 #if __ARM_ARCH == 8
+/* In armv8-m.base, save and restore psplim using r3 as a temporary. */
 #define CONTEXT_SIZE 36
 #define base r3
 #define getpsplim mrs r3, psplim
