@@ -20,7 +20,7 @@
 /*
  * For floating-point, save and restore lr, which contains the floating-point
  * context bit of the exception return value, and use that bit to decide if the
- * non-volatile fp context should be saved/loaded as well.
+ * non-volatile fp context should be saved/restored as well.
  */
 #define pushlr push {r3, lr} /* push r3 as well to keep sp 8-byte aligned */
 #define poplr pop {r3, lr}
