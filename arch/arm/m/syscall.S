@@ -12,20 +12,20 @@ rt_syscall_handler:
 
 #include "syscall-v6-v8base.S"
 
-#elif __ARM_ARCH == 7
+#else
 
 #ifdef __ARM_FP
+
+#if __ARM_ARCH == 7
 #include "syscall-v7.S"
 #else
-#include "syscall-v7-nofp.S"
+#include "syscall-v8.S"
 #endif
 
-#elif __ARM_ARCH == 8
-
-#ifdef __ARM_FP
-#include "syscall-v8.S"
 #else
-#include "syscall-v8-nofp.S"
+
+#include "syscall-v7-v8-nofp.S"
+
 #endif
 
 #endif
