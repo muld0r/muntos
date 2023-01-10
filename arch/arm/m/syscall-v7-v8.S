@@ -39,7 +39,7 @@
 #define loadregs ldmia r0!, {base-r11}
 #define savefp
 #define loadfp
-#define return mov lr, TASK_INITIAL_EXC_RETURN; bx lr
+#define return mov r0, TASK_INITIAL_EXC_RETURN; bx r0
 #endif
 
     pushlr
