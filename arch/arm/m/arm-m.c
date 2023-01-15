@@ -73,8 +73,8 @@ void *rt_context_create_arg(void (*fn)(uintptr_t), uintptr_t arg, void *stack,
 
 #define STK_CTRL (*(volatile uint32_t *)0xE000E010U)
 #define STK_VAL (*(volatile uint32_t *)0xE000E018U)
-#define STK_CTRL_ENABLE 0x1U
-#define STK_CTRL_TICKINT 0x2U
+#define STK_CTRL_ENABLE (UINT32_C(1) << 0)
+#define STK_CTRL_TICKINT (UINT32_C(1) << 1)
 
 #define SHPR ((volatile uint32_t *)0xE000ED18U)
 #define SHPR2 (SHPR[1])
@@ -137,7 +137,7 @@ void rt_stop(void)
 }
 
 #define ICSR (*(volatile uint32_t *)0xE000ED04UL)
-#define PENDSVSET (1U << 28)
+#define PENDSVSET (UINT32_C(1) << 28)
 
 #define IPSR                                                                   \
     ({                                                                         \
