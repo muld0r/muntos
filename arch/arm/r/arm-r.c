@@ -10,21 +10,15 @@
 #include <stdint.h>
 #include <string.h>
 
-#if defined(__ARM_FP)
-#define USE_CONTEXT_FLAGS 1
-#else
-#define USE_CONTEXT_FLAGS 0
-#endif
-
-#if USE_CONTEXT_FLAGS
-uint32_t rt_context_flags = 0;
+// A flag indicating whether the active task has an fp context.
+#ifdef __ARM_FP
+volatile bool rt_task_fp_enabled = false;
 #endif
 
 struct context
 {
-    // Context flags are pushed along with the non-volatile regs.
-#if USE_CONTEXT_FLAGS
-    uint32_t flags;
+#ifdef __ARM_FP
+    uint32_t fp_enabled;
 #endif
     // Non-volatile regs are pushed last, only if a context switch occurs.
     uint32_t r4, r5, r6, r7, r8, r9, r10, r11;
@@ -69,8 +63,8 @@ static struct context *context_create(void *stack, size_t stack_size,
     const uint32_t cpsr_thumb = (fn_addr & 0x1) << CPSR_THUMB_SHIFT;
     ctx->cpsr = CPSR_MODE_SYS | CPSR_E | cpsr_thumb;
 
-#if USE_CONTEXT_FLAGS
-    ctx->flags = 0;
+#ifdef __ARM_FP
+    ctx->fp_enabled = 0;
 #endif
 
     return ctx;
@@ -113,12 +107,11 @@ void rt_start(void)
 }
 
 #if defined(__ARM_FP)
-void rt_enable_fpu(void)
+void rt_task_enable_fp(void)
 {
-    rt_context_flags |= 1;
-    /* Force the update of rt_context_flags to occur before setting fpscr.
-     * If fpscr is set and a context switch occurs before the context flag is
-     * updated, the write to fpscr will be lost. */
+    rt_task_fp_enabled = true;
+    /* rt_task_fp_enabled must be set before fpscr. If fpscr is set first and
+     * then a context switch occurs, the write to fpscr will be lost. */
     __asm__("dsb" ::: "memory");
     __asm__("vmsr fpscr, %0" : : "r"(0));
 }

@@ -55,12 +55,12 @@ rt_syscall_handler:
      * which also clears the exclusive monitor. */
 
 #ifdef __ARM_FP
-    // Get the task's flags.
-    ldr r1, =rt_context_flags
-    ldr r2, [r1]
+    // Check if the task has a floating-point context.
+    ldr r1, =rt_task_fp_enabled
+    ldrb r2, [r1]
 
     // Store the task's floating-point context if used.
-    tst r2, 1
+    cmp r2, 0
     ittt ne
     vpushne {d0-d15}
     vmrsne r3, fpscr
@@ -83,11 +83,11 @@ rt_syscall_handler:
 #ifdef __ARM_FP
     pop {r2, r4-r11}
 
-    // Restore the task's flags.
-    str r2, [r1] // r1 still contains &rt_context_flags
+    // Restore rt_task_fp_enabled.
+    strb r2, [r1] // r1 still contains &rt_task_fp_enabled
 
     // Restore the task's floating-point context if used.
-    tst r2, 1
+    cmp r2, 0
     ittt ne
     popne {r3}
     vmsrne fpscr, r3

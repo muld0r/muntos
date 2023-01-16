@@ -45,6 +45,15 @@ const char *rt_task_name(void);
  */
 struct rt_task *rt_task_self(void);
 
+/*
+ * On some floating-point capable architectures, it is necessary for each task
+ * to indicate that it needs a floating-point context; this function is only
+ * implemented for those architectures (currently just Arm R-Profile). On these
+ * architectures, rt_task_enable_fp must be called in each task before that
+ * task executes any floating-point code.
+ */
+void rt_task_enable_fp(void);
+
 struct rt_task
 {
     struct rt_list list;
