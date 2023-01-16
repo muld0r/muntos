@@ -16,6 +16,14 @@
 #include "vim_ssi.S"
 #endif
 
+#ifndef __thumb__
+// arm mode doesn't have cbz, so make our own.
+.macro cbz reg, label
+    cmp \reg, 0
+    beq \label
+.endm
+#endif
+
     .syntax unified
     .section .text.rt_syscall_handler
     .global rt_syscall_handler
@@ -48,8 +56,7 @@ rt_syscall_handler:
     blx rt_syscall_run
 
     // If there's no new context to switch to, return early.
-    cmp r0, 0
-    beq .Lreturn
+    cbz r0, .Lreturn
 
     /* Ordinarily a clrex is necessary here, but rt_syscall_run uses strex,
      * which also clears the exclusive monitor. */
@@ -60,11 +67,11 @@ rt_syscall_handler:
     ldrb r2, [r1]
 
     // Store the task's floating-point context if used.
-    cmp r2, 0
-    ittt ne
-    vpushne {d0-d15}
-    vmrsne r3, fpscr
-    pushne {r3}
+    cbz r2, .Lskip_fp_save
+    vpush {d0-d15}
+    vmrs r3, fpscr
+    push {r3}
+.Lskip_fp_save:
 
     // Store the rest of the task's context.
     push {r2, r4-r11} // flags, callee-saved registers
@@ -87,11 +94,12 @@ rt_syscall_handler:
     strb r2, [r1] // r1 still contains &rt_task_fp_enabled
 
     // Restore the task's floating-point context if used.
-    cmp r2, 0
-    ittt ne
-    popne {r3}
-    vmsrne fpscr, r3
-    vpopne {d0-d15}
+    cbz r2, .Lskip_fp_restore
+    pop {r3}
+    vmsr fpscr, r3
+    vpop {d0-d15}
+.Lskip_fp_restore:
+
 #else
     pop {r4-r11}
 #endif
