@@ -27,33 +27,27 @@
     .syntax unified
     .section .text.rt_syscall_handler
     .global rt_syscall_handler
+    .global rt_syscall_handler_irq
+    .global rt_syscall_handler_svc
     .type rt_syscall_handler, %function
+    .type rt_syscall_handler_irq, %function
+    .type rt_syscall_handler_svc, %function
 rt_syscall_handler:
+rt_syscall_handler_irq:
     sub lr, 4
-
-    // Push irq lr (task pc) and spsr (task cpsr) to the system stack.
+rt_syscall_handler_svc:
+    // Push lr (task pc) and spsr (task cpsr) to the system stack.
     srsdb 31!
     // Switch to system mode.
     cps 31
-    // Push only some registers to the stack first so we can re-enable IRQs.
-    push {r0-r2}
-
+    push {r0-r3, r12, lr}
     vic_syscall_start
-    cpsie i
 
-    /* Align the stack pointer to 8 bytes and save the adjustment in r0 along
-     * with the rest of the task's volatile registers. */
-#ifdef __thumb__
-    // thumb doesn't support and with sp.
-    mov r1, sp
-    and r0, r1, 4
-#else
-    and r0, sp, 4
-#endif
-    sub sp, r0
-    push {r0, r3, r12, lr}
-
+    // Switch to supervisor mode and re-enable interrupts.
+    cpsie i, 19
     blx rt_syscall_run
+    // Switch back to system mode to save and restore task contexts.
+    cps 31
 
     // If there's no new context to switch to, return early.
     cbz r0, .Lreturn
@@ -105,19 +99,14 @@ rt_syscall_handler:
 #endif
 
 .Lreturn:
-    /* Restore the second group of volatile registers and undo the stack
-     * adjustment with interrupts still enabled. */
-    pop {r0, r3, r12, lr}
-    add sp, r0
-
     /* Disable interrupts again before unmasking the syscall interrupt at the
      * VIC; otherwise, repeated syscalls could grow the task stack
      * indefinitely. */
     cpsid i
     vic_syscall_finish
 
-    // Restore the remaining volatile registers.
-    pop {r0-r2}
+    // Restore the volatile registers.
+    pop {r0-r3, r12, lr}
     // Restore the task's pc and cpsr (this re-enables interrupts).
     rfeia sp!
 

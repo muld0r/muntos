@@ -23,14 +23,9 @@ struct context
     // Non-volatile regs are pushed last, only if a context switch occurs.
     uint32_t r4, r5, r6, r7, r8, r9, r10, r11;
 
-    // Remaining volatile regs are pushed after re-enabling interrupts.
-    uint32_t stack_adjust, r3, r12;
+    // Volatile registers are pushed next, before re-enabling interrupts.
+    uint32_t r0, r1, r2, r3, r12;
     void (*lr)(void);
-
-    // If a gap is required for stack alignment, it will be here.
-
-    // These registers are saved first, before re-enabling interrupts.
-    uint32_t r0, r1, r2;
 
     // pc and cpsr are pushed first by srsdb.
     union
@@ -57,7 +52,6 @@ static struct context *context_create(void *stack, size_t stack_size,
     void *const stack_end = (char *)stack + stack_size;
     struct context *ctx = stack_end;
     ctx -= 1;
-    ctx->stack_adjust = 0;
     ctx->lr = rt_task_exit;
 
     const uint32_t cpsr_thumb = (fn_addr & 0x1) << CPSR_THUMB_SHIFT;
