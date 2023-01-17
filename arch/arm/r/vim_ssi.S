@@ -40,8 +40,6 @@
     str r1, [r0, SSI_REQENACLR - SYS_BASE]
     // Clear the software interrupt.
     ldr r1, [r0, SSIVEC - SYS_BASE]
-    // Ensure the above accesses are complete before re-enabling interrupts.
-    dsb
 .endm
 
 .macro vic_syscall_finish
