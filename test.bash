@@ -7,13 +7,15 @@ scons -j $(nproc)
 trap 'if [ "$?" != "0" ]; then echo "test failed!"; fi' EXIT
 
 set -x
-build/simple
-build/sleep
-build/sem
+
 build/list
+build/mutex
+build/once
 build/pq
 build/queue
-build/mutex
 build/rwlock
-build/water_sem
+build/sem
+build/simple
+build/sleep
 build/water_cond
+build/water_sem
