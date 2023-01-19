@@ -36,7 +36,7 @@ struct context
     uint32_t cpsr;
 };
 
-#if defined(__ARM_BIG_ENDIAN)
+#ifdef __ARM_BIG_ENDIAN
 #define BIG_ENDIAN UINT32_C(1)
 #else
 #define BIG_ENDIAN UINT32_C(0)
@@ -100,7 +100,7 @@ void rt_start(void)
     }
 }
 
-#if defined(__ARM_FP)
+#ifdef __ARM_FP
 void rt_task_enable_fp(void)
 {
     rt_task_fp_enabled = true;
