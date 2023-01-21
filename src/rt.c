@@ -160,7 +160,7 @@ static void wake_if_sleeping(struct rt_task *task)
 
 static void wake_sem_waiters(struct rt_sem *sem)
 {
-    int waiters = -rt_atomic_load_explicit(&sem->value, memory_order_acquire);
+    int waiters = -rt_atomic_load_explicit(&sem->value, memory_order_relaxed);
     if (waiters < 0)
     {
         waiters = 0;
