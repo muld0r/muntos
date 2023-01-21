@@ -9,8 +9,9 @@
 struct rt_once;
 
 /*
- * Run fn exactly once, among all callers using the same rt_once. This function
- * only returns after fn has been called by some task and returned.
+ * Run fn exactly once among all callers using the same struct rt_once.
+ * Regardless of which caller actually executes fn, rt_once only returns for
+ * any caller after fn has returned.
  */
 static inline void rt_once(struct rt_once *once, void (*fn)(void));
 
@@ -28,7 +29,7 @@ struct rt_once
 #define RT_ONCE(name) struct rt_once name = RT_ONCE_INIT(name)
 
 /*
- * The slow path for using an rt_once, which should not be called directly.
+ * The slow path for rt_once. Do not call this directly.
  */
 void rt_once_slow(struct rt_once *once, void (*fn)(void));
 
