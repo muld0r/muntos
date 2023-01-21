@@ -1,10 +1,12 @@
 #ifndef RT_COND_H
 #define RT_COND_H
 
-#include <rt/mutex.h>
 #include <rt/sem.h>
 
+#include <stdbool.h>
+
 struct rt_cond;
+struct rt_mutex;
 
 void rt_cond_init(struct rt_cond *cond);
 

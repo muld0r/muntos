@@ -2,6 +2,7 @@
 
 #include <rt/log.h>
 #include <rt/syscall.h>
+#include <rt/task.h>
 
 void rt_sleep(unsigned long ticks)
 {

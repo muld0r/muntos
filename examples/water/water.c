@@ -6,8 +6,6 @@
 #include <rt/task.h>
 #include <rt/tick.h>
 
-#include <stdbool.h>
-
 static rt_atomic_uint hydrogen_bonded = 0;
 static rt_atomic_uint oxygen_bonded = 0;
 static rt_atomic_uint water_formed = 0;
@@ -47,7 +45,7 @@ int main(void)
 {
     static char timeout_stack[TASK_STACK_SIZE]
         __attribute__((aligned(STACK_ALIGN)));
-    RT_TASK(timeout, timeout_stack, UINT_MAX);
+    RT_TASK(timeout, timeout_stack, 4);
 
     static char atom_stacks[3][TASK_STACK_SIZE]
         __attribute__((aligned(STACK_ALIGN)));

@@ -4,8 +4,6 @@
 #include <rt/atomic.h>
 #include <rt/mutex.h>
 
-#include <stdint.h>
-
 struct rt_once;
 
 /*

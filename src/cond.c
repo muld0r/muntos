@@ -1,5 +1,7 @@
 #include <rt/cond.h>
 #include <rt/log.h>
+#include <rt/mutex.h>
+#include <rt/task.h>
 #include <rt/tick.h>
 
 void rt_cond_init(struct rt_cond *cond)

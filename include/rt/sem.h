@@ -6,8 +6,8 @@
 #include <rt/syscall.h>
 
 #include <limits.h>
+#include <stdbool.h>
 #include <stddef.h>
-#include <stdint.h>
 
 struct rt_sem;
 

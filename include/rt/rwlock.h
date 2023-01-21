@@ -4,8 +4,6 @@
 #include <rt/cond.h>
 #include <rt/mutex.h>
 
-#include <stdbool.h>
-
 struct rt_rwlock;
 
 void rt_rwlock_init(struct rt_rwlock *lock);

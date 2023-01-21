@@ -12,6 +12,7 @@
 #include <stdlib.h>
 #include <sys/time.h>
 
+#include <limits.h>
 #include <stdarg.h>
 #include <stdatomic.h>
 #include <stdio.h>
