@@ -6,7 +6,7 @@
 struct reaction
 {
     struct rt_sem h2ready, hdone;
-    rt_atomic_int h;
+    rt_atomic_uint h;
 };
 
 static struct reaction rxn = {
@@ -17,8 +17,9 @@ static struct reaction rxn = {
 
 void hydrogen(void)
 {
-    int oldh = rt_atomic_fetch_add_explicit(&rxn.h, 1, memory_order_relaxed);
-    if ((oldh % 2) == 1)
+    unsigned oldh =
+        rt_atomic_fetch_add_explicit(&rxn.h, 1, memory_order_relaxed);
+    if ((oldh & 1) == 1)
     {
         rt_sem_post(&rxn.h2ready);
     }

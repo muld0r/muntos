@@ -6,13 +6,14 @@
 #include <stdatomic.h>
 #include <stdbool.h>
 
-#define rt_atomic_bool atomic_bool
-#define rt_atomic_uchar atomic_uchar
-#define rt_atomic_int atomic_int
-#define rt_atomic_uint atomic_uint
-#define rt_atomic_long atomic_long
-#define rt_atomic_ulong atomic_ulong
-#define rt_atomic_size_t atomic_size_t
+typedef atomic_bool rt_atomic_bool;
+typedef atomic_uchar rt_atomic_uchar;
+typedef atomic_int rt_atomic_int;
+typedef atomic_uint rt_atomic_uint;
+typedef atomic_long rt_atomic_long;
+typedef atomic_ulong rt_atomic_ulong;
+typedef atomic_size_t rt_atomic_size_t;
+typedef _Atomic uint32_t rt_atomic_uint32_t;
 
 #define rt_atomic_load atomic_load
 #define rt_atomic_store atomic_store
