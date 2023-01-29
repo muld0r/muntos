@@ -1,8 +1,9 @@
 #include <rt/context.h>
-#include <rt/rt.h>
-
+#include <rt/cycle.h>
 #include <rt/log.h>
+#include <rt/rt.h>
 #include <rt/syscall.h>
+
 #include <rt/task.h>
 #include <rt/tick.h>
 
@@ -292,4 +293,13 @@ void rt_stop(void)
 {
     block_all_signals(NULL);
     pthread_kill(main_thread, SIGRESUME);
+}
+
+void rt_cycle_enable(void)
+{
+}
+
+uint32_t rt_cycle(void)
+{
+    return 0;
 }

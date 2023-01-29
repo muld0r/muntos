@@ -1,13 +1,14 @@
-#include "exc_return.h"
-
 #include <rt/context.h>
 #include <rt/log.h>
 #include <rt/rt.h>
 #include <rt/syscall.h>
+
 #include <rt/task.h>
 
 #include <stdbool.h>
 #include <stdint.h>
+
+#include "exc_return.h"
 
 struct context
 {
@@ -170,6 +171,29 @@ void rt_syscall_pend(void)
 void rt_logf(const char *fmt, ...)
 {
     (void)fmt;
+}
+
+#define DWT_LAR (*(volatile uint32_t *)0xE0001FB0)
+#define DWT_LAR_UNLOCK UINT32_C(0xC5ACCE55)
+
+#define DEMCR (*(volatile unsigned *)0xE000EDFCU)
+#define DEMCR_TRCENA (UINT32_C(1) << 24)
+
+#define DWT_CTRL (*(volatile uint32_t *)0xE0001000U)
+#define DWT_CTRL_CYCCNTENA (UINT32_C(1) << 0)
+
+#define DWT_CYCCNT (*(volatile uint32_t *)0xE0001004U)
+
+void rt_cycle_enable(void)
+{
+    DWT_LAR = DWT_LAR_UNLOCK;
+    DEMCR |= DEMCR_TRCENA;
+    DWT_CTRL |= DWT_CTRL_CYCCNTENA;
+}
+
+uint32_t rt_cycle(void)
+{
+    return DWT_CYCCNT;
 }
 
 #if __ARM_ARCH == 6

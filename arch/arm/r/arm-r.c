@@ -1,10 +1,12 @@
-#include "vic.h"
-
 #include <rt/context.h>
+#include <rt/cycle.h>
 #include <rt/log.h>
 #include <rt/rt.h>
 #include <rt/syscall.h>
 #include <rt/task.h>
+
+#include "coprocessor.h"
+#include "vic.h"
 
 #include <stdbool.h>
 #include <stdint.h>
@@ -136,3 +138,16 @@ void rt_syscall_pend(void)
     __asm__("isb");
 }
 #endif
+
+void rt_cycle_enable(void)
+{
+    /* Enable counters and reset the cycle counter. */
+    pmcr_oreq(PMCR_E | PMCR_C);
+    /* Enable the cycle counter. */
+    pmcntenset_oreq(PMCNTEN_C);
+}
+
+uint32_t rt_cycle(void)
+{
+    return pmccntr();
+}
