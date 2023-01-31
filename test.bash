@@ -17,5 +17,5 @@ build/rwlock
 build/sem
 build/simple
 build/sleep
-build/water_cond
-build/water_sem
+build/water/cond
+build/water/sem
