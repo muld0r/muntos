@@ -301,5 +301,15 @@ void rt_cycle_enable(void)
 
 uint32_t rt_cycle(void)
 {
+#if defined(__aarch64__)
+    uint64_t cycles;
+    __asm__ __volatile__("mrs %0, cntvct_el0" : "=r"(cycles));
+    return (uint32_t)cycles;
+#elif defined(__x86_64__)
+    uint32_t cycles;
+    __asm__ __volatile__("rdtsc" : "=a"(cycles) : : "edx");
+    return cycles;
+#else
     return 0;
+#endif
 }

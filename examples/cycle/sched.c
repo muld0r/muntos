@@ -1,4 +1,5 @@
 #include <rt/cycle.h>
+#include <rt/log.h>
 #include <rt/rt.h>
 #include <rt/task.h>
 
@@ -27,4 +28,6 @@ int main(void)
 
     rt_cycle_enable();
     rt_start();
+
+    rt_logf("cycles = %u\n", cycles);
 }
