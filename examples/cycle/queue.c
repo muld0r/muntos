@@ -9,7 +9,7 @@ static volatile uint32_t cycles = 0;
 
 RT_QUEUE_STATIC(queue, int, 10);
 
-static void waiter(void)
+static void popper(void)
 {
     int x;
     rt_queue_pop(&queue, &x);
@@ -17,7 +17,7 @@ static void waiter(void)
     rt_stop();
 }
 
-static void poster(void)
+static void pusher(void)
 {
     int x = 0;
     start_cycle = rt_cycle();
@@ -29,8 +29,8 @@ int main(void)
     static char task_stacks[2][TASK_STACK_SIZE]
         __attribute__((aligned(STACK_ALIGN)));
 
-    RT_TASK(waiter, task_stacks[0], 2);
-    RT_TASK(poster, task_stacks[1], 1);
+    RT_TASK(popper, task_stacks[0], 2);
+    RT_TASK(pusher, task_stacks[1], 1);
 
     rt_cycle_enable();
     rt_start();
