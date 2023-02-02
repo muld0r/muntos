@@ -1,4 +1,5 @@
 #include <rt/context.h>
+#include <rt/cycle.h>
 #include <rt/log.h>
 #include <rt/rt.h>
 #include <rt/syscall.h>
