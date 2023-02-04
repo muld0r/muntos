@@ -117,5 +117,5 @@ bool rt_sem_timedwait(struct rt_sem *sem, unsigned long ticks)
     rt_task_self()->record = &wait_record;
     rt_syscall(&wait_record);
 
-    return wait_record.syscall == RT_SYSCALL_SEM_TIMEDWAIT;
+    return wait_record.syscall != RT_SYSCALL_SEM_TIMEDWAIT;
 }

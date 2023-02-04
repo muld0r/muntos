@@ -24,8 +24,8 @@ void rt_task_init_arg(struct rt_task *task, void (*fn)(uintptr_t),
                       uintptr_t arg, const char *name, unsigned priority,
                       void *stack, size_t stack_size);
 
-/* Make a statically-initialized task runnable. */
-void rt_task_start(struct rt_task *task);
+/* Make a statically-initialized task ready to run. */
+void rt_task_ready(struct rt_task *task);
 
 /*
  * Exit from the current task. This should be called automatically when a
@@ -52,15 +52,26 @@ struct rt_task *rt_task_self(void);
  */
 void rt_task_enable_fp(void);
 
+enum rt_task_state
+{
+    RT_TASK_STATE_READY,
+    RT_TASK_STATE_RUNNING,
+    RT_TASK_STATE_BLOCKED,
+    RT_TASK_STATE_BLOCKED_TIMEOUT,
+    RT_TASK_STATE_ASLEEP,
+    RT_TASK_STATE_EXITED,
+};
+
 struct rt_task
 {
     struct rt_list list;
     struct rt_list sleep_list;
     void *ctx;
     unsigned long wake_tick;
+    struct rt_syscall_record *record;
     const char *name;
     unsigned priority;
-    struct rt_syscall_record *record;
+    enum rt_task_state state;
 };
 
 #define RT_TASK(fn, stack, priority_)                                          \
@@ -75,7 +86,7 @@ struct rt_task
             .record = NULL,                                                    \
         };                                                                     \
         fn##_task.ctx = rt_context_create((fn), (stack), sizeof(stack));       \
-        rt_task_start(&fn##_task);                                             \
+        rt_task_ready(&fn##_task);                                             \
     } while (0)
 
 #define RT_TASK_ARG(fn, arg, stack, priority_)                                 \
@@ -91,7 +102,7 @@ struct rt_task
         };                                                                     \
         fn##_task.ctx =                                                        \
             rt_context_create_arg((fn), (arg), (stack), sizeof(stack));        \
-        rt_task_start(&fn##_task);                                             \
+        rt_task_ready(&fn##_task);                                             \
     } while (0)
 
 #endif /* RT_TASK_H */

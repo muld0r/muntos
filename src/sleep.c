@@ -6,6 +6,11 @@
 
 void rt_sleep(unsigned long ticks)
 {
+    if (ticks == 0)
+    {
+        return;
+    }
+
     struct rt_syscall_record sleep_record;
     sleep_record.syscall = RT_SYSCALL_SLEEP;
     sleep_record.args.sleep.task = rt_task_self();
@@ -16,6 +21,11 @@ void rt_sleep(unsigned long ticks)
 
 void rt_sleep_periodic(unsigned long *last_wake_tick, unsigned long period)
 {
+    if (period == 0)
+    {
+        return;
+    }
+
     struct rt_syscall_record sleep_record;
     sleep_record.syscall = RT_SYSCALL_SLEEP_PERIODIC;
     sleep_record.args.sleep_periodic.task = rt_task_self();
