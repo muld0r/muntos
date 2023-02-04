@@ -163,55 +163,41 @@ static void wake_sem_waiters(struct rt_sem *sem)
 
 static void tick_syscall(void)
 {
-    /*
-     * The tick counter moves independently of the tick syscall, so process all
-     * ticks until caught up.
-     */
-    while (woken_tick < rt_tick())
+    const unsigned long ticks_to_advance = rt_tick() - woken_tick;
+    while (!rt_list_is_empty(&sleep_list))
     {
-        ++woken_tick;
-        while (!rt_list_is_empty(&sleep_list))
+        struct rt_task *const task =
+            task_from_sleep_list(rt_list_front(&sleep_list));
+        if (ticks_to_advance < (task->wake_tick - woken_tick))
         {
-            struct rt_task *const task =
-                task_from_sleep_list(rt_list_front(&sleep_list));
-            if (task->wake_tick != woken_tick)
-            {
-                /*
-                 * Tasks are ordered by when they should wake up, so if we
-                 * reach a task that should still be sleeping, we are done
-                 * scanning tasks. This task will be the next to wake, unless
-                 * another task goes to sleep later, with an earlier wake tick.
-                 */
-                break;
-            }
-            /* If the waking task was blocked on a sem_timedwait, remove it
-             * from the semaphore's wait list. */
-            if (task->record &&
-                (task->record->syscall == RT_SYSCALL_SEM_TIMEDWAIT))
-            {
-                struct rt_sem *sem = task->record->args.sem_timedwait.sem;
-                rt_atomic_fetch_add_explicit(&sem->value, 1,
-                                             memory_order_relaxed);
-                rt_list_remove(&task->list);
-                --sem->num_waiters;
-                wake_sem_waiters(sem);
-                /* Signal to the task that its sem_timedwait timed out by
-                 * setting the sem argument to NULL. */
-                task->record->args.sem_timedwait.sem = NULL;
-            }
-            rt_list_remove(&task->sleep_list);
-            rt_task_ready(task);
+            break;
         }
+        /* If the waking task was blocked on a sem_timedwait, remove it
+         * from the semaphore's wait list. */
+        if (task->record && (task->record->syscall == RT_SYSCALL_SEM_TIMEDWAIT))
+        {
+            struct rt_sem *const sem = task->record->args.sem_timedwait.sem;
+            rt_atomic_fetch_add_explicit(&sem->value, 1, memory_order_relaxed);
+            rt_list_remove(&task->list);
+            --sem->num_waiters;
+            wake_sem_waiters(sem);
+            /* Signal to the task that its sem_timedwait timed out by
+             * setting the sem argument to NULL. */
+            task->record->args.sem_timedwait.sem = NULL;
+        }
+        rt_list_remove(&task->sleep_list);
+        rt_task_ready(task);
     }
+    woken_tick += ticks_to_advance;
 }
 
-static rt_atomic_ulong rt_ticks;
+static rt_atomic_ulong tick;
 static rt_atomic_flag tick_pending = RT_ATOMIC_FLAG_INIT;
 
 void rt_tick_advance(void)
 {
-    const unsigned long oldticks =
-        rt_atomic_fetch_add_explicit(&rt_ticks, 1, memory_order_relaxed);
+    const unsigned long old_tick =
+        rt_atomic_fetch_add_explicit(&tick, 1, memory_order_relaxed);
 
     static struct rt_syscall_record tick_record = {
         .next = NULL,
@@ -221,14 +207,14 @@ void rt_tick_advance(void)
     if (!rt_atomic_flag_test_and_set_explicit(&tick_pending,
                                               memory_order_relaxed))
     {
-        rt_logf("syscall: tick %lu\n", oldticks + 1);
+        rt_logf("syscall: tick %lu\n", old_tick + 1);
         rt_syscall(&tick_record);
     }
 }
 
 unsigned long rt_tick(void)
 {
-    return rt_atomic_load_explicit(&rt_ticks, memory_order_relaxed);
+    return rt_atomic_load_explicit(&tick, memory_order_relaxed);
 }
 
 void rt_syscall(struct rt_syscall_record *record)
