@@ -99,7 +99,7 @@ bool rt_cond_timedwait(struct rt_cond *cond, struct rt_mutex *mutex,
     rt_task_self()->record = &wait_record;
     rt_syscall(&wait_record);
 
-    if (wait_record.syscall != RT_SYSCALL_SEM_TIMEDWAIT)
+    if (wait_record.args.sem_timedwait.sem == NULL)
     {
         return false;
     }

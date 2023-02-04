@@ -184,21 +184,20 @@ static void tick_syscall(void)
                  */
                 break;
             }
-            if (task->record)
+            /* If the waking task was blocked on a sem_timedwait, remove it
+             * from the semaphore's wait list. */
+            if (task->record &&
+                (task->record->syscall == RT_SYSCALL_SEM_TIMEDWAIT))
             {
-                /* If the waking task was blocked on a timed system call, remove
-                 * it from the corresponding wait list and adjust the waiter
-                 * counts. */
-                if (task->record->syscall == RT_SYSCALL_SEM_TIMEDWAIT)
-                {
-                    struct rt_sem *sem = task->record->args.sem_timedwait.sem;
-                    rt_atomic_fetch_add_explicit(&sem->value, 1,
-                                                 memory_order_relaxed);
-                    rt_list_remove(&task->list);
-                    --sem->num_waiters;
-                    wake_sem_waiters(sem);
-                    task->record->syscall = RT_SYSCALL_SLEEP;
-                }
+                struct rt_sem *sem = task->record->args.sem_timedwait.sem;
+                rt_atomic_fetch_add_explicit(&sem->value, 1,
+                                             memory_order_relaxed);
+                rt_list_remove(&task->list);
+                --sem->num_waiters;
+                wake_sem_waiters(sem);
+                /* Signal to the task that its sem_timedwait timed out by
+                 * setting the sem argument to NULL. */
+                task->record->args.sem_timedwait.sem = NULL;
             }
             rt_list_remove(&task->sleep_list);
             rt_task_ready(task);

@@ -75,8 +75,8 @@ void rt_syscall_handler(void);
 /*
  * Architecture-dependent trigger for the syscall handler. This should cause
  * the syscall handler to run before this function returns if called from a
- * task, or when no other interrupts are running, but before another task gets
- * to run, if called from an interrupt.
+ * task. If called from an interrupt, the syscall should run once no other
+ * interrupts are running, but before another task gets to run.
  */
 void rt_syscall_pend(void);
 
