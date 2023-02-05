@@ -63,7 +63,7 @@ int main(void)
 
     static char timeout_stack[TASK_STACK_SIZE]
         __attribute__((aligned(STACK_ALIGN)));
-    RT_TASK(timeout, timeout_stack, UINT_MAX);
+    RT_TASK(timeout, timeout_stack, 2);
 
     rt_start();
 
