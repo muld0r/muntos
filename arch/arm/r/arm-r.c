@@ -45,7 +45,7 @@ struct context
 #define BIG_ENDIAN UINT32_C(0)
 #endif
 
-#define CPSR_MODE_SYS UINT32_C(0x1F)
+#define CPSR_MODE_SYS UINT32_C(31)
 #define CPSR_E (BIG_ENDIAN << 9)
 #define CPSR_THUMB_SHIFT 5
 
@@ -90,6 +90,26 @@ void *rt_context_create_arg(void (*fn)(uintptr_t), uintptr_t arg, void *stack,
 
 void rt_start(void)
 {
+#if RT_TASK_ENABLE_CYCLES
+    // Enable counters and reset the cycle counter.
+    pmcr_oreq(PMCR_E | PMCR_C);
+    // Enable the cycle counter.
+    pmcntenset_oreq(PMCNTEN_C);
+    rt_task_self()->start_cycle = rt_cycle();
+#endif
+
+    // The idle stack needs to be large enough to store a context.
+    static char idle_stack[STACK_SIZE(sizeof(struct context))]
+        __attribute__((aligned(STACK_ALIGN)));
+
+    // Switch to system mode.
+    __asm__("cps %0" : : "i"(CPSR_MODE_SYS));
+    // Set the stack pointer to the top of the idle stack.
+    __asm__("ldr sp, =%0" : : "i"(&idle_stack[sizeof idle_stack]));
+
+    // Flush memory before enabling interrupts.
+    __asm__("dsb" ::: "memory");
+
     // Enable interrupts.
     __asm__("cpsie i");
 
@@ -139,14 +159,6 @@ void rt_syscall_pend(void)
     __asm__("isb");
 }
 #endif
-
-void rt_cycle_enable(void)
-{
-    /* Enable counters and reset the cycle counter. */
-    pmcr_oreq(PMCR_E | PMCR_C);
-    /* Enable the cycle counter. */
-    pmcntenset_oreq(PMCNTEN_C);
-}
 
 uint32_t rt_cycle(void)
 {

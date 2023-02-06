@@ -295,10 +295,6 @@ void rt_stop(void)
     pthread_kill(main_thread, SIGRESUME);
 }
 
-void rt_cycle_enable(void)
-{
-}
-
 uint32_t rt_cycle(void)
 {
 #if defined(__aarch64__)

@@ -6,8 +6,7 @@
  * provide a way to extend this code with assembly macros.
  * vic_syscall_start needs to clear and mask the syscall interrupt such that
  * another syscall cannot occur when IRQs are re-enabled. vic_syscall_finish
- * must unmask the syscall interrupt. Both are run with IRQs disabled, and may
- * use r0-r2 as scratch registers.
+ * must unmask the syscall interrupt. Both are run with IRQs disabled.
  */
 
 #include "vic.h"
@@ -40,6 +39,7 @@ rt_syscall_handler_svc:
     srsdb 31!
     // Switch to system mode.
     cps 31
+    // Save the task's volatile registers.
     push {r0-r3, r12, lr}
     vic_syscall_start
 
@@ -105,7 +105,7 @@ rt_syscall_handler_svc:
     cpsid i
     vic_syscall_finish
 
-    // Restore the volatile registers.
+    // Restore the task's volatile registers.
     pop {r0-r3, r12, lr}
     // Restore the task's pc and cpsr (this re-enables interrupts).
     rfeia sp!

@@ -7,6 +7,10 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#ifndef RT_TASK_ENABLE_CYCLES
+#define RT_TASK_ENABLE_CYCLES 0
+#endif
+
 struct rt_task;
 
 /*
@@ -66,6 +70,10 @@ struct rt_task
 {
     struct rt_list list;
     struct rt_list sleep_list;
+#if RT_TASK_ENABLE_CYCLES
+    uint64_t total_cycles;
+    uint32_t start_cycle;
+#endif
     void *ctx;
     unsigned long wake_tick;
     struct rt_syscall_record *record;
@@ -80,10 +88,8 @@ struct rt_task
         static struct rt_task fn##_task = {                                    \
             .list = RT_LIST_INIT(fn##_task.list),                              \
             .sleep_list = RT_LIST_INIT(fn##_task.sleep_list),                  \
-            .wake_tick = 0,                                                    \
             .name = #fn,                                                       \
             .priority = (priority_),                                           \
-            .record = NULL,                                                    \
         };                                                                     \
         fn##_task.ctx = rt_context_create((fn), (stack), sizeof(stack));       \
         rt_task_ready(&fn##_task);                                             \
@@ -95,10 +101,8 @@ struct rt_task
         static struct rt_task fn##_task = {                                    \
             .list = RT_LIST_INIT(fn##_task.list),                              \
             .sleep_list = RT_LIST_INIT(fn##_task.sleep_list),                  \
-            .wake_tick = 0,                                                    \
             .name = #fn "(" #arg ")",                                          \
             .priority = (priority_),                                           \
-            .record = NULL,                                                    \
         };                                                                     \
         fn##_task.ctx =                                                        \
             rt_context_create_arg((fn), (arg), (stack), sizeof(stack));        \

@@ -30,7 +30,6 @@ int main(void)
     RT_TASK(waiter, task_stacks[0], 2);
     RT_TASK(poster, task_stacks[1], 1);
 
-    rt_cycle_enable();
     rt_start();
 
     rt_logf("cycles = %u\n", (unsigned)cycles);

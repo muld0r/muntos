@@ -27,7 +27,6 @@ int main(void)
     RT_TASK(sleep, task_stacks[0], 2);
     RT_TASK(task1, task_stacks[1], 1);
 
-    rt_cycle_enable();
     rt_start();
 
     rt_logf("cycles = %u\n", (unsigned)cycles);

@@ -85,8 +85,42 @@ void *rt_context_create_arg(void (*fn)(uintptr_t), uintptr_t arg, void *stack,
 #define STACK_ALIGN 8UL
 #define STACK_SIZE(x) (((x) + (STACK_ALIGN - 1)) & ~(STACK_ALIGN - 1))
 
+#define DWT_LAR (*(volatile uint32_t *)0xE0001FB0)
+#define DWT_LAR_UNLOCK UINT32_C(0xC5ACCE55)
+
+#define DEMCR (*(volatile unsigned *)0xE000EDFCU)
+#define DEMCR_TRCENA (UINT32_C(1) << 24)
+
+#define DWT_CTRL (*(volatile uint32_t *)0xE0001000U)
+#define DWT_CTRL_CYCCNTENA (UINT32_C(1) << 0)
+
+#define DWT_CYCCNT (*(volatile uint32_t *)0xE0001004U)
+
 void rt_start(void)
 {
+    /*
+     * Set SVCall and PendSV to the lowest exception priority, and SysTick to
+     * one higher. Write the priority as 0xFF, then read it back to determine
+     * how many bits of priority are implemented, and subtract one from that
+     * value to get the tick priority.
+     */
+    SHPR2 = UINT32_C(0xFF) << 24;
+    const uint32_t syscall_prio = SHPR2 >> 24;
+    const uint32_t tick_prio = syscall_prio - 1;
+    SHPR3 = (tick_prio << 24) | (syscall_prio << 16);
+
+    // Reset SysTick and enable its interrupt.
+    STK_VAL = 0;
+    STK_CTRL = STK_CTRL_ENABLE | STK_CTRL_TICKINT;
+
+#if RT_TASK_ENABLE_CYCLES
+    // Enable the cycle counter.
+    DWT_LAR = DWT_LAR_UNLOCK;
+    DEMCR |= DEMCR_TRCENA;
+    DWT_CTRL |= DWT_CTRL_CYCCNTENA;
+    rt_task_self()->start_cycle = rt_cycle();
+#endif
+
     // The idle stack needs to be large enough to store a context.
     static char idle_stack[STACK_SIZE(sizeof(struct context))]
         __attribute__((aligned(STACK_ALIGN)));
@@ -102,20 +136,8 @@ void rt_start(void)
     __asm__("msr control, %0" : : "r"(2));
     __asm__("isb");
 
-    /*
-     * Set SVCall and PendSV to the lowest exception priority, and SysTick to
-     * one higher. Write the priority as 0xFF, then read it back to determine
-     * how many bits of priority are implemented, and subtract one from that
-     * value to get the tick priority.
-     */
-    SHPR2 = UINT32_C(0xFF) << 24;
-    const uint32_t syscall_prio = SHPR2 >> 24;
-    const uint32_t tick_prio = syscall_prio - 1;
-    SHPR3 = (tick_prio << 24) | (syscall_prio << 16);
-
-    // Reset SysTick and enable its interrupt.
-    STK_VAL = 0;
-    STK_CTRL = STK_CTRL_ENABLE | STK_CTRL_TICKINT;
+    // Flush memory before enabling interrupts.
+    __asm__("dsb" ::: "memory");
 
     // Enable interrupts.
     __asm__("cpsie i");
@@ -172,24 +194,6 @@ void rt_syscall_pend(void)
 void rt_logf(const char *fmt, ...)
 {
     (void)fmt;
-}
-
-#define DWT_LAR (*(volatile uint32_t *)0xE0001FB0)
-#define DWT_LAR_UNLOCK UINT32_C(0xC5ACCE55)
-
-#define DEMCR (*(volatile unsigned *)0xE000EDFCU)
-#define DEMCR_TRCENA (UINT32_C(1) << 24)
-
-#define DWT_CTRL (*(volatile uint32_t *)0xE0001000U)
-#define DWT_CTRL_CYCCNTENA (UINT32_C(1) << 0)
-
-#define DWT_CYCCNT (*(volatile uint32_t *)0xE0001004U)
-
-void rt_cycle_enable(void)
-{
-    DWT_LAR = DWT_LAR_UNLOCK;
-    DEMCR |= DEMCR_TRCENA;
-    DWT_CTRL |= DWT_CTRL_CYCCNTENA;
 }
 
 uint32_t rt_cycle(void)

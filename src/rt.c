@@ -3,6 +3,7 @@
 #include <rt/atomic.h>
 #include <rt/container.h>
 #include <rt/context.h>
+#include <rt/cycle.h>
 #include <rt/list.h>
 #include <rt/log.h>
 #include <rt/mutex.h>
@@ -121,6 +122,7 @@ static void *sched(void)
 
     rt_logf("sched: switching to %s with priority %u\n", rt_task_name(),
             active_task->priority);
+
     return active_task->ctx;
 }
 
@@ -232,6 +234,13 @@ void rt_syscall(struct rt_syscall_record *record)
 
 void *rt_syscall_run(void)
 {
+#if RT_TASK_ENABLE_CYCLES
+    static volatile uint64_t total_task_cycles = 0;
+    const uint32_t task_cycles = rt_cycle() - active_task->start_cycle;
+    active_task->total_cycles += task_cycles;
+    total_task_cycles += task_cycles;
+#endif
+
     /*
      * Take all elements on the pending syscall stack at once. Syscalls added
      * after this step will be on a new stack. This is done to preserve the
@@ -328,7 +337,11 @@ void *rt_syscall_run(void)
         record = next_record;
     }
 
-    return sched();
+    void *const new_ctx = sched();
+#if RT_TASK_ENABLE_CYCLES
+    active_task->start_cycle = rt_cycle();
+#endif
+    return new_ctx;
 }
 
 void rt_task_ready(struct rt_task *task)
