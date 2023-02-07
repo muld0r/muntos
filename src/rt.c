@@ -35,9 +35,6 @@ static struct rt_syscall_record *_Atomic pending_syscalls;
 static struct rt_task idle_task = {
     .list = RT_LIST_INIT(idle_task.list),
     .sleep_list = RT_LIST_INIT(idle_task.sleep_list),
-    .ctx = NULL,
-    .wake_tick = 0,
-    .record = NULL,
     .name = "idle",
     .priority = 0,
     /* The idle task is initially running. rt_start() is expected to trigger a
