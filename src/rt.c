@@ -240,15 +240,8 @@ void *rt_syscall_run(void)
 
     /*
      * Take all elements on the pending syscall stack at once. Syscalls added
-     * after this step will be on a new stack. This is done to preserve the
-     * ordering of syscalls invoked. Otherwise, syscalls that are added to the
-     * stack while the stack is being flushed will be handled before tasks that
-     * were pushed earlier.
+     * after this step will be on a new stack.
      */
-    /* TODO: need to make sure that a syscall post after this swap has occurred
-     * results in the syscall handler being called again, otherwise we should
-     * just keep handling system calls from the same stack, even if they're out
-     * of order. */
     struct rt_syscall_record *record =
         rt_atomic_exchange_explicit(&pending_syscalls, NULL,
                                     memory_order_acquire);
