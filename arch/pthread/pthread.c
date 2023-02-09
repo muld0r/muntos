@@ -1,5 +1,6 @@
 #include <rt/context.h>
 #include <rt/cycle.h>
+#include <rt/interrupt.h>
 #include <rt/log.h>
 #include <rt/rt.h>
 #include <rt/syscall.h>
@@ -141,6 +142,11 @@ void *rt_context_create_arg(void (*fn)(uintptr_t), uintptr_t arg, void *stack,
 void rt_syscall_pend(void)
 {
     pthread_kill(pthread_self(), SIGSYSCALL);
+}
+
+bool rt_interrupt_is_active(void)
+{
+    return false;
 }
 
 __attribute__((noreturn)) static void resume_handler(int sig)

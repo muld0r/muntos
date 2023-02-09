@@ -1,5 +1,6 @@
 #include <rt/sem.h>
 
+#include <rt/interrupt.h>
 #include <rt/log.h>
 #include <rt/task.h>
 
@@ -35,26 +36,19 @@ void rt_sem_post(struct rt_sem *sem)
             /* Semaphore is saturated. */
             return;
         }
+        if (value < 0)
+        {
+            /* If the value was negative, then the post needs to happen in a
+             * system call because there are waiters. */
+            rt_sem_post_syscall(sem, 1);
+            return;
+        }
     } while (!rt_atomic_compare_exchange_weak_explicit(&sem->value, &value,
                                                        value + 1,
                                                        memory_order_release,
                                                        memory_order_relaxed));
 
     rt_logf("%s sem post, new value %d\n", rt_task_name(), value + 1);
-
-    /* If the value was less than zero, then there was at least one waiter when
-     * we successfully posted. If there isn't already a post system call
-     * pending, then create one. */
-    /* TODO: if pre-empted after test_and_set but before pushing the syscall,
-     * then posts made by higher priority contexts won't pend a syscall when
-     * they should. This can be solved by having tasks use their own
-     * syscall record when posting. */
-    if ((value < 0) &&
-        !rt_atomic_flag_test_and_set_explicit(&sem->post_pending,
-                                              memory_order_acquire))
-    {
-        rt_syscall(&sem->post_record);
-    }
 }
 
 bool rt_sem_trywait(struct rt_sem *sem)
@@ -118,4 +112,45 @@ bool rt_sem_timedwait(struct rt_sem *sem, unsigned long ticks)
     rt_syscall(&wait_record);
 
     return wait_record.args.sem_timedwait.sem != NULL;
+}
+
+void rt_sem_post_syscall(struct rt_sem *sem, int increment)
+{
+    /* In an interrupt, we need to use the post system call record attached to
+     * the semaphore rather than allocating one on the stack, because the
+     * system call will run after the interrupt has returned. */
+    if (rt_interrupt_is_active())
+    {
+        /* If the semaphore's post record is already pending, don't attempt to
+         * use it again. The interrupt that is using it will still cause the
+         * post to occur, so no posts are missed in this case. Instead, just
+         * add to the semaphore value directly. The system call will run
+         * after this increment has taken effect. */
+        if (!rt_atomic_flag_test_and_set_explicit(&sem->post_pending,
+                                                  memory_order_acquire))
+        {
+            sem->post_record.args.sem_post.increment = increment;
+            rt_syscall(&sem->post_record);
+        }
+        else
+        {
+            rt_atomic_fetch_add_explicit(&sem->value, increment,
+                                         memory_order_release);
+        }
+    }
+    else
+    {
+        /* Each task can use its own post system call record because the
+         * syscall will run before this call returns. Adding to the semaphore
+         * value directly from a task when there are waiters can result in
+         * priority inversion if a context switch occurs before wakes are
+         * resolved but after the value is incremented, and the semaphore is
+         * decremented on the fast path by another task that is lower priority
+         * than a previous waiter. */
+        struct rt_syscall_record post_record;
+        post_record.args.sem_post.sem = sem;
+        post_record.args.sem_post.increment = increment;
+        post_record.syscall = RT_SYSCALL_SEM_POST;
+        rt_syscall(&post_record);
+    }
 }

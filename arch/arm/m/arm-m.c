@@ -1,5 +1,6 @@
 #include <rt/context.h>
 #include <rt/cycle.h>
+#include <rt/interrupt.h>
 #include <rt/log.h>
 #include <rt/rt.h>
 #include <rt/syscall.h>
@@ -170,6 +171,11 @@ void rt_stop(void)
         ipsr;                                                                  \
     })
 
+bool rt_interrupt_is_active(void)
+{
+    return IPSR != 0;
+}
+
 void rt_syscall_pend(void)
 {
     /*
@@ -178,16 +184,16 @@ void rt_syscall_pend(void)
      * priority than SVCall, using svc will escalate to a hard fault, so we
      * must use PendSV instead.
      */
-    if (IPSR == 0)
-    {
-        __asm__("svc 0");
-    }
-    else
+    if (rt_interrupt_is_active())
     {
         ICSR = PENDSVSET;
         /* NOTE: Normally a synchronization barrier is needed after setting
          * ICSR, but an exception return implicitly synchronizes, and this
          * path is only run from a higher priority exception than PendSV. */
+    }
+    else
+    {
+        __asm__("svc 0");
     }
 }
 

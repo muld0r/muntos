@@ -12,25 +12,9 @@ void rt_cond_init(struct rt_cond *cond)
 static void cond_post(struct rt_sem *sem, bool broadcast)
 {
     int value = rt_atomic_load_explicit(&sem->value, memory_order_relaxed);
-    do
+    if (value < 0)
     {
-        if (value >= 0)
-        {
-            /* Condition variable has no waiters. */
-            return;
-        }
-        /* Use relaxed ordering always because the waiter is using a mutex. */
-    } while (!rt_atomic_compare_exchange_weak_explicit(&sem->value, &value,
-                                                       broadcast ? 0
-                                                                 : value + 1,
-                                                       memory_order_relaxed,
-                                                       memory_order_relaxed));
-
-    /* TODO: see sem_post */
-    if (!rt_atomic_flag_test_and_set_explicit(&sem->post_pending,
-                                              memory_order_acquire))
-    {
-        rt_syscall(&sem->post_record);
+        rt_sem_post_syscall(sem, broadcast ? -value : 1);
     }
 }
 

@@ -54,6 +54,7 @@ union rt_syscall_args
     struct
     {
         struct rt_sem *sem;
+        int increment;
     } sem_post;
 };
 

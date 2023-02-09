@@ -23,6 +23,8 @@ bool rt_sem_trywait(struct rt_sem *sem);
 
 bool rt_sem_timedwait(struct rt_sem *sem, unsigned long ticks);
 
+void rt_sem_post_syscall(struct rt_sem *sem, int increment);
+
 struct rt_sem
 {
     struct rt_list wait_list;

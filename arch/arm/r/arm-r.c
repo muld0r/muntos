@@ -45,7 +45,9 @@ struct context
 #define BIG_ENDIAN UINT32_C(0)
 #endif
 
+#define CPSR_MODE_USR UINT32_C(16)
 #define CPSR_MODE_SYS UINT32_C(31)
+#define CPSR_MODE_MASK UINT32_C(0x1F)
 #define CPSR_E (BIG_ENDIAN << 9)
 #define CPSR_THUMB_SHIFT 5
 
@@ -145,6 +147,14 @@ void rt_stop(void)
 void rt_logf(const char *fmt, ...)
 {
     (void)fmt;
+}
+
+bool rt_interrupt_is_active(void)
+{
+    uint32_t cpsr;
+    __asm__ __volatile__("mrs %0, cpsr" : "=r"(cpsr));
+    const uint32_t mode = cpsr & CPSR_MODE_MASK;
+    return (mode != CPSR_MODE_SYS) && (mode != CPSR_MODE_USR);
 }
 
 #if RT_ARCH_ARM_R_VIC_TYPE == VIM_SSI
