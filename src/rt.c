@@ -282,13 +282,8 @@ void *rt_syscall_run(void)
             break;
         }
         case RT_SYSCALL_EXIT:
-        {
-            static RT_LIST(exited_list);
-            struct rt_task *const task = record->args.exit.task;
-            task->state = RT_TASK_STATE_EXITED;
-            rt_list_push_back(&exited_list, &task->list);
+            record->args.exit.task->state = RT_TASK_STATE_EXITED;
             break;
-        }
         case RT_SYSCALL_SEM_WAIT:
         {
             struct rt_sem *const sem = record->args.sem_wait.sem;
@@ -324,7 +319,8 @@ void *rt_syscall_run(void)
                 rt_atomic_flag_clear_explicit(&sem->post_pending,
                                               memory_order_release);
             }
-            rt_atomic_fetch_add_explicit(&sem->value, increment, memory_order_relaxed);
+            rt_atomic_fetch_add_explicit(&sem->value, increment,
+                                         memory_order_relaxed);
             wake_sem_waiters(sem);
             break;
         }
