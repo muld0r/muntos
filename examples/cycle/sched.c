@@ -23,8 +23,11 @@ int main(void)
     static char task_stacks[2][TASK_STACK_SIZE]
         __attribute__((aligned(STACK_ALIGN)));
 
-    RT_TASK(task0, task_stacks[0], 1);
-    RT_TASK(task1, task_stacks[1], 1);
+    /* The last task to be created at a given priority will run first once
+     * rt_start is called, because the pending syscalls that ready the tasks
+     * are on a LIFO stack. */
+    RT_TASK(task1, task_stacks[0], 1);
+    RT_TASK(task0, task_stacks[1], 1);
 
     rt_start();
 

@@ -143,9 +143,6 @@ void rt_start(void)
     // Enable interrupts.
     __asm__("cpsie i");
 
-    // Execute a supervisor call to switch into the first task.
-    __asm__("svc 0");
-
     // Idle loop that will run when no other tasks are runnable.
     for (;;)
     {
@@ -178,23 +175,9 @@ bool rt_interrupt_is_active(void)
 
 void rt_syscall_pend(void)
 {
-    /*
-     * If no exception is active, we are in thread mode and should use svc.
-     * Otherwise, we are in an exception. Because all exceptions have higher
-     * priority than SVCall, using svc will escalate to a hard fault, so we
-     * must use PendSV instead.
-     */
-    if (rt_interrupt_is_active())
-    {
-        ICSR = PENDSVSET;
-        /* NOTE: Normally a synchronization barrier is needed after setting
-         * ICSR, but an exception return implicitly synchronizes, and this
-         * path is only run from a higher priority exception than PendSV. */
-    }
-    else
-    {
-        __asm__("svc 0");
-    }
+    ICSR = PENDSVSET;
+    __asm__("dsb" ::: "memory");
+    __asm__("isb");
 }
 
 void rt_logf(const char *fmt, ...)

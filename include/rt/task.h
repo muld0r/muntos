@@ -3,6 +3,7 @@
 
 #include <rt/context.h>
 #include <rt/list.h>
+#include <rt/syscall.h>
 
 #include <stddef.h>
 #include <stdint.h>
@@ -76,7 +77,7 @@ struct rt_task
 #endif
     void *ctx;
     unsigned long wake_tick;
-    struct rt_syscall_record *record;
+    struct rt_syscall_record record;
     const char *name;
     unsigned priority;
     enum rt_task_state state;

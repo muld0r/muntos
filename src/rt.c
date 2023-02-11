@@ -13,9 +13,10 @@
 #include <rt/task.h>
 #include <rt/tick.h>
 
-#define task_from_member(l, m) (rt_container_of((l), struct rt_task, m))
+#define task_from_member(p, m) (rt_container_of((p), struct rt_task, m))
 #define task_from_list(l) (task_from_member(l, list))
 #define task_from_sleep_list(l) (task_from_member(l, sleep_list))
+#define task_from_record(r) (task_from_member(r, record))
 
 static bool task_priority_greater_than(const struct rt_list *a,
                                        const struct rt_list *b)
@@ -59,13 +60,24 @@ struct rt_task *rt_task_self(void)
     return active_task;
 }
 
+void rt_task_ready(struct rt_task *task)
+{
+    rt_logf("syscall: %s ready\n", task->name);
+    task->record.syscall = RT_SYSCALL_TASK_READY;
+    rt_syscall(&task->record);
+}
+
+static void task_ready(struct rt_task *task)
+{
+    task->state = RT_TASK_STATE_READY;
+    insert_by_priority(&ready_list, task);
+}
+
 void rt_task_exit(void)
 {
     rt_logf("syscall: %s exit\n", rt_task_name());
-    struct rt_syscall_record exit_record;
-    exit_record.args.exit.task = rt_task_self();
-    exit_record.syscall = RT_SYSCALL_EXIT;
-    rt_syscall(&exit_record);
+    active_task->record.syscall = RT_SYSCALL_EXIT;
+    rt_syscall(&active_task->record);
 }
 
 void **rt_context_prev;
@@ -78,14 +90,13 @@ static void *sched(void)
         return NULL;
     }
 
-    struct rt_list *const node = rt_list_front(&ready_list);
-    struct rt_task *next_task = task_from_list(node);
+    struct rt_task *next_task = task_from_list(rt_list_front(&ready_list));
 
     /* If the active task invoked a system call to suspend itself, its state
      * will be something other than RUNNING here. */
     const bool still_running = active_task->state == RT_TASK_STATE_RUNNING;
 
-    /* If the active task is still runnable and the new task is lower priority,
+    /* If the active task is still running and the new task is lower priority,
      * then continue executing the active task. */
     if (still_running && (active_task->priority > next_task->priority))
     {
@@ -95,7 +106,7 @@ static void *sched(void)
     }
 
     /* The next task will be used, so remove it from the ready list. */
-    rt_list_remove(node);
+    rt_list_remove(&next_task->list);
 
     /* If a task made a system call to suspend itself but was then woken up by
      * its own or another system call and is still the highest priority task,
@@ -105,12 +116,12 @@ static void *sched(void)
         return NULL;
     }
 
-    /* If the active task did not block or sleep, re-add it to the ready list
-     * and mark it as READY. */
+    /* If the active task is still running but we are switching to a new task,
+     * add the active task to the ready list and mark it as READY. */
     if (still_running)
     {
         rt_logf("sched: %s is still runnable\n", rt_task_name());
-        rt_task_ready(active_task);
+        task_ready(active_task);
     }
 
     rt_context_prev = &active_task->ctx;
@@ -155,7 +166,7 @@ static void wake_sem_waiters(struct rt_sem *sem)
         struct rt_task *task =
             task_from_list(rt_list_pop_front(&sem->wait_list));
         rt_list_remove(&task->sleep_list);
-        rt_task_ready(task);
+        task_ready(task);
         --sem->num_waiters;
     }
 }
@@ -173,19 +184,19 @@ static void tick_syscall(void)
         }
         /* If the waking task was blocked on a sem_timedwait, remove it
          * from the semaphore's wait list. */
-        if (task->record && (task->record->syscall == RT_SYSCALL_SEM_TIMEDWAIT))
+        if (task->record.syscall == RT_SYSCALL_SEM_TIMEDWAIT)
         {
-            struct rt_sem *const sem = task->record->args.sem_timedwait.sem;
+            struct rt_sem *const sem = task->record.args.sem_timedwait.sem;
             rt_atomic_fetch_add_explicit(&sem->value, 1, memory_order_relaxed);
             rt_list_remove(&task->list);
             --sem->num_waiters;
             wake_sem_waiters(sem);
             /* Signal to the task that its sem_timedwait timed out by
              * setting the sem argument to NULL. */
-            task->record->args.sem_timedwait.sem = NULL;
+            task->record.args.sem_timedwait.sem = NULL;
         }
         rt_list_remove(&task->sleep_list);
-        rt_task_ready(task);
+        task_ready(task);
     }
     woken_tick += ticks_to_advance;
 }
@@ -259,7 +270,7 @@ void *rt_syscall_run(void)
         case RT_SYSCALL_SLEEP:
         {
             const unsigned long ticks = record->args.sleep.ticks;
-            struct rt_task *const task = record->args.sleep.task;
+            struct rt_task *const task = task_from_record(record);
             task->state = RT_TASK_STATE_ASLEEP;
             sleep_until(task, woken_tick + ticks);
             break;
@@ -271,7 +282,7 @@ void *rt_syscall_run(void)
                                 period = record->args.sleep_periodic.period,
                                 ticks_since_last_wake =
                                     woken_tick - last_wake_tick;
-            struct rt_task *const task = record->args.sleep_periodic.task;
+            struct rt_task *const task = task_from_record(record);
             /* If there have been at least as many ticks as the period since the
              * last wake, then the desired wake up tick has already occurred. */
             if (ticks_since_last_wake < period)
@@ -282,12 +293,12 @@ void *rt_syscall_run(void)
             break;
         }
         case RT_SYSCALL_EXIT:
-            record->args.exit.task->state = RT_TASK_STATE_EXITED;
+            task_from_record(record)->state = RT_TASK_STATE_EXITED;
             break;
         case RT_SYSCALL_SEM_WAIT:
         {
             struct rt_sem *const sem = record->args.sem_wait.sem;
-            struct rt_task *const task = record->args.sem_wait.task;
+            struct rt_task *const task = task_from_record(record);
             task->state = RT_TASK_STATE_BLOCKED;
             insert_by_priority(&sem->wait_list, task);
             ++sem->num_waiters;
@@ -300,7 +311,7 @@ void *rt_syscall_run(void)
         {
             const unsigned long ticks = record->args.sem_timedwait.ticks;
             struct rt_sem *const sem = record->args.sem_timedwait.sem;
-            struct rt_task *const task = record->args.sem_timedwait.task;
+            struct rt_task *const task = task_from_record(record);
             task->state = RT_TASK_STATE_BLOCKED_TIMEOUT;
             insert_by_priority(&sem->wait_list, task);
             sleep_until(task, woken_tick + ticks);
@@ -324,6 +335,9 @@ void *rt_syscall_run(void)
             wake_sem_waiters(sem);
             break;
         }
+        case RT_SYSCALL_TASK_READY:
+            task_ready(task_from_record(record));
+            break;
         }
         record = next_record;
     }
@@ -335,18 +349,11 @@ void *rt_syscall_run(void)
     return new_ctx;
 }
 
-void rt_task_ready(struct rt_task *task)
-{
-    task->state = RT_TASK_STATE_READY;
-    insert_by_priority(&ready_list, task);
-}
-
 static void task_init(struct rt_task *task, const char *name, unsigned priority)
 {
     rt_logf("%s created\n", name);
     task->priority = priority;
     task->wake_tick = 0;
-    task->record = NULL;
     task->name = name;
     rt_list_init(&task->sleep_list);
     rt_task_ready(task);

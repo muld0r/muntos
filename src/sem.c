@@ -79,11 +79,10 @@ void rt_sem_wait(struct rt_sem *sem)
         return;
     }
 
-    struct rt_syscall_record wait_record;
-    wait_record.args.sem_wait.task = rt_task_self();
-    wait_record.args.sem_wait.sem = sem;
-    wait_record.syscall = RT_SYSCALL_SEM_WAIT;
-    rt_syscall(&wait_record);
+    struct rt_syscall_record *const wait_record = &rt_task_self()->record;
+    wait_record->args.sem_wait.sem = sem;
+    wait_record->syscall = RT_SYSCALL_SEM_WAIT;
+    rt_syscall(wait_record);
 }
 
 bool rt_sem_timedwait(struct rt_sem *sem, unsigned long ticks)
@@ -103,15 +102,13 @@ bool rt_sem_timedwait(struct rt_sem *sem, unsigned long ticks)
         return false;
     }
 
-    struct rt_syscall_record wait_record;
-    wait_record.args.sem_timedwait.task = rt_task_self();
-    wait_record.args.sem_timedwait.sem = sem;
-    wait_record.args.sem_timedwait.ticks = ticks;
-    wait_record.syscall = RT_SYSCALL_SEM_TIMEDWAIT;
-    rt_task_self()->record = &wait_record;
-    rt_syscall(&wait_record);
+    struct rt_syscall_record *const wait_record = &rt_task_self()->record;
+    wait_record->args.sem_timedwait.sem = sem;
+    wait_record->args.sem_timedwait.ticks = ticks;
+    wait_record->syscall = RT_SYSCALL_SEM_TIMEDWAIT;
+    rt_syscall(wait_record);
 
-    return wait_record.args.sem_timedwait.sem != NULL;
+    return wait_record->args.sem_timedwait.sem != NULL;
 }
 
 void rt_sem_post_syscall(struct rt_sem *sem, int increment)
@@ -147,10 +144,10 @@ void rt_sem_post_syscall(struct rt_sem *sem, int increment)
          * resolved but after the value is incremented, and the semaphore is
          * decremented on the fast path by another task that is lower priority
          * than a previous waiter. */
-        struct rt_syscall_record post_record;
-        post_record.args.sem_post.sem = sem;
-        post_record.args.sem_post.increment = increment;
-        post_record.syscall = RT_SYSCALL_SEM_POST;
-        rt_syscall(&post_record);
+        struct rt_syscall_record *const post_record = &rt_task_self()->record;
+        post_record->args.sem_post.sem = sem;
+        post_record->args.sem_post.increment = increment;
+        post_record->syscall = RT_SYSCALL_SEM_POST;
+        rt_syscall(post_record);
     }
 }

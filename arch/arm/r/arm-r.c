@@ -115,9 +115,6 @@ void rt_start(void)
     // Enable interrupts.
     __asm__("cpsie i");
 
-    // Invoke a syscall to switch into the first task.
-    rt_syscall_pend();
-
     // Idle loop that will run when no other tasks are runnable.
     for (;;)
     {

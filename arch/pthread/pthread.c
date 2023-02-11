@@ -39,6 +39,7 @@ struct pthread_arg
 };
 
 static pthread_t main_thread;
+static bool rt_started = false;
 
 static void block_all_signals(sigset_t *old_sigset)
 {
@@ -141,7 +142,11 @@ void *rt_context_create_arg(void (*fn)(uintptr_t), uintptr_t arg, void *stack,
 
 void rt_syscall_pend(void)
 {
-    pthread_kill(pthread_self(), SIGSYSCALL);
+    // syscalls made before rt_start are deferred.
+    if (rt_started)
+    {
+        pthread_kill(pthread_self(), SIGSYSCALL);
+    }
 }
 
 bool rt_interrupt_is_active(void)
@@ -152,7 +157,7 @@ bool rt_interrupt_is_active(void)
 __attribute__((noreturn)) static void resume_handler(int sig)
 {
     (void)sig;
-    /* This is always an error, so don't use rt_logf. */
+    // This is always an error, so don't use rt_logf.
     fprintf(stderr, "thread %lx received a resume but was not suspended\n",
             (unsigned long)pthread_self());
     fflush(stderr);
@@ -257,6 +262,7 @@ void rt_start(void)
     setitimer(ITIMER_REAL, &timer, NULL);
 
     main_thread = pthread_self();
+    rt_started = true;
 
     pthread_kill(idle_thread, SIGRESUME);
     pthread_kill(idle_thread, SIGSYSCALL);

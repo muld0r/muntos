@@ -45,11 +45,10 @@ void rt_cond_wait(struct rt_cond *cond, struct rt_mutex *mutex)
 
     rt_mutex_unlock(mutex);
 
-    struct rt_syscall_record wait_record;
-    wait_record.args.sem_wait.task = rt_task_self();
-    wait_record.args.sem_wait.sem = &cond->sem;
-    wait_record.syscall = RT_SYSCALL_SEM_WAIT;
-    rt_syscall(&wait_record);
+    struct rt_syscall_record *const wait_record = &rt_task_self()->record;
+    wait_record->args.sem_wait.sem = &cond->sem;
+    wait_record->syscall = RT_SYSCALL_SEM_WAIT;
+    rt_syscall(wait_record);
 
     rt_mutex_lock(mutex);
 }
@@ -75,15 +74,13 @@ bool rt_cond_timedwait(struct rt_cond *cond, struct rt_mutex *mutex,
         return false;
     }
 
-    struct rt_syscall_record wait_record;
-    wait_record.args.sem_timedwait.task = rt_task_self();
-    wait_record.args.sem_timedwait.sem = &cond->sem;
-    wait_record.args.sem_timedwait.ticks = ticks;
-    wait_record.syscall = RT_SYSCALL_SEM_TIMEDWAIT;
-    rt_task_self()->record = &wait_record;
-    rt_syscall(&wait_record);
+    struct rt_syscall_record *const record = &rt_task_self()->record;
+    record->args.sem_timedwait.sem = &cond->sem;
+    record->args.sem_timedwait.ticks = ticks;
+    record->syscall = RT_SYSCALL_SEM_TIMEDWAIT;
+    rt_syscall(record);
 
-    if (wait_record.args.sem_timedwait.sem == NULL)
+    if (record->args.sem_timedwait.sem == NULL)
     {
         return false;
     }

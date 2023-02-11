@@ -10,6 +10,7 @@ set -x
 
 build/list
 build/mutex
+build/newtask
 build/once
 build/pq
 build/queue

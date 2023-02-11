@@ -21,33 +21,28 @@ enum rt_syscall
 
     /* Post a semaphore from a task or interrupt. */
     RT_SYSCALL_SEM_POST,
+
+    /* Add a task to the ready list. */
+    RT_SYSCALL_TASK_READY,
 };
 
 union rt_syscall_args
 {
     struct
     {
-        struct rt_task *task;
-    } exit;
-    struct
-    {
-        struct rt_task *task;
         unsigned long ticks;
     } sleep;
     struct
     {
-        struct rt_task *task;
         unsigned long last_wake_tick;
         unsigned long period;
     } sleep_periodic;
     struct
     {
-        struct rt_task *task;
         struct rt_sem *sem;
     } sem_wait;
     struct
     {
-        struct rt_task *task;
         struct rt_sem *sem;
         unsigned long ticks;
     } sem_timedwait;
