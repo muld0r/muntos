@@ -1,7 +1,7 @@
+#include <rt/log.h>
 #include <rt/once.h>
 #include <rt/rt.h>
 #include <rt/task.h>
-#include <rt/log.h>
 
 #define ITERATIONS 10000UL
 

@@ -1,6 +1,6 @@
+#include <rt/log.h>
 #include <rt/rt.h>
 #include <rt/task.h>
-#include <rt/log.h>
 
 static char task_stacks[2][TASK_STACK_SIZE]
     __attribute__((aligned(STACK_ALIGN)));
@@ -18,8 +18,8 @@ static void fn(uintptr_t arg)
     }
 
     /* Create a new task in the unused slot with one lower priority, so it will
-     * only run once this task has exited, at which point the current slot can be
-     * used for a new task. */
+     * only run once this task has exited, at which point the current slot can
+     * be used for a new task. */
     ++arg;
     uintptr_t task_index = arg & 1;
     rt_task_init_arg(&tasks[task_index], fn, arg, "fn", N - (unsigned)arg,
