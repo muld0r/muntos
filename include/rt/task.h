@@ -59,8 +59,8 @@ void rt_task_enable_fp(void);
 
 enum rt_task_state
 {
-    RT_TASK_STATE_READY,
     RT_TASK_STATE_RUNNING,
+    RT_TASK_STATE_READY,
     RT_TASK_STATE_BLOCKED,
     RT_TASK_STATE_BLOCKED_TIMEOUT,
     RT_TASK_STATE_ASLEEP,
