@@ -1,5 +1,8 @@
 #include <rt/mutex.h>
 
+#include <rt/log.h>
+#include <rt/task.h>
+
 void rt_mutex_init(struct rt_mutex *mutex)
 {
     rt_sem_binary_init(&mutex->sem, 1);
@@ -7,6 +10,7 @@ void rt_mutex_init(struct rt_mutex *mutex)
 
 void rt_mutex_lock(struct rt_mutex *mutex)
 {
+    rt_logf("%s mutex lock\n", rt_task_name());
     rt_sem_wait(&mutex->sem);
 }
 
@@ -22,5 +26,6 @@ bool rt_mutex_timedlock(struct rt_mutex *mutex, unsigned long ticks)
 
 void rt_mutex_unlock(struct rt_mutex *mutex)
 {
+    rt_logf("%s mutex unlock\n", rt_task_name());
     rt_sem_post(&mutex->sem);
 }

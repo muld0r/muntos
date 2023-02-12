@@ -1,4 +1,5 @@
 #include <rt/cond.h>
+
 #include <rt/log.h>
 #include <rt/mutex.h>
 #include <rt/task.h>
@@ -14,12 +15,15 @@ static void cond_post(struct rt_sem *sem, bool broadcast)
     int value = rt_atomic_load_explicit(&sem->value, memory_order_relaxed);
     if (value < 0)
     {
+        rt_logf("%s cond post %d + %d\n", rt_task_name(), value,
+                broadcast ? -value : 1);
         rt_sem_post_syscall(sem, broadcast ? -value : 1);
     }
 }
 
 void rt_cond_signal(struct rt_cond *cond)
 {
+    rt_logf("%s cond signal\n", rt_task_name());
     cond_post(&cond->sem, false);
 }
 
@@ -45,10 +49,14 @@ void rt_cond_wait(struct rt_cond *cond, struct rt_mutex *mutex)
 
     rt_mutex_unlock(mutex);
 
+    rt_logf("%s cond wait, waiting\n", rt_task_name());
+
     struct rt_syscall_record *const wait_record = &rt_task_self()->record;
     wait_record->args.sem_wait.sem = &cond->sem;
     wait_record->syscall = RT_SYSCALL_SEM_WAIT;
     rt_syscall(wait_record);
+
+    rt_logf("%s cond wait, awoken\n", rt_task_name());
 
     rt_mutex_lock(mutex);
 }

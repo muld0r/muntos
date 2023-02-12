@@ -34,12 +34,14 @@ void rt_sem_post(struct rt_sem *sem)
         if (value == sem->max_value)
         {
             /* Semaphore is saturated. */
+            rt_logf("%s sem post, saturated %d\n", rt_task_name(), value);
             return;
         }
         if (value < 0)
         {
             /* If the value was negative, then the post needs to happen in a
              * system call because there are waiters. */
+            rt_logf("%s sem post, syscall %d + 1\n", rt_task_name(), value);
             rt_sem_post_syscall(sem, 1);
             return;
         }
