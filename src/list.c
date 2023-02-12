@@ -57,13 +57,13 @@ struct rt_list *rt_list_pop_front(struct rt_list *list)
 }
 
 void rt_list_insert_by(struct rt_list *list, struct rt_list *node,
-                       bool (*less_than)(const struct rt_list *a,
-                                         const struct rt_list *b))
+                       bool (*cmp)(const struct rt_list *a,
+                                   const struct rt_list *b))
 {
     struct rt_list *successor;
     rt_list_for_each(successor, list)
     {
-        if (less_than(node, successor))
+        if (cmp(node, successor))
         {
             break;
         }
