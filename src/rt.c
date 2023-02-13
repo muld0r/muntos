@@ -114,6 +114,7 @@ static void *sched(void)
      * it should continue running, so don't context switch. */
     if (active_task == next_task)
     {
+        rt_logf("sched: %s was suspended and reawakened\n", rt_task_name());
         return NULL;
     }
 
