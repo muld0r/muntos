@@ -118,9 +118,9 @@ static void *sched(void)
         return NULL;
     }
 
-    /* If the active task is still running but we are switching to a new task,
+    /* If the active task is still runnable but we are switching to a new task,
      * add the active task to the ready list and mark it as READY. */
-    if (runnable)
+    if (active_task->state == RT_TASK_STATE_RUNNING)
     {
         rt_logf("sched: %s is still runnable\n", rt_task_name());
         task_ready(active_task);
