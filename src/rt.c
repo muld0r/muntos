@@ -92,14 +92,11 @@ static void *sched(void)
 
     struct rt_task *next_task = task_from_list(rt_list_front(&ready_list));
 
-    /* If the active task invoked a system call to suspend itself but was then
-     * woken up again, its state will be READY. */
-    const bool runnable = (active_task->state == RT_TASK_STATE_RUNNING) ||
-                          (active_task->state == RT_TASK_STATE_READY);
+    const bool still_running = active_task->state == RT_TASK_STATE_RUNNING;
 
     /* If the active task is still running and the new task is lower priority,
      * then continue executing the active task. */
-    if (runnable && (active_task->priority > next_task->priority))
+    if (still_running && (active_task->priority > next_task->priority))
     {
         rt_logf("sched: %s is still highest priority (%u > %u)\n",
                 rt_task_name(), active_task->priority, next_task->priority);
@@ -118,9 +115,9 @@ static void *sched(void)
         return NULL;
     }
 
-    /* If the active task is still runnable but we are switching to a new task,
+    /* If the active task is still running but we are switching to a new task,
      * add the active task to the ready list and mark it as READY. */
-    if (active_task->state == RT_TASK_STATE_RUNNING)
+    if (still_running)
     {
         rt_logf("sched: %s is still runnable\n", rt_task_name());
         task_ready(active_task);
