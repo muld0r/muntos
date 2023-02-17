@@ -26,7 +26,7 @@ struct rt_cond
 
 #define RT_COND_INIT(name)                                                     \
     {                                                                          \
-        .sem = RT_SEM_INIT(name.sem, 0),                                       \
+        .sem = RT_SEM_INIT_MAX(name.sem, 0, 0),                                \
     }
 
 #define RT_COND(name) struct rt_cond name = RT_COND_INIT(name)

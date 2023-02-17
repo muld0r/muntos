@@ -18,5 +18,6 @@ build/rwlock
 build/sem
 build/simple
 build/sleep
+build/water/barrier
 build/water/cond
 build/water/sem

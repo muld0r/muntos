@@ -5,7 +5,7 @@
 
 void rt_mutex_init(struct rt_mutex *mutex)
 {
-    rt_sem_binary_init(&mutex->sem, 1);
+    rt_sem_init_binary(&mutex->sem, 1);
 }
 
 void rt_mutex_lock(struct rt_mutex *mutex)

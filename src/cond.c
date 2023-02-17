@@ -7,29 +7,19 @@
 
 void rt_cond_init(struct rt_cond *cond)
 {
-    rt_sem_init(&cond->sem, 0);
-}
-
-static void cond_post(struct rt_sem *sem, bool broadcast)
-{
-    int value = rt_atomic_load_explicit(&sem->value, memory_order_relaxed);
-    if (value < 0)
-    {
-        rt_logf("%s cond post %d + %d\n", rt_task_name(), value,
-                broadcast ? -value : 1);
-        rt_sem_post_syscall(sem, broadcast ? -value : 1);
-    }
+    rt_sem_init_max(&cond->sem, 0, 0);
 }
 
 void rt_cond_signal(struct rt_cond *cond)
 {
     rt_logf("%s cond signal\n", rt_task_name());
-    cond_post(&cond->sem, false);
+    rt_sem_post(&cond->sem);
 }
 
 void rt_cond_broadcast(struct rt_cond *cond)
 {
-    cond_post(&cond->sem, true);
+    rt_logf("%s cond broadcast\n", rt_task_name());
+    rt_sem_post_n(&cond->sem, INT_MAX);
 }
 
 void rt_cond_wait(struct rt_cond *cond, struct rt_mutex *mutex)
@@ -41,11 +31,6 @@ void rt_cond_wait(struct rt_cond *cond, struct rt_mutex *mutex)
         rt_atomic_fetch_sub_explicit(&cond->sem.value, 1, memory_order_relaxed);
 
     rt_logf("%s cond wait, new value %d\n", rt_task_name(), value - 1);
-
-    if (value > 0)
-    {
-        return;
-    }
 
     rt_mutex_unlock(mutex);
 
@@ -69,11 +54,6 @@ bool rt_cond_timedwait(struct rt_cond *cond, struct rt_mutex *mutex,
         rt_atomic_fetch_sub_explicit(&cond->sem.value, 1, memory_order_relaxed);
 
     rt_logf("%s cond wait, new value %d\n", rt_task_name(), value - 1);
-
-    if (value > 0)
-    {
-        return true;
-    }
 
     rt_mutex_unlock(mutex);
 

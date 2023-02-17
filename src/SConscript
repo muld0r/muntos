@@ -3,6 +3,7 @@ Import("env")
 librt = env.StaticLibrary(
     target="rt",
     source=[
+        "barrier.c",
         "cond.c",
         "list.c",
         "mutex.c",

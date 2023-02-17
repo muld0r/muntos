@@ -321,7 +321,6 @@ void *rt_syscall_run(void)
         case RT_SYSCALL_SEM_POST:
         {
             struct rt_sem *const sem = record->args.sem_post.sem;
-            const int increment = record->args.sem_post.increment;
             /* Allow another post syscall from an interrupt to occur while
              * wakes are evaluated so that no posts are missed. */
             if (record == &sem->post_record)
@@ -329,8 +328,7 @@ void *rt_syscall_run(void)
                 rt_atomic_flag_clear_explicit(&sem->post_pending,
                                               memory_order_release);
             }
-            rt_atomic_fetch_add_explicit(&sem->value, increment,
-                                         memory_order_relaxed);
+            rt_sem_add_n(sem, record->args.sem_post.n);
             wake_sem_waiters(sem);
             break;
         }

@@ -15,6 +15,7 @@ env.Program("sleep.c")
 water = env.Object("water/water.c")
 env.Program(["water/sem.c", water])
 env.Program(["water/cond.c", water])
+env.Program(["water/barrier.c", water])
 
 env.Program("cycle/sched.c")
 env.Program("cycle/sleep.c")

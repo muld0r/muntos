@@ -22,7 +22,7 @@ struct rt_mutex
 
 #define RT_MUTEX_INIT(name)                                                    \
     {                                                                          \
-        .sem = RT_SEM_BINARY_INIT(name.sem, 1),                                \
+        .sem = RT_SEM_INIT_BINARY(name.sem, 1),                                \
     }
 
 #define RT_MUTEX(name) struct rt_mutex name = RT_MUTEX_INIT(name)
