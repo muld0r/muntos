@@ -1,6 +1,7 @@
 #include "water.h"
 
 #include <rt/atomic.h>
+#include <rt/log.h>
 #include <rt/rt.h>
 #include <rt/sleep.h>
 #include <rt/task.h>
@@ -66,6 +67,9 @@ int main(void)
     const uint32_t o_hi = w;
     const uint32_t h_lo = (w - 1) * 2;
     const uint32_t h_hi = w * 2;
+
+    rt_logf("hydrogen = %u, oxygen = %u, water = %u\n", (unsigned)h,
+            (unsigned)o, (unsigned)w);
 
     if ((o < o_lo) || (o > o_hi) || (h < h_lo) || (h > h_hi))
     {
