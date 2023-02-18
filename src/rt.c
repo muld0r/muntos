@@ -186,7 +186,7 @@ static void tick_syscall(void)
         if (task->record.syscall == RT_SYSCALL_SEM_TIMEDWAIT)
         {
             struct rt_sem *const sem = task->record.args.sem_timedwait.sem;
-            rt_atomic_fetch_add_explicit(&sem->value, 1, memory_order_relaxed);
+            rt_sem_add_n(sem, 1);
             rt_list_remove(&task->list);
             --sem->num_waiters;
             wake_sem_waiters(sem);
