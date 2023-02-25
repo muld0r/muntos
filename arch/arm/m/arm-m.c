@@ -114,11 +114,14 @@ void rt_start(void)
     STK_VAL = 0;
     STK_CTRL = STK_CTRL_ENABLE | STK_CTRL_TICKINT;
 
-#if RT_TASK_ENABLE_CYCLES
+#if RT_CYCLE_ENABLE
     // Enable the cycle counter.
     DWT_LAR = DWT_LAR_UNLOCK;
     DEMCR |= DEMCR_TRCENA;
     DWT_CTRL |= DWT_CTRL_CYCCNTENA;
+#endif
+
+#if RT_TASK_ENABLE_CYCLE
     rt_task_self()->start_cycle = rt_cycle();
 #endif
 
@@ -187,7 +190,11 @@ void rt_logf(const char *fmt, ...)
 
 uint32_t rt_cycle(void)
 {
+#if RT_CYCLE_ENABLE
     return DWT_CYCCNT;
+#else
+    return 0;
+#endif
 }
 
 #if __ARM_ARCH == 6

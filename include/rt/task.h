@@ -2,14 +2,19 @@
 #define RT_TASK_H
 
 #include <rt/context.h>
+#include <rt/cycle.h>
 #include <rt/list.h>
 #include <rt/syscall.h>
 
 #include <stddef.h>
 #include <stdint.h>
 
-#ifndef RT_TASK_ENABLE_CYCLES
-#define RT_TASK_ENABLE_CYCLES 0
+#ifndef RT_TASK_ENABLE_CYCLE
+#define RT_TASK_ENABLE_CYCLE 0
+#endif
+
+#if RT_TASK_ENABLE_CYCLE && !RT_CYCLE_ENABLE
+#error "To use task cycle counts, the cycle counter must be enabled."
 #endif
 
 struct rt_task;
@@ -71,7 +76,7 @@ struct rt_task
 {
     struct rt_list list;
     struct rt_list sleep_list;
-#if RT_TASK_ENABLE_CYCLES
+#if RT_TASK_ENABLE_CYCLE
     uint64_t total_cycles;
     uint32_t start_cycle;
 #endif

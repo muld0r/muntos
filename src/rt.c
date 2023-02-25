@@ -241,7 +241,7 @@ void rt_syscall(struct rt_syscall_record *record)
 
 void *rt_syscall_run(void)
 {
-#if RT_TASK_ENABLE_CYCLES
+#if RT_TASK_ENABLE_CYCLE
     static volatile uint64_t total_task_cycles = 0;
     const uint32_t task_cycles = rt_cycle() - active_task->start_cycle;
     active_task->total_cycles += task_cycles;
@@ -340,7 +340,7 @@ void *rt_syscall_run(void)
     }
 
     void *const new_ctx = sched();
-#if RT_TASK_ENABLE_CYCLES
+#if RT_TASK_ENABLE_CYCLE
     active_task->start_cycle = rt_cycle();
 #endif
     return new_ctx;

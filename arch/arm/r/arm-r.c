@@ -92,11 +92,14 @@ void *rt_context_create_arg(void (*fn)(uintptr_t), uintptr_t arg, void *stack,
 
 void rt_start(void)
 {
-#if RT_TASK_ENABLE_CYCLES
+#if RT_CYCLE_ENABLE
     // Enable counters and reset the cycle counter.
     pmcr_oreq(PMCR_E | PMCR_C);
     // Enable the cycle counter.
     pmcntenset_oreq(PMCNTEN_C);
+#endif
+
+#if RT_TASK_ENABLE_CYCLE
     rt_task_self()->start_cycle = rt_cycle();
 #endif
 
@@ -169,5 +172,9 @@ void rt_syscall_pend(void)
 
 uint32_t rt_cycle(void)
 {
+#if RT_CYCLE_ENABLE
     return pmccntr();
+#else
+    return 0;
+#endif
 }
