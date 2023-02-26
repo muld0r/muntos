@@ -100,15 +100,16 @@ void *rt_context_create_arg(void (*fn)(uintptr_t), uintptr_t arg, void *stack,
 void rt_start(void)
 {
     /*
-     * Set SVCall and PendSV to the lowest exception priority, and SysTick to
-     * one higher. Write the priority as 0xFF, then read it back to determine
-     * how many bits of priority are implemented, and subtract one from that
-     * value to get the tick priority.
+     * Set PendSV to the lowest exception priority and SysTick to one higher.
+     * Write the priority as 0xFF, then read it back to determine how many bits
+     * of priority are implemented, and subtract one from that value to get the
+     * tick priority.
      */
-    SHPR2 = UINT32_C(0xFF) << 24;
-    const uint32_t syscall_prio = SHPR2 >> 24;
+    SHPR3 = UINT32_C(0xFF) << 16;
+    const uint32_t shpr3 = SHPR3;
+    const uint32_t syscall_prio = shpr3 >> 16;
     const uint32_t tick_prio = syscall_prio - 1;
-    SHPR3 = (tick_prio << 24) | (syscall_prio << 16);
+    SHPR3 = (tick_prio << 24) | shpr3;
 
     // Reset SysTick and enable its interrupt.
     STK_VAL = 0;
