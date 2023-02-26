@@ -165,7 +165,7 @@ bool rt_interrupt_is_active(void)
 void rt_syscall_pend(void)
 {
     SYS_SSIR1 = SYS_SSIR1_KEY;
-    __asm__("dsb");
+    __asm__("dsb" ::: "memory");
     __asm__("isb");
 }
 #endif
