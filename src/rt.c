@@ -60,13 +60,6 @@ struct rt_task *rt_task_self(void)
     return active_task;
 }
 
-void rt_task_ready(struct rt_task *task)
-{
-    rt_logf("syscall: %s ready\n", task->name);
-    task->record.syscall = RT_SYSCALL_TASK_READY;
-    rt_syscall(&task->record);
-}
-
 static void task_ready(struct rt_task *task)
 {
     task->state = RT_TASK_STATE_READY;
@@ -86,7 +79,15 @@ static void *sched(void)
 {
     if (rt_list_is_empty(&ready_list))
     {
-        rt_logf("sched: no new task to run, continuing %s\n", rt_task_name());
+        /*
+         * Note, if a task other than the idle task is running, then the ready
+         * list will never be empty, because if the idle task is not running,
+         * then it is ready. This also means that the active task's state
+         * doesn't need to be checked or adjusted here, because it will always
+         * be RUNNING. For active tasks other than idle, the state can be
+         * anything at this point.
+         */
+        rt_logf("sched: no new tasks to run, continuing %s\n", rt_task_name());
         return NULL;
     }
 
@@ -353,7 +354,8 @@ static void task_init(struct rt_task *task, const char *name, unsigned priority)
     task->wake_tick = 0;
     task->name = name;
     rt_list_init(&task->sleep_list);
-    rt_task_ready(task);
+    task->record.syscall = RT_SYSCALL_TASK_READY;
+    rt_syscall(&task->record);
 }
 
 void rt_task_init(struct rt_task *task, void (*fn)(void), const char *name,

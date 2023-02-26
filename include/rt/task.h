@@ -34,9 +34,6 @@ void rt_task_init_arg(struct rt_task *task, void (*fn)(uintptr_t),
                       uintptr_t arg, const char *name, unsigned priority,
                       void *stack, size_t stack_size);
 
-/* Make a statically-initialized task ready to run. */
-void rt_task_ready(struct rt_task *task);
-
 /*
  * Exit from the current task. This should be called automatically when a
  * task function returns.
@@ -94,11 +91,12 @@ struct rt_task
         static struct rt_task fn##_task = {                                    \
             .list = RT_LIST_INIT(fn##_task.list),                              \
             .sleep_list = RT_LIST_INIT(fn##_task.sleep_list),                  \
+            .record.syscall = RT_SYSCALL_TASK_READY,                           \
             .name = #fn,                                                       \
             .priority = (priority_),                                           \
         };                                                                     \
         fn##_task.ctx = rt_context_create((fn), (stack), sizeof(stack));       \
-        rt_task_ready(&fn##_task);                                             \
+        rt_syscall(&fn##_task.record);                                         \
     } while (0)
 
 #define RT_TASK_ARG(fn, arg, stack, priority_)                                 \
@@ -107,12 +105,13 @@ struct rt_task
         static struct rt_task fn##_task = {                                    \
             .list = RT_LIST_INIT(fn##_task.list),                              \
             .sleep_list = RT_LIST_INIT(fn##_task.sleep_list),                  \
+            .record.syscall = RT_SYSCALL_TASK_READY,                           \
             .name = #fn "(" #arg ")",                                          \
             .priority = (priority_),                                           \
         };                                                                     \
         fn##_task.ctx =                                                        \
             rt_context_create_arg((fn), (arg), (stack), sizeof(stack));        \
-        rt_task_ready(&fn##_task);                                             \
+        rt_syscall(&fn##_task.record);                                         \
     } while (0)
 
 #endif /* RT_TASK_H */
