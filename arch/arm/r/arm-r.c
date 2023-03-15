@@ -154,6 +154,11 @@ bool rt_interrupt_is_active(void)
     uint32_t cpsr;
     __asm__ __volatile__("mrs %0, cpsr" : "=r"(cpsr));
     const uint32_t mode = cpsr & CPSR_MODE_MASK;
+    /*
+     * NOTE: this assumes that nested interrupts don't use system mode.
+     * Interrupt nesting can use supervisor mode, which doesn't require each
+     * task stack to accommodate interrupts.
+     */
     return (mode != CPSR_MODE_SYS) && (mode != CPSR_MODE_USR);
 }
 
