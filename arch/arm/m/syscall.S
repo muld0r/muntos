@@ -3,7 +3,7 @@
 #include "exc_return.h"
 
     .syntax unified
-    .section .text.rt_syscall_handler
+    .section .text.rt_syscall_handler,"ax",%progbits
     .global rt_syscall_handler
     .type rt_syscall_handler, %function
 rt_syscall_handler:

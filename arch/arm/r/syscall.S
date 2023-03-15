@@ -24,7 +24,7 @@
 #endif
 
     .syntax unified
-    .section .text.rt_syscall_handler
+    .section .text.rt_syscall_handler,"ax",%progbits
     .global rt_syscall_handler
     .global rt_syscall_handler_irq
     .global rt_syscall_handler_svc
