@@ -60,11 +60,9 @@ static void increment_timedlock(void)
 
 int main(void)
 {
-    static char task_stacks[NUM_TASKS][TASK_STACK_SIZE]
-        __attribute__((aligned(STACK_ALIGN)));
-    RT_TASK(increment_lock, task_stacks[0], 1);
-    RT_TASK(increment_trylock, task_stacks[1], 1);
-    RT_TASK(increment_timedlock, task_stacks[2], 1);
+    RT_TASK(increment_lock, RT_STACK_MIN, 1);
+    RT_TASK(increment_trylock, RT_STACK_MIN, 1);
+    RT_TASK(increment_timedlock, RT_STACK_MIN, 1);
     rt_start();
 
     if (x != ITERATIONS * NUM_TASKS)

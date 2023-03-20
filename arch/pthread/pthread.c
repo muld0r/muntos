@@ -221,9 +221,10 @@ void rt_start(void)
 {
     block_all_signals(NULL);
 
-    static char idle_stack[PTHREAD_STACK_MIN];
+    RT_STACK(idle_task_stack, RT_STACK_MIN);
     pthread_t idle_thread =
-        (pthread_t)rt_context_create(idle_fn, idle_stack, sizeof idle_stack);
+        (pthread_t)rt_context_create(idle_fn, idle_task_stack,
+                                     sizeof idle_task_stack);
 
     /* The tick handler must block SIGSYSCALL. */
     struct sigaction tick_action = {

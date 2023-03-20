@@ -10,12 +10,31 @@ llvm_flags = [
     "-flto",
 ]
 
+
+def ld_emitter(target, source, env):
+    map_file = os.path.splitext(str(target[0]))[0] + ".map"
+    return target + [map_file], source
+
+
 env = Environment(
     CPPPATH=[Dir("include").srcnode()],
     CCFLAGS=llvm_flags,
     CFLAGS=["-std=c17"],
     LINKFLAGS=llvm_flags,
+    PROGEMITTER=ld_emitter,
 )
+
+if sys.platform == "darwin":
+    env["LINKCOM"] = (
+        "$LINK -o ${TARGETS[0]} -Wl,-map,${TARGETS[1]}"
+        + " $LINKFLAGS $SOURCES $_LIBDIRFLAGS $_LIBFLAGS"
+    )
+else:
+    env["LINKCOM"] = (
+        "$LINK -o ${TARGETS[0]} -Wl,-Map,${TARGETS[1]}"
+        + " $LINKFLAGS $SOURCES $_LIBDIRFLAGS"
+        + " -Wl,--start-group $_LIBFLAGS -Wl,--end-group"
+    )
 
 # for color terminal output when available
 if "TERM" in os.environ:
@@ -24,6 +43,7 @@ if "TERM" in os.environ:
 env["CC"] = "clang"
 env.Append(
     CCFLAGS=[
+        "-pthread",
         "-Weverything",
         "-Werror",
         "-Wno-padded",
@@ -34,6 +54,8 @@ env.Append(
         "-Wno-gcc-compat",
         "-Wno-missing-noreturn",
     ],
+    LINKFLAGS="-pthread",
+    CPPPATH=[Dir("arch/pthread/include").srcnode()],
 )
 
 if "darwin" in sys.platform:
@@ -54,22 +76,15 @@ librt = SConscript(
     dirs="src", variant_dir="build/lib", duplicate=False, exports=["env"]
 )
 
-pthread_env = env.Clone()
-pthread_env.Append(
-    CCFLAGS="-pthread",
-    LINKFLAGS="-pthread",
-)
-
 libpthread = SConscript(
     "arch/pthread/SConscript",
     variant_dir="build/lib/pthread",
     duplicate=False,
-    exports={"env": pthread_env},
+    exports={"env": env},
 )
 
-example_env = pthread_env.Clone()
+example_env = env.Clone()
 example_env.Append(
-    CPPDEFINES={"STACK_ALIGN": 4096, "TASK_STACK_SIZE": 32768},
     LIBS=[librt, libpthread],
 )
 

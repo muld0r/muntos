@@ -38,10 +38,8 @@ static void oncer_reset(void)
 
 int main(void)
 {
-    static char task_stacks[2][TASK_STACK_SIZE]
-        __attribute__((aligned(STACK_ALIGN)));
-    RT_TASK(oncer, task_stacks[0], 1);
-    RT_TASK(oncer_reset, task_stacks[1], 1);
+    RT_TASK(oncer, RT_STACK_MIN, 1);
+    RT_TASK(oncer_reset, RT_STACK_MIN, 1);
     rt_start();
 
     if (x != ITERATIONS)

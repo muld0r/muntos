@@ -49,23 +49,17 @@ static void timeout(void)
 
 int main(void)
 {
-    static char pusher_stacks[NPUSHERS][TASK_STACK_SIZE]
-        __attribute__((aligned(STACK_ALIGN)));
+    RT_STACKS(pusher_stacks, RT_STACK_MIN, NPUSHERS);
     static struct rt_task pushers[NPUSHERS];
 
     for (uintptr_t i = 0; i < NPUSHERS; ++i)
     {
         rt_task_init_arg(&pushers[i], pusher, i * TASK_INC, "pusher", 1,
-                         pusher_stacks[i], TASK_STACK_SIZE);
+                         pusher_stacks[i], RT_STACK_MIN);
     }
 
-    static char popper_stack[TASK_STACK_SIZE]
-        __attribute__((aligned(STACK_ALIGN)));
-    RT_TASK(popper, popper_stack, 2);
-
-    static char timeout_stack[TASK_STACK_SIZE]
-        __attribute__((aligned(STACK_ALIGN)));
-    RT_TASK(timeout, timeout_stack, 3);
+    RT_TASK(popper, RT_STACK_MIN, 2);
+    RT_TASK(timeout, RT_STACK_MIN, 3);
     rt_start();
 
     if (out_of_order)

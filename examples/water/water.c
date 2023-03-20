@@ -44,15 +44,10 @@ static void hydrogen_loop(void)
 
 int main(void)
 {
-    static char timeout_stack[TASK_STACK_SIZE]
-        __attribute__((aligned(STACK_ALIGN)));
-    RT_TASK(timeout, timeout_stack, 3);
-
-    static char atom_stacks[3][TASK_STACK_SIZE]
-        __attribute__((aligned(STACK_ALIGN)));
-    RT_TASK(hydrogen_loop, atom_stacks[0], 1);
-    RT_TASK(hydrogen_loop, atom_stacks[1], 1);
-    RT_TASK(oxygen_loop, atom_stacks[2], 2);
+    RT_TASK(timeout, RT_STACK_MIN, 3);
+    RT_TASK(hydrogen_loop, RT_STACK_MIN, 1);
+    RT_TASK(hydrogen_loop, RT_STACK_MIN, 1);
+    RT_TASK(oxygen_loop, RT_STACK_MIN, 2);
 
     rt_start();
 

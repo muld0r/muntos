@@ -7,6 +7,8 @@
 
 #include <rt/task.h>
 
+#include <rt/stack.h>
+
 #include <stdbool.h>
 #include <stdint.h>
 
@@ -83,9 +85,6 @@ void *rt_context_create_arg(void (*fn)(uintptr_t), uintptr_t arg, void *stack,
 #define SHPR2 (SHPR[1])
 #define SHPR3 (SHPR[2])
 
-#define STACK_ALIGN 8UL
-#define STACK_SIZE(x) (((x) + (STACK_ALIGN - 1)) & ~(STACK_ALIGN - 1))
-
 #define DWT_LAR (*(volatile uint32_t *)0xE0001FB0)
 #define DWT_LAR_UNLOCK UINT32_C(0xC5ACCE55)
 
@@ -126,15 +125,14 @@ void rt_start(void)
     rt_task_self()->start_cycle = rt_cycle();
 #endif
 
-    // The idle stack needs to be large enough to store a context.
-    static char idle_stack[STACK_SIZE(sizeof(struct context))]
-        __attribute__((aligned(STACK_ALIGN)));
+    // The idle task stack needs to be large enough to store a context.
+    RT_STACK(idle_task_stack, sizeof(struct context));
 
     // Set the process stack pointer to the top of the idle stack.
-    __asm__("msr psp, %0" : : "r"(&idle_stack[sizeof idle_stack]));
+    __asm__("msr psp, %0" : : "r"(&idle_task_stack[sizeof idle_task_stack]));
 #if __ARM_ARCH == 8
     // If supported, set the process stack pointer limit.
-    __asm__("msr psplim, %0" : : "r"(idle_stack));
+    __asm__("msr psplim, %0" : : "r"(idle_task_stack));
 #endif
 
     // Switch to the process stack pointer.

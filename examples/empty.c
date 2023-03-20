@@ -8,8 +8,6 @@ static void empty(void)
 
 int main(void)
 {
-    static char task_stack[TASK_STACK_SIZE]
-        __attribute__((aligned(STACK_ALIGN)));
-    RT_TASK(empty, task_stack, 1);
+    RT_TASK(empty, RT_STACK_MIN, 1);
     rt_start();
 }

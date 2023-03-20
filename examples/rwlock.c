@@ -48,23 +48,16 @@ static void timeout(void)
 
 int main(void)
 {
-    static char reader_stacks[NUM_READERS][TASK_STACK_SIZE]
-        __attribute__((aligned(STACK_ALIGN)));
+    RT_STACKS(reader_stacks, RT_STACK_MIN, NUM_READERS);
     static struct rt_task reader_tasks[NUM_READERS];
     for (int i = 0; i < NUM_READERS; ++i)
     {
         rt_task_init(&reader_tasks[i], reader, "reader", 1, reader_stacks[i],
-                     TASK_STACK_SIZE);
+                     RT_STACK_MIN);
     }
 
-    static char writer_stack[TASK_STACK_SIZE]
-        __attribute__((aligned(STACK_ALIGN)));
-    RT_TASK(writer, writer_stack, 1);
-
-    static char timeout_stack[TASK_STACK_SIZE]
-        __attribute__((aligned(STACK_ALIGN)));
-    RT_TASK(timeout, timeout_stack, 2);
-
+    RT_TASK(writer, RT_STACK_MIN, 1);
+    RT_TASK(timeout, RT_STACK_MIN, 2);
     rt_start();
 
     if (mismatch)

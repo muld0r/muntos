@@ -4,6 +4,7 @@
 #include <rt/context.h>
 #include <rt/cycle.h>
 #include <rt/list.h>
+#include <rt/stack.h>
 #include <rt/syscall.h>
 
 #include <stddef.h>
@@ -85,9 +86,10 @@ struct rt_task
     enum rt_task_state state;
 };
 
-#define RT_TASK(fn, stack, priority_)                                          \
+#define RT_TASK(fn, stack_size, priority_)                                     \
     do                                                                         \
     {                                                                          \
+        RT_STACK(fn##_task_stack, stack_size);                                 \
         static struct rt_task fn##_task = {                                    \
             .list = RT_LIST_INIT(fn##_task.list),                              \
             .sleep_list = RT_LIST_INIT(fn##_task.sleep_list),                  \
@@ -95,13 +97,15 @@ struct rt_task
             .name = #fn,                                                       \
             .priority = (priority_),                                           \
         };                                                                     \
-        fn##_task.ctx = rt_context_create((fn), (stack), sizeof(stack));       \
+        fn##_task.ctx =                                                        \
+            rt_context_create((fn), fn##_task_stack, sizeof fn##_task_stack);  \
         rt_syscall(&fn##_task.record);                                         \
     } while (0)
 
-#define RT_TASK_ARG(fn, arg, stack, priority_)                                 \
+#define RT_TASK_ARG(fn, arg, stack_size, priority_)                            \
     do                                                                         \
     {                                                                          \
+        RT_STACK(fn##_task_stack, stack_size);                                 \
         static struct rt_task fn##_task = {                                    \
             .list = RT_LIST_INIT(fn##_task.list),                              \
             .sleep_list = RT_LIST_INIT(fn##_task.sleep_list),                  \
@@ -109,8 +113,8 @@ struct rt_task
             .name = #fn "(" #arg ")",                                          \
             .priority = (priority_),                                           \
         };                                                                     \
-        fn##_task.ctx =                                                        \
-            rt_context_create_arg((fn), (arg), (stack), sizeof(stack));        \
+        fn##_task.ctx = rt_context_create_arg((fn), (arg), fn##_task_stack,    \
+                                              sizeof fn##_task_stack);         \
         rt_syscall(&fn##_task.record);                                         \
     } while (0)
 

@@ -34,10 +34,8 @@ static void sleep_periodic(uintptr_t period)
 
 int main(void)
 {
-    static char task_stacks[2][TASK_STACK_SIZE]
-        __attribute__((aligned(STACK_ALIGN)));
-    RT_TASK_ARG(sleep_periodic, 5, task_stacks[0], 2);
-    RT_TASK_ARG(sleep_periodic, 10, task_stacks[1], 1);
+    RT_TASK_ARG(sleep_periodic, 5, RT_STACK_MIN, 2);
+    RT_TASK_ARG(sleep_periodic, 10, RT_STACK_MIN, 1);
     rt_start();
 
     if (rt_atomic_load(&wrong_tick))

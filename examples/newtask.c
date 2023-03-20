@@ -2,8 +2,7 @@
 #include <rt/rt.h>
 #include <rt/task.h>
 
-static char task_stacks[2][TASK_STACK_SIZE]
-    __attribute__((aligned(STACK_ALIGN)));
+RT_STACKS(task_stacks, RT_STACK_MIN, 2);
 static struct rt_task tasks[2];
 
 #define N 100
@@ -23,12 +22,11 @@ static void fn(uintptr_t arg)
     ++arg;
     uintptr_t task_index = arg & 1;
     rt_task_init_arg(&tasks[task_index], fn, arg, "fn", N - (unsigned)arg,
-                     task_stacks[task_index], TASK_STACK_SIZE);
+                     task_stacks[task_index], RT_STACK_MIN);
 }
 
 int main(void)
 {
-    rt_task_init_arg(&tasks[0], fn, 0, "fn", N, task_stacks[0],
-                     TASK_STACK_SIZE);
+    rt_task_init_arg(&tasks[0], fn, 0, "fn", N, task_stacks[0], RT_STACK_MIN);
     rt_start();
 }
