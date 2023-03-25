@@ -1,5 +1,0 @@
-Import("env")
-
-libarm_r = env.StaticLibrary("arm-r", source=["arm-r.c", "syscall.S"])
-
-Return("libarm_r")

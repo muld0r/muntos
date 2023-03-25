@@ -1,17 +1,25 @@
 @ vim:ft=arm
 
-#include "exc_return.h"
-
     .syntax unified
     .section .text.rt_syscall_handler,"ax",%progbits
     .global rt_syscall_handler
     .type rt_syscall_handler, %function
 rt_syscall_handler:
 
+#if __ARM_ARCH_PROFILE == 'R'
+
+#include "r/syscall.S"
+
+#elif __ARM_ARCH_PROFILE == 'M'
+
+#include "m/exc_return.h"
+
 #if __ARM_ARCH == 6 || defined(__ARM_ARCH_8M_BASE__)
-#include "syscall-v6-v8base.S"
+#include "m/syscall-v6-v8base.S"
 #else
-#include "syscall-v7-v8.S"
+#include "m/syscall-v7-v8.S"
 #endif
+
+#endif // __ARM_ARCH_PROFILE
 
     .size rt_syscall_handler, .-rt_syscall_handler

@@ -3,32 +3,52 @@
 #include <rt/interrupt.h>
 #include <rt/log.h>
 #include <rt/rt.h>
+#include <rt/stack.h>
 #include <rt/syscall.h>
-
 #include <rt/task.h>
 
-#include <rt/stack.h>
+#define PROFILE_R (__ARM_ARCH_PROFILE == 'R')
+#define PROFILE_M (__ARM_ARCH_PROFILE == 'M')
+
+#define V8M ((__ARM_ARCH == 8) && PROFILE_M)
+
+#ifdef __ARM_FP
+#define FPU 1
+#else
+#define FPU 0
+#endif
+
+#if PROFILE_R
+#include "r/coprocessor.h"
+#include "r/vic.h"
+#elif PROFILE_M
+#include "m/exc_return.h"
+#endif
 
 #include <stdbool.h>
 #include <stdint.h>
 
-#include "exc_return.h"
-
 struct context
 {
     // Saved by task context switch.
-#if __ARM_ARCH == 8
+#if V8M
     void *psplim;
 #endif
+
+#if PROFILE_R && FPU
+    uint32_t fp_enabled;
+#endif
+
     uint32_t r4, r5, r6, r7, r8, r9, r10, r11;
 
-#ifdef __ARM_FP
+#if PROFILE_M && FPU
     /* Only use a per-task exception return value if floating-point is enabled,
-     * because otherwise the exception return value is always the same. */
+     * because otherwise the exception return value is always the same. This
+     * is the lr value on exception entry, so place it after r4-r11 so it can
+     * be saved/restored along with those registers. */
     uint32_t exc_return;
 #endif
 
-    // Saved automatically on exception entry.
     uint32_t r0, r1, r2, r3, r12;
     void (*lr)(void);
     union
@@ -39,43 +59,17 @@ struct context
     uint32_t psr;
 };
 
+#if PROFILE_R
+
+#define CPSR_MODE_USR UINT32_C(16)
+#define CPSR_MODE_SYS UINT32_C(31)
+#define CPSR_MODE_MASK UINT32_C(0x1F)
+#define CPSR_E ((uint32_t)(__BYTE_ORDER__ == __ORDER_BIG_ENDIAN__) << 9)
+#define CPSR_THUMB_SHIFT 5
+
+#elif PROFILE_M
+
 #define PSR_THUMB (UINT32_C(1) << 24)
-
-static struct context *context_create(void *stack, size_t stack_size)
-{
-    void *const stack_end = (char *)stack + stack_size;
-    struct context *ctx = stack_end;
-    ctx -= 1;
-
-#if __ARM_ARCH == 8
-    ctx->psplim = stack;
-#endif
-
-#ifdef __ARM_FP
-    ctx->exc_return = (uint32_t)TASK_INITIAL_EXC_RETURN;
-#endif
-
-    ctx->lr = rt_task_exit;
-    ctx->psr = PSR_THUMB;
-    return ctx;
-}
-
-void *rt_context_create(void (*fn)(void), void *stack, size_t stack_size)
-{
-    struct context *const ctx = context_create(stack, stack_size);
-    ctx->pc.fn = fn;
-    return ctx;
-}
-
-void *rt_context_create_arg(void (*fn)(uintptr_t), uintptr_t arg, void *stack,
-                            size_t stack_size)
-{
-    struct context *const ctx = context_create(stack, stack_size);
-    ctx->pc.fn_with_arg = fn;
-    ctx->r0 = arg;
-    return ctx;
-}
-
 #define STK_CTRL (*(volatile uint32_t *)0xE000E010U)
 #define STK_VAL (*(volatile uint32_t *)0xE000E018U)
 #define STK_CTRL_ENABLE (UINT32_C(1) << 0)
@@ -96,8 +90,59 @@ void *rt_context_create_arg(void (*fn)(uintptr_t), uintptr_t arg, void *stack,
 
 #define DWT_CYCCNT (*(volatile uint32_t *)0xE0001004U)
 
+#endif // PROFILE
+
+static struct context *context_create(void *stack, size_t stack_size,
+                                      uintptr_t fn_addr)
+{
+    void *const stack_end = (char *)stack + stack_size;
+    struct context *ctx = stack_end;
+    ctx -= 1;
+
+#if V8M
+    ctx->psplim = stack;
+#endif
+
+    ctx->lr = rt_task_exit;
+
+#if PROFILE_R
+    ctx->psr = CPSR_MODE_SYS | CPSR_E | (fn_addr & 0x1) << CPSR_THUMB_SHIFT;
+#if FPU
+    ctx->fp_enabled = 0;
+#endif
+
+#elif PROFILE_M
+    (void)fn_addr;
+    ctx->psr = PSR_THUMB;
+#if FPU
+    ctx->exc_return = (uint32_t)TASK_INITIAL_EXC_RETURN;
+#endif
+
+#endif // PROFILE
+    return ctx;
+}
+
+void *rt_context_create(void (*fn)(void), void *stack, size_t stack_size)
+{
+    struct context *const ctx =
+        context_create(stack, stack_size, (uintptr_t)fn);
+    ctx->pc.fn = fn;
+    return ctx;
+}
+
+void *rt_context_create_arg(void (*fn)(uintptr_t), uintptr_t arg, void *stack,
+                            size_t stack_size)
+{
+    struct context *const ctx =
+        context_create(stack, stack_size, (uintptr_t)fn);
+    ctx->pc.fn_with_arg = fn;
+    ctx->r0 = arg;
+    return ctx;
+}
+
 void rt_start(void)
 {
+#if PROFILE_M
     /*
      * Set PendSV to the lowest exception priority and SysTick to one higher.
      * Write the priority as 0xFF, then read it back to determine how many bits
@@ -113,13 +158,21 @@ void rt_start(void)
     // Reset SysTick and enable its interrupt.
     STK_VAL = 0;
     STK_CTRL = STK_CTRL_ENABLE | STK_CTRL_TICKINT;
+#endif
 
 #if RT_CYCLE_ENABLE
+#if PROFILE_R
+    // Enable counters and reset the cycle counter.
+    pmcr_oreq(PMCR_E | PMCR_C);
+    // Enable the cycle counter.
+    pmcntenset_oreq(PMCNTEN_C);
+#elif PROFILE_M
     // Enable the cycle counter.
     DWT_LAR = DWT_LAR_UNLOCK;
     DEMCR |= DEMCR_TRCENA;
     DWT_CTRL |= DWT_CTRL_CYCCNTENA;
-#endif
+#endif // PROFILE
+#endif // RT_CYCLE_ENABLE
 
 #if RT_TASK_ENABLE_CYCLE
     rt_task_self()->start_cycle = rt_cycle();
@@ -128,16 +181,23 @@ void rt_start(void)
     // The idle task stack needs to be large enough to store a context.
     RT_STACK(idle_task_stack, sizeof(struct context));
 
-    // Set the process stack pointer to the top of the idle stack.
-    __asm__("msr psp, %0" : : "r"(&idle_task_stack[sizeof idle_task_stack]));
-#if __ARM_ARCH == 8
+#if V8M
     // If supported, set the process stack pointer limit.
     __asm__("msr psplim, %0" : : "r"(idle_task_stack));
 #endif
 
+#if PROFILE_R
+    // Switch to system mode.
+    __asm__("cps %0" : : "i"(CPSR_MODE_SYS));
+    // Set the stack pointer to the top of the idle stack.
+    __asm__("ldr sp, =%0" : : "i"(&idle_task_stack[sizeof idle_task_stack]));
+#elif PROFILE_M
+    // Set the process stack pointer to the top of the idle stack.
+    __asm__("msr psp, %0" : : "r"(&idle_task_stack[sizeof idle_task_stack]));
     // Switch to the process stack pointer.
     __asm__("msr control, %0" : : "r"(2));
     __asm__("isb");
+#endif
 
     // Flush memory before enabling interrupts.
     __asm__("dsb" ::: "memory");
@@ -160,24 +220,42 @@ void rt_stop(void)
     }
 }
 
-#define ICSR (*(volatile uint32_t *)0xE000ED04UL)
-#define PENDSVSET (UINT32_C(1) << 28)
-
-#define IPSR                                                                   \
-    ({                                                                         \
-        uint32_t ipsr;                                                         \
-        __asm__ __volatile__("mrs %0, ipsr" : "=r"(ipsr));                     \
-        ipsr;                                                                  \
-    })
-
 bool rt_interrupt_is_active(void)
 {
-    return IPSR != 0;
+#if PROFILE_R
+    uint32_t cpsr;
+    __asm__ __volatile__("mrs %0, cpsr" : "=r"(cpsr));
+    const uint32_t mode = cpsr & CPSR_MODE_MASK;
+    /*
+     * NOTE: this assumes that nested interrupts don't use system mode.
+     * Interrupt nesting can use supervisor mode, which doesn't require each
+     * task stack to accommodate interrupts.
+     */
+    return (mode != CPSR_MODE_SYS) && (mode != CPSR_MODE_USR);
+#elif PROFILE_M
+    uint32_t ipsr;
+    __asm__ __volatile__("mrs %0, ipsr" : "=r"(ipsr));
+    return ipsr != 0;
+#endif // PROFILE
 }
 
 void rt_syscall_pend(void)
 {
+#if PROFILE_R
+
+#if RT_ARCH_ARM_R_VIC_TYPE == VIM_SSI
+#define SYS_SSIR1 (*(volatile uint32_t *)0xFFFFFFB0U)
+#define SYS_SSIR1_KEY (UINT32_C(0x75) << 8)
+    SYS_SSIR1 = SYS_SSIR1_KEY;
+#endif // RT_ARCH_ARM_R_VIC_TYPE
+
+#elif PROFILE_M
+
+#define ICSR (*(volatile uint32_t *)0xE000ED04UL)
+#define PENDSVSET (UINT32_C(1) << 28)
     ICSR = PENDSVSET;
+
+#endif // PROFILE
     __asm__("dsb" ::: "memory");
     __asm__("isb");
 }
@@ -190,12 +268,30 @@ void rt_logf(const char *fmt, ...)
 uint32_t rt_cycle(void)
 {
 #if RT_CYCLE_ENABLE
+#if PROFILE_R
+    return pmccntr();
+#elif PROFILE_M
     return DWT_CYCCNT;
-#else
+#endif // PROFILE
+#else  // RT_CYCLE_ENABLE
     return 0;
 #endif
 }
 
-#if __ARM_ARCH == 6
-#include "atomic-v6.c"
+#if FPU && PROFILE_R
+// A flag indicating whether the active task has an fp context.
+volatile bool rt_task_fp_enabled = false;
+
+void rt_task_enable_fp(void)
+{
+    rt_task_fp_enabled = true;
+    /* rt_task_fp_enabled must be set before fpscr. If fpscr is set first and
+     * then a context switch occurs, the write to fpscr will be lost. */
+    __asm__("dsb" ::: "memory");
+    __asm__("vmsr fpscr, %0" : : "r"(0));
+}
+#endif
+
+#if PROFILE_M && __ARM_ARCH == 6
+#include "m/atomic-v6.c"
 #endif

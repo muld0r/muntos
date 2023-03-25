@@ -23,15 +23,10 @@
 .endm
 #endif
 
-    .syntax unified
-    .section .text.rt_syscall_handler,"ax",%progbits
-    .global rt_syscall_handler
     .global rt_syscall_handler_irq
     .global rt_syscall_handler_svc
-    .type rt_syscall_handler, %function
     .type rt_syscall_handler_irq, %function
     .type rt_syscall_handler_svc, %function
-rt_syscall_handler:
 rt_syscall_handler_irq:
     sub lr, 4
 rt_syscall_handler_svc:
@@ -109,5 +104,3 @@ rt_syscall_handler_svc:
     pop {r0-r3, r12, lr}
     // Restore the task's pc and cpsr (this re-enables interrupts).
     rfeia sp!
-
-    .size rt_syscall_handler, .-rt_syscall_handler
