@@ -281,7 +281,7 @@ uint32_t rt_cycle(void)
 #endif
 }
 
-#if FPU && PROFILE_R
+#if PROFILE_R && FPU
 // A flag indicating whether the active task has an fp context.
 volatile bool rt_task_fp_enabled = false;
 
