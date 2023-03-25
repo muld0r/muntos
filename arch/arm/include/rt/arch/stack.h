@@ -18,6 +18,12 @@
 #define RT_STACK_ALIGN(n) 8UL
 #endif
 
-#define RT_STACK_MIN 160
+/*
+ * A register context takes 16-18 words depending on the architecture
+ * subvariant. Pushing all callee-saved registers once requires an
+ * additional 8 words. A task function that uses no stack space of its
+ * own can use just the context size of 64-72 bytes.
+ */
+#define RT_STACK_MIN 128
 
 #endif /* RT_ARCH_STACK_H */
