@@ -65,11 +65,14 @@ struct context
 #define CPSR_MODE_SYS UINT32_C(31)
 #define CPSR_MODE_MASK UINT32_C(0x1F)
 #define CPSR_E ((uint32_t)(__BYTE_ORDER__ == __ORDER_BIG_ENDIAN__) << 9)
-#define CPSR_THUMB_SHIFT 5
+#define CPSR_THUMB(fn_addr) ((uint32_t)((fn_addr) & 1) << 5)
 
 #elif PROFILE_M
 
+#define CONTROL_SPSEL (UINT32_C(1) << 1)
+
 #define PSR_THUMB (UINT32_C(1) << 24)
+
 #define STK_CTRL (*(volatile uint32_t *)0xE000E010U)
 #define STK_VAL (*(volatile uint32_t *)0xE000E018U)
 #define STK_CTRL_ENABLE (UINT32_C(1) << 0)
@@ -106,7 +109,7 @@ static struct context *context_create(void *stack, size_t stack_size,
     ctx->lr = rt_task_exit;
 
 #if PROFILE_R
-    ctx->psr = CPSR_MODE_SYS | CPSR_E | (fn_addr & 0x1) << CPSR_THUMB_SHIFT;
+    ctx->psr = CPSR_MODE_SYS | CPSR_E | CPSR_THUMB(fn_addr);
 #if FPU
     ctx->fp_enabled = 0;
 #endif
@@ -195,7 +198,7 @@ void rt_start(void)
     // Set the process stack pointer to the top of the idle stack.
     __asm__("msr psp, %0" : : "r"(&idle_task_stack[sizeof idle_task_stack]));
     // Switch to the process stack pointer.
-    __asm__("msr control, %0" : : "r"(2));
+    __asm__("msr control, %0" : : "r"(CONTROL_SPSEL));
     __asm__("isb");
 #endif
 
