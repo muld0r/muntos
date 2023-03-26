@@ -8,7 +8,7 @@ static RT_RWLOCK(lock);
 static unsigned long x = 0;
 static unsigned long y = 0;
 
-#define NUM_READERS 4
+#define NUM_READERS 3
 
 static volatile bool mismatch = false;
 

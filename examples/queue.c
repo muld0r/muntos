@@ -17,7 +17,7 @@ static void pusher(uintptr_t i)
     }
 }
 
-#define NPUSHERS 4
+#define NPUSHERS 3
 #define TASK_INC UINT32_C(0x1000000)
 
 static volatile bool out_of_order = false;
