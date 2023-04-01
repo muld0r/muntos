@@ -5,8 +5,6 @@
 #define RT_MPU_ENABLE 0
 #endif
 
-#if RT_MPU_ENABLE
-
 #if __ARM_ARCH == 6 || __ARM_ARCH == 7
 
 /*
@@ -24,8 +22,16 @@
 
 #define RT_MPU_SUBREGIONS(n) ((((n)-1) / RT_MPU_SUBREGION_SIZE(n)) + 1)
 
-#define RT_MPU_SRD(n)                                                          \
-    ((UINT32_C(0xFF00) >> (8 - RT_MPU_SUBREGIONS(n))) & UINT32_C(0xFF))
+#define RT_MPU_OFFSET(a, n) ((a) - ((a) & (RT_MPU_REGION_SIZE(n) - 1)))
+
+#define RT_MPU_SUBREGION_OFFSET(a, n)                                          \
+    (RT_MPU_OFFSET(a, n) / RT_MPU_SUBREGION_SIZE(n))
+
+#define RT_MPU_SRD(a, n)                                                       \
+    (((UINT32_C(0xFF00) >>                                                     \
+       (8 - RT_MPU_SUBREGIONS(n) - RT_MPU_SUBREGION_OFFSET(a, n))) |           \
+      ((UINT32_C(1) << RT_MPU_SUBREGION_OFFSET(a, n)) - 1)) &                  \
+     UINT32_C(0xFF))
 
 #define RT_MPU_ALIGN(n)                                                        \
     (RT_MPU_SUBREGIONS(n) > 4 ? RT_MPU_REGION_SIZE(n)                          \
@@ -44,7 +50,5 @@
 #else /* __ARM_ARCH */
 #error "Unsupported __ARM_ARCH for MPU configuration."
 #endif
-
-#endif /* RT_MPU_ENABE */
 
 #endif /* RT_MPU_H */
