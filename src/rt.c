@@ -131,6 +131,10 @@ static void *sched(void)
     rt_logf("sched: switching to %s with priority %u\n", rt_task_name(),
             active_task->priority);
 
+#if RT_MPU_ENABLE
+    rt_mpu_reconfigure(&active_task->mpu_config);
+#endif
+
     return active_task->ctx;
 }
 

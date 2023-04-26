@@ -7,6 +7,8 @@
 #include <rt/stack.h>
 #include <rt/syscall.h>
 
+#include <rt/arch/mpu.h>
+
 #include <stddef.h>
 #include <stdint.h>
 
@@ -79,6 +81,9 @@ struct rt_task
     uint32_t start_cycle;
 #endif
     void *ctx;
+#if RT_MPU_ENABLE
+    struct rt_mpu_config mpu_config;
+#endif
     unsigned long wake_tick;
     struct rt_syscall_record record;
     const char *name;
