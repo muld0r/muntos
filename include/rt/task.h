@@ -62,6 +62,12 @@ struct rt_task *rt_task_self(void);
  */
 void rt_task_enable_fp(void);
 
+/*
+ * On architectures that have privilege levels, make the current task
+ * unprivileged.
+ */
+void rt_task_drop_privilege(void);
+
 enum rt_task_state
 {
     RT_TASK_STATE_RUNNING,

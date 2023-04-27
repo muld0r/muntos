@@ -77,6 +77,7 @@ struct context
 
 #elif PROFILE_M
 
+#define CONTROL_NPRIV (UINT32_C(1) << 0)
 #define CONTROL_SPSEL (UINT32_C(1) << 1)
 
 #define PSR_THUMB (UINT32_C(1) << 24)
@@ -220,6 +221,8 @@ void rt_start(void)
     // Enable interrupts.
     __asm__("cpsie i");
 
+    rt_task_drop_privilege();
+
     // Idle loop that will run when no other tasks are runnable.
     for (;;)
     {
@@ -317,6 +320,18 @@ void rt_task_enable_fp(void)
     __asm__("vmsr fpscr, %0" : : "r"(0));
 }
 #endif
+
+void rt_task_drop_privilege(void)
+{
+#if PROFILE_R
+    __asm__("cps %0" : : "i"(CPSR_MODE_USR));
+#elif PROFILE_M && RT_MPU_ENABLE
+    uint32_t control;
+    __asm__("mrs %0, control" : "=r"(control));
+    __asm__("msr control, %0" : : "r"(control | CONTROL_NPRIV));
+    __asm__("isb");
+#endif
+}
 
 #if PROFILE_M && __ARM_ARCH == 6
 #include "m/atomic-v6.c"
