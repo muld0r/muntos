@@ -10,8 +10,19 @@
 
 #include <rt/arch/mpu.h>
 
+#if RT_MPU_ENABLE
+#define CONTROL_SIZE 4
+#define controltemp r2,
+#define getcontrol mrs r2, control
+#define setcontrol msr control, r2
+#else
+#define CONTROL_SIZE 0
+#define controltemp
+#define getcontrol
+#define setcontrol
+#endif
+
 #if __ARM_ARCH == 8
-/* In armv8-m.base, save and restore psplim using r3 as a temporary. */
 #define PSPLIM_SIZE 4
 #define psplimtemp r3,
 #define getpsplim mrs r3, psplim
@@ -23,18 +34,6 @@
 #define getpsplim
 #define setpsplim
 #define returnifnull cmp r0, 0; beq .Lreturn
-#endif
-
-#if RT_MPU_ENABLE
-#define CONTROL_SIZE 4
-#define controltemp r2,
-#define getcontrol mrs r2, control
-#define setcontrol msr control, r2
-#else
-#define CONTROL_SIZE 0
-#define controltemp
-#define getcontrol
-#define setcontrol
 #endif
 
 #define CONTEXT_SIZE (32 + PSPLIM_SIZE + CONTROL_SIZE)
@@ -69,11 +68,11 @@
     mov r10, r6
     mov r11, r7
     ldmia r0!, {controltemp psplimtemp r4-r7}
-    setcontrol
-    setpsplim
 
     /* Set the new stack pointer. */
     msr psp, r1
+    setcontrol
+    setpsplim
 
 .Lreturn:
     movs r0, -TASK_INITIAL_EXC_RETURN

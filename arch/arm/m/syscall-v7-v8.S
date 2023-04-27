@@ -6,17 +6,6 @@
 
 #include <rt/arch/mpu.h>
 
-#if __ARM_ARCH == 8
-/* In armv8-m, save and restore psplim using r3 as a temporary. */
-#define psplimtemp r3,
-#define getpsplim mrs r3, psplim
-#define setpsplim msr psplim, r3
-#else /* v7 */
-#define psplimtemp
-#define getpsplim
-#define setpsplim
-#endif
-
 #ifdef __ARM_FP
 /*
  * For floating-point, save and restore lr, which contains exception return
@@ -43,17 +32,27 @@
 #endif
 
 #if RT_MPU_ENABLE
-#define controltemp ,r12
-#define getcontrol mrs r12, control
-#define setcontrol msr control, r12
+#define controltemp r2,
+#define getcontrol mrs r2, control
+#define setcontrol msr control, r2
 #else
 #define controltemp
 #define getcontrol
 #define setcontrol
 #endif
 
-#define saveregs stmdb r1!, {psplimtemp r4-r11 controltemp excreturn}
-#define loadregs ldmia r0!, {psplimtemp r4-r11 controltemp excreturn}
+#if __ARM_ARCH == 8
+#define psplimtemp r3,
+#define getpsplim mrs r3, psplim
+#define setpsplim msr psplim, r3
+#else /* v7 */
+#define psplimtemp
+#define getpsplim
+#define setpsplim
+#endif
+
+#define saveregs stmdb r1!, {controltemp psplimtemp r4-r11 excreturn}
+#define loadregs ldmia r0!, {controltemp psplimtemp r4-r11 excreturn}
 
     pushlr
     bl rt_syscall_run
@@ -64,8 +63,8 @@
     /* Write the suspending context to its stack pointer. */
     mrs r1, psp
     savefp
-    getpsplim
     getcontrol
+    getpsplim
     saveregs
 
     /* Store the new stack pointer with the saved context. */
@@ -79,8 +78,8 @@
 
     /* Set the new stack pointer. */
     msr psp, r0
-    setpsplim
     setcontrol
+    setpsplim
 
 .Lreturn:
     return

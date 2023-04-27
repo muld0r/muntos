@@ -30,7 +30,13 @@
 
 struct context
 {
-    // Saved by task context switch.
+#if PROFILE_M && RT_MPU_ENABLE
+    /* In M-profile, thread-mode privilege is part of the control register. In
+     * A/R-profile, it's part of the processor mode (system vs. user), which is
+     * a field of the CPSR. */
+    uint32_t control;
+#endif
+
 #if V8M
     void *psplim;
 #endif
@@ -41,20 +47,12 @@ struct context
 
     uint32_t r4, r5, r6, r7, r8, r9, r10, r11;
 
-#if PROFILE_M
-#if RT_MPU_ENABLE
-    /* In M-profile, thread-mode privilege is part of the control register. In
-     * A/R-profile, it's part of the processor mode (system vs. user), which is
-     * a field of the CPSR. */
-    uint32_t control;
-#endif
-#if FPU
+#if PROFILE_M && FPU
     /* Only use a per-task exception return value if floating-point is enabled,
      * because otherwise the exception return value is always the same. This
      * is the lr value on exception entry, so place it after r4-r11 so it can
      * be saved/restored along with those registers. */
     uint32_t exc_return;
-#endif
 #endif
 
     uint32_t r0, r1, r2, r3, r12;
