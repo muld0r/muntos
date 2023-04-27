@@ -125,6 +125,10 @@ static struct context *context_create(void *stack, size_t stack_size,
 #elif PROFILE_M
     (void)fn_addr;
     ctx->psr = PSR_THUMB;
+#if RT_MPU_ENABLE
+    // Tasks start privileged and use the process stack pointer.
+    ctx->control = CONTROL_SPSEL;
+#endif
 #if FPU
     ctx->exc_return = (uint32_t)TASK_INITIAL_EXC_RETURN;
 #endif
