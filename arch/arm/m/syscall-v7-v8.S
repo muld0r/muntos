@@ -75,12 +75,12 @@
 
     /* Load the new context returned by rt_syscall_run. */
     loadregs
-    setpsplim
-    setcontrol
     loadfp
 
     /* Set the new stack pointer. */
     msr psp, r0
+    setpsplim
+    setcontrol
 
 .Lreturn:
     return
