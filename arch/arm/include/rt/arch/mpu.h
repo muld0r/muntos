@@ -282,6 +282,9 @@ static inline void rt_mpu_enable(void)
 static inline void rt_mpu_reconfigure(const struct rt_mpu_config *config)
 {
     // TODO: more efficient version with assembly
+#if __ARM_ARCH == 8
+    RT_MPU->number = RT_MPU_TASK_REGION_START_ID;
+#endif
     for (int i = 0; i < RT_MPU_NUM_TASK_REGIONS; ++i)
     {
         RT_MPU->regions[i % RT_MPU_NUM_REGION_REGS] = config->regions[i];
