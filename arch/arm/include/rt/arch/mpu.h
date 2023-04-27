@@ -5,7 +5,7 @@
 #define RT_MPU_ENABLE 0
 #endif
 
-#if RT_MPU_ENABLE
+#if !defined(__ASSEMBLER__) && RT_MPU_ENABLE
 
 #include <stddef.h>
 #include <stdint.h>

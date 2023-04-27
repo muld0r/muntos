@@ -41,12 +41,20 @@ struct context
 
     uint32_t r4, r5, r6, r7, r8, r9, r10, r11;
 
-#if PROFILE_M && FPU
+#if PROFILE_M
+#if RT_MPU_ENABLE
+    /* In M-profile, thread-mode privilege is part of the control register. In
+     * A/R-profile, it's part of the processor mode (system vs. user), which is
+     * a field of the CPSR. */
+    uint32_t control;
+#endif
+#if FPU
     /* Only use a per-task exception return value if floating-point is enabled,
      * because otherwise the exception return value is always the same. This
      * is the lr value on exception entry, so place it after r4-r11 so it can
      * be saved/restored along with those registers. */
     uint32_t exc_return;
+#endif
 #endif
 
     uint32_t r0, r1, r2, r3, r12;
@@ -65,7 +73,7 @@ struct context
 #define CPSR_MODE_SYS UINT32_C(31)
 #define CPSR_MODE_MASK UINT32_C(0x1F)
 #define CPSR_E ((uint32_t)(__BYTE_ORDER__ == __ORDER_BIG_ENDIAN__) << 9)
-#define CPSR_THUMB(fn_addr) ((uint32_t)((fn_addr) & 1) << 5)
+#define CPSR_THUMB(fn_addr) ((uint32_t)((fn_addr)&1) << 5)
 
 #elif PROFILE_M
 
@@ -250,17 +258,28 @@ void rt_syscall_pend(void)
 #define SYS_SSIR1 (*(volatile uint32_t *)0xFFFFFFB0U)
 #define SYS_SSIR1_KEY (UINT32_C(0x75) << 8)
     SYS_SSIR1 = SYS_SSIR1_KEY;
+    __asm__("dsb" ::: "memory");
+    __asm__("isb");
 #endif // RT_ARCH_ARM_R_VIC_TYPE
 
 #elif PROFILE_M
 
 #define ICSR (*(volatile uint32_t *)0xE000ED04UL)
 #define PENDSVSET (UINT32_C(1) << 28)
-    ICSR = PENDSVSET;
 
+    /* If the MPU is enabled, then the current task might be unprivileged, which
+     * prevents access to ICSR, so system calls must be invoked with svc. */
+    if (RT_MPU_ENABLE && !rt_interrupt_is_active())
+    {
+        __asm__("svc 0");
+    }
+    else
+    {
+        ICSR = PENDSVSET;
+        __asm__("dsb" ::: "memory");
+        __asm__("isb");
+    }
 #endif // PROFILE
-    __asm__("dsb" ::: "memory");
-    __asm__("isb");
 }
 
 void rt_logf(const char *fmt, ...)
