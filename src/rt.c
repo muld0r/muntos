@@ -351,7 +351,8 @@ void *rt_syscall_run(void)
     return new_ctx;
 }
 
-static void task_init(struct rt_task *task, const char *name, unsigned priority)
+static void task_init(struct rt_task *task, const char *name, unsigned priority,
+                      void *stack, size_t stack_size)
 {
     rt_logf("%s created\n", name);
     task->priority = priority;
@@ -359,6 +360,13 @@ static void task_init(struct rt_task *task, const char *name, unsigned priority)
     task->name = name;
     rt_list_init(&task->sleep_list);
     task->record.syscall = RT_SYSCALL_TASK_READY;
+#if RT_MPU_ENABLE
+    rt_mpu_config_set(&task->mpu_config, RT_MPU_TASK_REGION_START_ID,
+                      (uintptr_t)stack, stack_size, RT_MPU_STACK_ATTR);
+#else
+    (void)stack;
+    (void)stack_size;
+#endif
     rt_syscall(&task->record);
 }
 
@@ -366,7 +374,7 @@ void rt_task_init(struct rt_task *task, void (*fn)(void), const char *name,
                   unsigned priority, void *stack, size_t stack_size)
 {
     task->ctx = rt_context_create(fn, stack, stack_size);
-    task_init(task, name, priority);
+    task_init(task, name, priority, stack, stack_size);
 }
 
 void rt_task_init_arg(struct rt_task *task, void (*fn)(uintptr_t),
@@ -374,5 +382,5 @@ void rt_task_init_arg(struct rt_task *task, void (*fn)(uintptr_t),
                       void *stack, size_t stack_size)
 {
     task->ctx = rt_context_create_arg(fn, arg, stack, stack_size);
-    task_init(task, name, priority);
+    task_init(task, name, priority, stack, stack_size);
 }

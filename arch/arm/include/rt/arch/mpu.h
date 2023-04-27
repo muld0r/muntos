@@ -117,6 +117,10 @@ struct rt_mpu
 
 #define RT_MPU_ATTR_ENABLE (UINT32_C(1) << 0)
 
+#define RT_MPU_STACK_ATTR                                                      \
+    (RT_MPU_ATTR_RW | RT_MPU_ATTR_XN | RT_MPU_ATTR_CACHED_WB_RWALLOC |         \
+     RT_MPU_ATTR_ENABLE)
+
 #define RT_MPU_BASE_ADDR(id, start_addr)                                       \
     ((id & RT_MPU_REGION_MASK) | RT_MPU_VALID | start_addr)
 
@@ -183,7 +187,7 @@ struct rt_mpu
 #define RT_MPU_ATTR_INNER_SHAREABLE RT_MPU_ATTR_SH(3)
 
 /* These attribute fields are in the limit_addr register, but to allow them to
- * be passed as part of a single attribute argument, shift them up by 5 bits */
+ * be passed as part of a single attribute argument, shift them up by 5 bits. */
 #define RT_MPU_ATTR_RLAR_SHIFT 5
 #define RT_MPU_ATTR_MASK (UINT32_C(0x1F))
 #define RT_MPU_ADDR_MASK (~RT_MPU_ATTR_MASK)
@@ -222,6 +226,9 @@ struct rt_mpu
     RT_MPU_ATTR_INDIRECT(RT_MPU_ATTR_WT(1, 0), RT_MPU_ATTR_WT(1, 0))
 #define RT_MPU_ATTR_WT_RWALLOC                                                 \
     RT_MPU_ATTR_INDIRECT(RT_MPU_ATTR_WT(1, 1), RT_MPU_ATTR_WT(1, 1))
+
+// The stack will use the indirect attributes for index 0.
+#define RT_MPU_STACK_ATTR (RT_MPU_ATTR_RW | RT_MPU_ATTR_XN | RT_MPU_ATTR_ENABLE)
 
 #define RT_MPU_BASE_ADDR(start_addr, attr)                                     \
     ((start_addr & RT_MPU_ADDR_MASK) | (attr & RT_MPU_ATTR_MASK))
