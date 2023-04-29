@@ -45,16 +45,17 @@
 
 #define RT_MPU_SUBREGIONS(n) ((((n)-1) / RT_MPU_SUBREGION_SIZE(n)) + 1)
 
-#define RT_MPU_OFFSET(a, n) ((a) - ((a) & (RT_MPU_REGION_SIZE(n) - 1)))
+#define RT_MPU_OFFSET(a, n) ((a) - ((a) & ~(RT_MPU_REGION_SIZE(n) - 1)))
 
 #define RT_MPU_SUBREGION_OFFSET(a, n)                                          \
     (RT_MPU_OFFSET(a, n) / RT_MPU_SUBREGION_SIZE(n))
 
+#define RT_MPU_SRD_PREFIX(o) ((UINT32_C(1) << (o)) - 1)
+#define RT_MPU_SRD_SUFFIX(o) ((~((UINT32_C(1) << (o)) - 1)) & UINT32_C(0xFF))
+
 #define RT_MPU_SRD(a, n)                                                       \
-    (((UINT32_C(0xFF00) >>                                                     \
-       (8 - RT_MPU_SUBREGIONS(n) - RT_MPU_SUBREGION_OFFSET(a, n))) |           \
-      ((UINT32_C(1) << RT_MPU_SUBREGION_OFFSET(a, n)) - 1)) &                  \
-     UINT32_C(0xFF))
+    (RT_MPU_SRD_PREFIX(RT_MPU_SUBREGION_OFFSET(a, n)) |                        \
+     RT_MPU_SRD_SUFFIX(RT_MPU_SUBREGION_OFFSET((a) + (n)-1, n) + 1))
 
 #define RT_MPU_ALIGN(n)                                                        \
     (RT_MPU_SUBREGIONS(n) > 4 ? RT_MPU_REGION_SIZE(n)                          \
@@ -285,8 +286,11 @@ static inline void rt_mpu_reconfigure(const struct rt_mpu_config *config)
 #if __ARM_ARCH == 8
     RT_MPU->number = RT_MPU_TASK_REGION_START_ID;
 #endif
-    for (int i = 0; i < RT_MPU_NUM_TASK_REGIONS; ++i)
+    for (uint32_t i = 0; i < RT_MPU_NUM_TASK_REGIONS; ++i)
     {
+#if __ARM_ARCH == 7
+        RT_MPU->number = RT_MPU_TASK_REGION_START_ID + i;
+#endif
         RT_MPU->regions[i % RT_MPU_NUM_REGION_REGS] = config->regions[i];
     }
 }
