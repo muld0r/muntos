@@ -76,7 +76,7 @@ struct rt_mpu_config
     struct rt_mpu_region regions[RT_MPU_NUM_TASK_REGIONS];
 };
 
-#if __ARM_ARCH >= 7
+#if __ARM_ARCH == 7
 // v7-m implements alias registers, but v6-m does not.
 #define RT_MPU_NUM_REGION_REGS 4
 #else
@@ -325,10 +325,9 @@ static inline void rt_mpu_reconfigure(const struct rt_mpu_config *config)
 #if (RT_MPU_NUM_REGION_REGS == 4) && ((RT_MPU_NUM_TASK_REGIONS % 4) == 0)
     for (int i = 0; i < RT_MPU_NUM_TASK_REGIONS; i += 4)
     {
-        __asm__("ldmia %0, {r4-r11}\n\
-                 stmia %1, {r4-r11}\n"
+        __asm__("ldmia %0, {r4-r11}; stmia %1, {r4-r11}"
                 :
-                : "r"(&config->regions[i]), "r"(&RT_MPU->regions)
+                : "r"(&config->regions[i]), "r"(RT_MPU->regions)
                 : "r4", "r5", "r6", "r7", "r8", "r9", "r10", "r11");
     }
 #else
