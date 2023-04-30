@@ -145,9 +145,9 @@ static inline void rt_mpu_config_init(struct rt_mpu_config *config)
     {
         /* Initialize the region number and valid bit for all task regions even
          * if the region will never be enabled, so that the configurations can
-         * be applied safely. If the region registers are 0, the MPU region
-         * number will be used when each configuration is applied, disabling
-         * already-configured regions. */
+         * be applied safely. If the region registers are 0, the
+         * previously-used MPU region number will be used when each
+         * configuration is applied, disabling already-configured regions. */
         config->regions[i].base_addr =
             RT_MPU_BASE_ADDR(RT_MPU_TASK_REGION_START_ID + i, 0);
         config->regions[i].attr_size = RT_MPU_ATTR_SIZE(0, 256, 0);
@@ -180,7 +180,13 @@ struct rt_mpu_config
     struct rt_mpu_region regions[RT_MPU_NUM_TASK_REGIONS];
 };
 
+#ifdef __ARM_ARCH_8M_BASE__
+#define RT_MPU_NUM_REGION_REGS 1
+#define RT_MPU_NUM_RESERVED 4
+#else
 #define RT_MPU_NUM_REGION_REGS 4
+#define RT_MPU_NUM_RESERVED 1
+#endif
 
 struct rt_mpu
 {
@@ -188,7 +194,7 @@ struct rt_mpu
     uint32_t ctrl;
     uint32_t number;
     struct rt_mpu_region regions[RT_MPU_NUM_REGION_REGS];
-    uint32_t : 32; // padding
+    uint32_t reserved[RT_MPU_NUM_RESERVED];
     uint32_t attr_indirect[2];
 };
 
@@ -302,10 +308,12 @@ static inline void rt_mpu_enable(void)
 {
     RT_MPU->ctrl = RT_MPU_CTRL_ENABLE | RT_MPU_CTRL_HFNMI_ENABLE |
                    RT_MPU_CTRL_PRIVDEF_ENABLE;
-#if __ARM_ARCH == 8
-    /* Once the MPU is enabled, set the region number to the offset that
-     * will be used for context switches. (On v7, the region number is part of
-     * the address register.) */
+#if __ARM_ARCH == 8 && !defined(__ARM_ARCH_8M_BASE__)
+    /* Once the MPU is enabled, set the region number to the offset that will
+     * be used for context switches because the region number is not part of
+     * the region config on v8-m like it is in v7-m. On v8-m.base we need to
+     * set the region number while reconfiguring anyway, so don't bother
+     * setting an offset up front. */
     RT_MPU->number = RT_MPU_TASK_REGION_START_ID;
 #endif
     __asm__("dmb" ::: "memory");
@@ -314,11 +322,28 @@ static inline void rt_mpu_enable(void)
 
 static inline void rt_mpu_reconfigure(const struct rt_mpu_config *config)
 {
-    // TODO: more efficient version with assembly
+#if (RT_MPU_NUM_REGION_REGS == 4) && ((RT_MPU_NUM_TASK_REGIONS % 4) == 0)
+    for (int i = 0; i < RT_MPU_NUM_TASK_REGIONS; i += 4)
+    {
+        __asm__("ldmia %0, {r4-r11}\n\
+                 stmia %1, {r4-r11}\n"
+                :
+                : "r"(&config->regions[i]), "r"(&RT_MPU->regions)
+                : "r4", "r5", "r6", "r7", "r8", "r9", "r10", "r11");
+    }
+#else
     for (uint32_t i = 0; i < RT_MPU_NUM_TASK_REGIONS; ++i)
     {
+#ifdef __ARM_ARCH_8M_BASE__
+        /* armv8-m.base is unique in that it does not embed the region number in
+         * the region config register, but also does not have region alias
+         * registers, so we have to set the region number for each reconfigured
+         * region here. */
+        RT_MPU->number = RT_MPU_TASK_REGION_START_ID + i;
+#endif
         RT_MPU->regions[i % RT_MPU_NUM_REGION_REGS] = config->regions[i];
     }
+#endif
 }
 
 #else // RT_MPU_ENABLE
