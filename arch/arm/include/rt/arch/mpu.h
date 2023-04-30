@@ -286,7 +286,7 @@ static inline void rt_mpu_enable(void)
      * the address register.) */
     RT_MPU->number = RT_MPU_TASK_REGION_START_ID;
 #endif
-    __asm__("dmb");
+    __asm__("dmb" ::: "memory");
     __asm__("isb");
 }
 
