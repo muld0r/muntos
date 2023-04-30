@@ -255,6 +255,13 @@ bool rt_interrupt_is_active(void)
 #endif // PROFILE
 }
 
+static bool interrupts_masked(void)
+{
+    uint32_t primask;
+    __asm__("mrs %0, primask" : "=r"(primask));
+    return primask != 0;
+}
+
 void rt_syscall_pend(void)
 {
 #if PROFILE_R
@@ -272,9 +279,12 @@ void rt_syscall_pend(void)
 #define ICSR (*(volatile uint32_t *)0xE000ED04UL)
 #define PENDSVSET (UINT32_C(1) << 28)
 
-    /* If the MPU is enabled, then the current task might be unprivileged, which
-     * prevents access to ICSR, so system calls must be invoked with svc. */
-    if (RT_MPU_ENABLE && !rt_interrupt_is_active())
+    /* If the MPU is enabled, then the current task might be unprivileged,
+     * which prevents access to ICSR, so system calls must be invoked with svc.
+     * svc can only be used if no interrupt is active and if interrupts are not
+     * masked. TODO: is there a more efficient way to check that svc is allowed?
+     */
+    if (RT_MPU_ENABLE && !rt_interrupt_is_active() && !interrupts_masked())
     {
         __asm__("svc 0");
     }
