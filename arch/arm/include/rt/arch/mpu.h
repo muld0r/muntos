@@ -226,6 +226,7 @@ struct rt_mpu
 
 #define RT_MPU_ATTR_WT_RALLOC                                                  \
     RT_MPU_ATTR_INDIRECT(RT_MPU_ATTR_WT(1, 0), RT_MPU_ATTR_WT(1, 0))
+
 #define RT_MPU_ATTR_WT_RWALLOC                                                 \
     RT_MPU_ATTR_INDIRECT(RT_MPU_ATTR_WT(1, 1), RT_MPU_ATTR_WT(1, 1))
 
