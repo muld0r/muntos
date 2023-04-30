@@ -279,14 +279,19 @@ static inline void rt_mpu_enable(void)
 {
     RT_MPU->ctrl = RT_MPU_CTRL_ENABLE | RT_MPU_CTRL_HFNMI_ENABLE |
                    RT_MPU_CTRL_PRIVDEF_ENABLE;
+#if __ARM_ARCH == 8
+    /* Once the MPU is enabled, set the region number to the offset that
+     * will be used for context switches. (On v7, the region number is part of
+     * the address register.) */
+    RT_MPU->number = RT_MPU_TASK_REGION_START_ID;
+#endif
+    __asm__("dmb");
+    __asm__("isb");
 }
 
 static inline void rt_mpu_reconfigure(const struct rt_mpu_config *config)
 {
     // TODO: more efficient version with assembly
-#if __ARM_ARCH == 8
-    RT_MPU->number = RT_MPU_TASK_REGION_START_ID;
-#endif
     for (uint32_t i = 0; i < RT_MPU_NUM_TASK_REGIONS; ++i)
     {
 #if __ARM_ARCH == 7
