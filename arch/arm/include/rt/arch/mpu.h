@@ -9,6 +9,7 @@
 
 #include <stddef.h>
 #include <stdint.h>
+#include <string.h>
 
 #ifndef RT_MPU_NUM_REGIONS
 #define RT_MPU_NUM_REGIONS 8
@@ -53,6 +54,7 @@
 #define RT_MPU_SRD_PREFIX(o) ((UINT32_C(1) << (o)) - 1)
 #define RT_MPU_SRD_SUFFIX(o) ((~((UINT32_C(1) << (o)) - 1)) & UINT32_C(0xFF))
 
+// TODO: this macro behaves badly when n is 0
 #define RT_MPU_SRD(a, n)                                                       \
     (RT_MPU_SRD_PREFIX(RT_MPU_SUBREGION_OFFSET(a, n)) |                        \
      RT_MPU_SRD_SUFFIX(RT_MPU_SUBREGION_OFFSET((a) + (n)-1, n) + 1))
@@ -123,10 +125,10 @@ struct rt_mpu
      RT_MPU_ATTR_ENABLE)
 
 #define RT_MPU_BASE_ADDR(id, start_addr)                                       \
-    ((id & RT_MPU_REGION_MASK) | RT_MPU_VALID | start_addr)
+    (((id)&RT_MPU_REGION_MASK) | RT_MPU_VALID | (start_addr))
 
 #define RT_MPU_ATTR_SIZE(start_addr, size, attr)                               \
-    (RT_MPU_SIZE(size) << 1 | RT_MPU_SRD(start_addr, size) << 8 | attr)
+    (RT_MPU_SIZE(size) << 1 | RT_MPU_SRD(start_addr, size) << 8 | (attr))
 
 static inline void rt_mpu_config_set(struct rt_mpu_config *config, uint32_t id,
                                      uintptr_t start_addr, size_t size,
@@ -135,6 +137,21 @@ static inline void rt_mpu_config_set(struct rt_mpu_config *config, uint32_t id,
     const uint32_t index = id - RT_MPU_TASK_REGION_START_ID;
     config->regions[index].base_addr = RT_MPU_BASE_ADDR(id, start_addr);
     config->regions[index].attr_size = RT_MPU_ATTR_SIZE(start_addr, size, attr);
+}
+
+static inline void rt_mpu_config_init(struct rt_mpu_config *config)
+{
+    for (uint32_t i = 0; i < RT_MPU_NUM_TASK_REGIONS; ++i)
+    {
+        /* Initialize the region number and valid bit for all task regions even
+         * if the region will never be enabled, so that the configurations can
+         * be applied safely. If the region registers are 0, the MPU region
+         * number will be used when each configuration is applied, disabling
+         * already-configured regions. */
+        config->regions[i].base_addr =
+            RT_MPU_BASE_ADDR(RT_MPU_TASK_REGION_START_ID + i, 0);
+        config->regions[i].attr_size = RT_MPU_ATTR_SIZE(0, 256, 0);
+    }
 }
 
 static inline void rt_mpu_region_set(uint32_t id, uintptr_t start_addr,
@@ -240,6 +257,11 @@ struct rt_mpu
     (((start_addr + size - 1) & RT_MPU_ADDR_MASK) |                            \
      ((attr >> RT_MPU_ATTR_RLAR_SHIFT) & RT_MPU_ATTR_MASK))
 
+static inline void rt_mpu_config_init(struct rt_mpu_config *config)
+{
+    memset(config, 0, sizeof *config);
+}
+
 static inline void rt_mpu_config_set(struct rt_mpu_config *config, uint32_t id,
                                      uintptr_t start_addr, size_t size,
                                      uint32_t attr)
@@ -295,13 +317,24 @@ static inline void rt_mpu_reconfigure(const struct rt_mpu_config *config)
     // TODO: more efficient version with assembly
     for (uint32_t i = 0; i < RT_MPU_NUM_TASK_REGIONS; ++i)
     {
-#if __ARM_ARCH == 7
-        RT_MPU->number = RT_MPU_TASK_REGION_START_ID + i;
-#endif
         RT_MPU->regions[i % RT_MPU_NUM_REGION_REGS] = config->regions[i];
     }
 }
 
-#endif // RT_MPU_ENABLE
+#else // RT_MPU_ENABLE
+
+/* Provide no-op versions for the static task initialization macros when
+ * there's no MPU. */
+#define rt_mpu_config_init(config)                                             \
+    do                                                                         \
+    {                                                                          \
+    } while (0)
+
+#define rt_mpu_config_set(config, id, start_addr, size, attr)                  \
+    do                                                                         \
+    {                                                                          \
+    } while (0)
+
+#endif
 
 #endif // RT_MPU_H

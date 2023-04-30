@@ -97,13 +97,6 @@ struct rt_task
     enum rt_task_state state;
 };
 
-#if !RT_MPU_ENABLE
-#define rt_mpu_config_set(config, id, stack, stack_size, attr)                 \
-    do                                                                         \
-    {                                                                          \
-    } while (0)
-#endif
-
 #define RT_TASK(fn, stack_size, priority_)                                     \
     do                                                                         \
     {                                                                          \
@@ -117,6 +110,7 @@ struct rt_task
         };                                                                     \
         fn##_task.ctx =                                                        \
             rt_context_create((fn), fn##_task_stack, sizeof fn##_task_stack);  \
+        rt_mpu_config_init(&fn##_task.mpu_config);                             \
         rt_mpu_config_set(&fn##_task.mpu_config, RT_MPU_TASK_REGION_START_ID,  \
                           (uintptr_t)fn##_task_stack, stack_size,              \
                           RT_MPU_STACK_ATTR);                                  \
@@ -136,6 +130,7 @@ struct rt_task
         };                                                                     \
         fn##_task.ctx = rt_context_create_arg((fn), (arg), fn##_task_stack,    \
                                               sizeof fn##_task_stack);         \
+        rt_mpu_config_init(&fn##_task.mpu_config);                             \
         rt_mpu_config_set(&fn##_task.mpu_config, RT_MPU_TASK_REGION_START_ID,  \
                           (uintptr_t)fn##_task_stack, stack_size,              \
                           RT_MPU_STACK_ATTR);                                  \
