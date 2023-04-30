@@ -171,6 +171,7 @@ struct rt_mpu
     uint32_t ctrl;
     uint32_t number;
     struct rt_mpu_region regions[RT_MPU_NUM_REGION_REGS];
+    uint32_t : 32; // padding
     uint32_t attr_indirect[2];
 };
 
