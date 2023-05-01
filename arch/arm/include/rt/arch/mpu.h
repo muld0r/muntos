@@ -197,6 +197,15 @@ struct rt_mpu_config
 #else
 #define RT_MPU_NUM_REGION_REGS 4
 #define RT_MPU_NUM_RESERVED 1
+
+#if RT_MPU_NUM_TASK_REGIONS > 4
+#error "Only up to 4 task regions are supported on armv8-m.main"
+/*
+ * TODO: this can be implemented by updating the region number dynamically if
+ * necessary.
+ */
+#endif
+
 #endif
 
 struct rt_mpu
