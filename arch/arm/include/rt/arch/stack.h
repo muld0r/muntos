@@ -1,7 +1,7 @@
 #ifndef RT_ARCH_STACK_H
 #define RT_ARCH_STACK_H
 
-#include <rt/arch/mpu.h>
+#include <rt/mpu.h>
 
 #if RT_MPU_ENABLE
 

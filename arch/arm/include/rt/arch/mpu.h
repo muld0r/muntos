@@ -1,11 +1,9 @@
-#ifndef RT_MPU_H
-#define RT_MPU_H
+#ifndef RT_ARCH_MPU_H
+#define RT_ARCH_MPU_H
 
-#ifndef RT_MPU_ENABLE
-#define RT_MPU_ENABLE 0
-#endif
+#include <rt/mpu.h>
 
-#if !defined(__ASSEMBLER__) && RT_MPU_ENABLE
+#if RT_MPU_ENABLE && !defined(__ASSEMBLER__)
 
 #include <stddef.h>
 #include <stdint.h>
@@ -358,20 +356,6 @@ static inline void rt_mpu_reconfigure(const struct rt_mpu_config *config)
 #endif
 }
 
-#else // RT_MPU_ENABLE
+#endif // RT_MPU_ENABLE
 
-/* Provide no-op versions for the static task initialization macros when
- * there's no MPU. */
-#define rt_mpu_config_init(config)                                             \
-    do                                                                         \
-    {                                                                          \
-    } while (0)
-
-#define rt_mpu_config_set(config, id, start_addr, size, attr)                  \
-    do                                                                         \
-    {                                                                          \
-    } while (0)
-
-#endif
-
-#endif // RT_MPU_H
+#endif // RT_ARCH_MPU_H

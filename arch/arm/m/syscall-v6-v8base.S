@@ -8,7 +8,7 @@
  * different, mainly due to the lack of stmdb and ldm.w/stm.w.
  */
 
-#include <rt/arch/mpu.h>
+#include <rt/mpu.h>
 
 #if RT_MPU_ENABLE
 #define CONTROL_SIZE 4

@@ -4,7 +4,7 @@
  * This variant of the syscall handler supports armv{7,8}-m{,+nofp}.
  */
 
-#include <rt/arch/mpu.h>
+#include <rt/mpu.h>
 
 #ifdef __ARM_FP
 /*

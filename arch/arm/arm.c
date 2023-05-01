@@ -2,6 +2,7 @@
 #include <rt/cycle.h>
 #include <rt/interrupt.h>
 #include <rt/log.h>
+#include <rt/mpu.h>
 #include <rt/rt.h>
 #include <rt/stack.h>
 #include <rt/syscall.h>

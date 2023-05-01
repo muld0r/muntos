@@ -4,10 +4,9 @@
 #include <rt/context.h>
 #include <rt/cycle.h>
 #include <rt/list.h>
+#include <rt/mpu.h>
 #include <rt/stack.h>
 #include <rt/syscall.h>
-
-#include <rt/arch/mpu.h>
 
 #include <stddef.h>
 #include <stdint.h>
