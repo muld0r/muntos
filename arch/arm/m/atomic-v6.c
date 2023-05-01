@@ -1,6 +1,20 @@
 #include <stdbool.h>
 
-static void barrier_start(int memorder)
+// Disable interrupts and return the previous mask.
+static inline bool disable(void)
+{
+    bool primask;
+    __asm__("mrs %0, primask" : "=r"(primask));
+    __asm__("cpsid i" ::: "memory");
+    return primask;
+}
+
+static inline void restore(bool mask)
+{
+    __asm__("msr primask, %0" : : "r"(mask) : "memory");
+}
+
+static inline void barrier_start(int memorder)
 {
     if ((memorder == __ATOMIC_RELEASE) || (memorder == __ATOMIC_ACQ_REL) ||
         (memorder == __ATOMIC_SEQ_CST))
@@ -9,7 +23,7 @@ static void barrier_start(int memorder)
     }
 }
 
-static void barrier_end(int memorder)
+static inline void barrier_end(int memorder)
 {
     if ((memorder == __ATOMIC_CONSUME) || (memorder == __ATOMIC_ACQUIRE) ||
         (memorder == __ATOMIC_ACQ_REL) || (memorder == __ATOMIC_SEQ_CST))
@@ -23,12 +37,12 @@ unsigned char __atomic_exchange_1(volatile void *ptr, unsigned char val,
 {
     volatile unsigned char *const p = ptr;
 
-    __asm__("cpsid i");
+    const bool mask = disable();
     barrier_start(memorder);
     const unsigned char old = *p;
     *p = val;
     barrier_end(memorder);
-    __asm__("cpsie i");
+    restore(mask);
 
     return old;
 }
@@ -37,12 +51,12 @@ unsigned __atomic_exchange_4(volatile void *ptr, unsigned val, int memorder)
 {
     volatile unsigned *const p = ptr;
 
-    __asm__("cpsid i");
+    const bool mask = disable();
     barrier_start(memorder);
     const unsigned old = *p;
     *p = val;
     barrier_end(memorder);
-    __asm__("cpsie i");
+    restore(mask);
 
     return old;
 }
@@ -51,12 +65,12 @@ unsigned __atomic_fetch_add_4(volatile void *ptr, unsigned val, int memorder)
 {
     volatile unsigned *const p = ptr;
 
-    __asm__("cpsid i");
+    const bool mask = disable();
     barrier_start(memorder);
     const unsigned old = *p;
     *p = old + val;
     barrier_end(memorder);
-    __asm__("cpsie i");
+    restore(mask);
 
     return old;
 }
@@ -65,12 +79,12 @@ unsigned __atomic_fetch_sub_4(volatile void *ptr, unsigned val, int memorder)
 {
     volatile unsigned *const p = ptr;
 
-    __asm__("cpsid i");
+    const bool mask = disable();
     barrier_start(memorder);
     const unsigned old = *p;
     *p = old - val;
     barrier_end(memorder);
-    __asm__("cpsie i");
+    restore(mask);
 
     return old;
 }
@@ -84,7 +98,7 @@ bool __atomic_compare_exchange_1(volatile void *ptr, void *exp,
     volatile unsigned char *const p = ptr;
     unsigned char *const e = exp;
 
-    __asm__("cpsid i");
+    const bool mask = disable();
     barrier_start(success_memorder);
     const unsigned char old = *p;
     const bool equal = old == *e;
@@ -98,7 +112,7 @@ bool __atomic_compare_exchange_1(volatile void *ptr, void *exp,
         *e = old;
         barrier_end(fail_memorder);
     }
-    __asm__("cpsie i");
+    restore(mask);
     return equal;
 }
 
@@ -111,7 +125,7 @@ bool __atomic_compare_exchange_4(volatile void *ptr, void *exp, unsigned val,
     volatile unsigned *const p = ptr;
     unsigned *const e = exp;
 
-    __asm__("cpsid i");
+    const bool mask = disable();
     barrier_start(success_memorder);
     const unsigned old = *p;
     const bool equal = old == *e;
@@ -125,6 +139,6 @@ bool __atomic_compare_exchange_4(volatile void *ptr, void *exp, unsigned val,
         *e = old;
         barrier_end(fail_memorder);
     }
-    __asm__("cpsie i");
+    restore(mask);
     return equal;
 }
