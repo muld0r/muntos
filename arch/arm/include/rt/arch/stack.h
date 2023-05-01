@@ -8,7 +8,7 @@
 #define RT_STACK_ALIGN(n) RT_MPU_ALIGN(n)
 
 #if __ARM_ARCH == 6 || __ARM_ARCH == 7
-#define RT_STACK_SIZE(n) (RT_MPU_SUBREGION_SIZE(n) * RT_MPU_SUBREGIONS(n))
+#define RT_STACK_SIZE(n) RT_MPU_SIZE(n)
 #endif
 
 #endif /* RT_MPU_ENABLE */

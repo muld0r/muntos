@@ -38,32 +38,45 @@
  * with size 256 or greater. An MPU region of size 32 can be achieved with a
  * 256-byte region and one active subregion, so just use >= 256 bytes always.
  */
-#define RT_MPU_SIZE(n)                                                         \
+#define RT_MPU_SIZEBITS(n)                                                     \
     (((n) <= 256) ? UINT32_C(7) : (UINT32_C(31) - (uint32_t)__builtin_clzl(n)))
 
-#define RT_MPU_REGION_SIZE(n) ((uint64_t)1 << (RT_MPU_SIZE(n) + 1))
+#define RT_MPU_REGION_SIZE(n) ((uint64_t)1 << (RT_MPU_SIZEBITS(n) + 1))
+
 #define RT_MPU_SUBREGION_SIZE(n) (RT_MPU_REGION_SIZE(n) / 8)
 
-#define RT_MPU_SUBREGIONS(n) ((((n)-1) / RT_MPU_SUBREGION_SIZE(n)) + 1)
+/* Only use subregions when the size is known at compile-time, to avoid
+ * run-time division during configurations. Static task stacks should have this
+ * property. Also require n > 0 because the calculations don't work for n == 0.
+ */
+#define RT_MPU_USE_SUBREGIONS(n) (__builtin_constant_p(n) && (n > 0))
 
-#define RT_MPU_OFFSET(a, n) ((a) - ((a) & ~(RT_MPU_REGION_SIZE(n) - 1)))
+#define RT_MPU_SUBREGIONS(n)                                                   \
+    (RT_MPU_USE_SUBREGIONS(n) ? ((((n)-1) / RT_MPU_SUBREGION_SIZE(n)) + 1) : 8)
 
+/* Calculate in which subregion an address resides, given the region size. */
 #define RT_MPU_SUBREGION_OFFSET(a, n)                                          \
-    (RT_MPU_OFFSET(a, n) / RT_MPU_SUBREGION_SIZE(n))
+    ((((a) & ~(RT_MPU_SUBREGION_SIZE(n) - 1)) -                                \
+      ((a) & ~(RT_MPU_REGION_SIZE(n) - 1))) /                                  \
+     RT_MPU_SUBREGION_SIZE(n))
 
 #define RT_MPU_SRD_PREFIX(o) ((UINT32_C(1) << (o)) - 1)
-#define RT_MPU_SRD_SUFFIX(o) ((~((UINT32_C(1) << (o)) - 1)) & UINT32_C(0xFF))
+#define RT_MPU_SRD_SUFFIX(o)                                                   \
+    ((~((UINT32_C(1) << ((o) + 1)) - 1)) & UINT32_C(0xFF))
 
-// TODO: this macro behaves badly when n is 0
 #define RT_MPU_SRD(a, n)                                                       \
-    (RT_MPU_SRD_PREFIX(RT_MPU_SUBREGION_OFFSET(a, n)) |                        \
-     RT_MPU_SRD_SUFFIX(RT_MPU_SUBREGION_OFFSET((a) + (n)-1, n) + 1))
+    (RT_MPU_USE_SUBREGIONS(n)                                                  \
+         ? (RT_MPU_SRD_PREFIX(RT_MPU_SUBREGION_OFFSET(a, n)) |                 \
+            RT_MPU_SRD_SUFFIX(RT_MPU_SUBREGION_OFFSET((a) + (n)-1, n)))        \
+         : UINT32_C(0))
 
 #define RT_MPU_ALIGN(n)                                                        \
     (RT_MPU_SUBREGIONS(n) > 4 ? RT_MPU_REGION_SIZE(n)                          \
      : RT_MPU_SUBREGIONS(n) > 2                                                \
          ? 4 * RT_MPU_SUBREGION_SIZE(n)                                        \
          : RT_MPU_SUBREGIONS(n) * RT_MPU_SUBREGION_SIZE(n))
+
+#define RT_MPU_SIZE(n) (RT_MPU_SUBREGION_SIZE(n) * RT_MPU_SUBREGIONS(n))
 
 struct rt_mpu_region
 {
@@ -128,7 +141,7 @@ struct rt_mpu
     (((id)&RT_MPU_REGION_MASK) | RT_MPU_VALID | (start_addr))
 
 #define RT_MPU_ATTR_SIZE(start_addr, size, attr)                               \
-    (RT_MPU_SIZE(size) << 1 | RT_MPU_SRD(start_addr, size) << 8 | (attr))
+    (RT_MPU_SIZEBITS(size) << 1 | RT_MPU_SRD(start_addr, size) << 8 | (attr))
 
 static inline void rt_mpu_config_set(struct rt_mpu_config *config, uint32_t id,
                                      uintptr_t start_addr, size_t size,
