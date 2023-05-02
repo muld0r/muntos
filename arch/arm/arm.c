@@ -256,12 +256,14 @@ bool rt_interrupt_is_active(void)
 #endif // PROFILE
 }
 
-static bool interrupts_masked(void)
+#if PROFILE_M
+static inline bool interrupts_masked(void)
 {
     uint32_t primask;
     __asm__("mrs %0, primask" : "=r"(primask));
     return primask != 0;
 }
+#endif
 
 void rt_syscall_pend(void)
 {

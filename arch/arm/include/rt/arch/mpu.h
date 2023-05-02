@@ -21,11 +21,13 @@
 #define RT_MPU_TASK_REGION_START_ID                                            \
     (RT_MPU_NUM_REGIONS - RT_MPU_NUM_TASK_REGIONS)
 
-#define RT_MPU ((volatile struct rt_mpu *)0xE000ED90UL)
-
 #define RT_MPU_CTRL_ENABLE (UINT32_C(1) << 0)
 #define RT_MPU_CTRL_HFNMI_ENABLE (UINT32_C(1) << 1)
 #define RT_MPU_CTRL_PRIVDEF_ENABLE (UINT32_C(1) << 2)
+
+#if __ARM_ARCH_PROFILE == 'M'
+#define RT_MPU_REGS ((volatile struct rt_mpu *)0xE000ED90UL)
+#endif
 
 #if __ARM_ARCH == 6 || __ARM_ARCH == 7
 
@@ -168,8 +170,9 @@ static inline void rt_mpu_config_init(struct rt_mpu_config *config)
 static inline void rt_mpu_region_set(uint32_t id, uintptr_t start_addr,
                                      size_t size, uint32_t attr)
 {
-    RT_MPU->regions[0].base_addr = RT_MPU_BASE_ADDR(id, start_addr);
-    RT_MPU->regions[0].attr_size = RT_MPU_ATTR_SIZE(start_addr, size, attr);
+    RT_MPU_REGS->regions[0].base_addr = RT_MPU_BASE_ADDR(id, start_addr);
+    RT_MPU_REGS->regions[0].attr_size =
+        RT_MPU_ATTR_SIZE(start_addr, size, attr);
 }
 
 #elif __ARM_ARCH == 8
@@ -301,15 +304,16 @@ static inline void rt_mpu_config_set(struct rt_mpu_config *config, uint32_t id,
 static inline void rt_mpu_region_set(uint32_t id, uintptr_t start_addr,
                                      size_t size, uint32_t attr)
 {
-    RT_MPU->number = id;
-    RT_MPU->regions[0].base_addr = RT_MPU_BASE_ADDR(start_addr, attr);
-    RT_MPU->regions[0].limit_addr = RT_MPU_LIMIT_ADDR(start_addr, size, attr);
+    RT_MPU_REGS->number = id;
+    RT_MPU_REGS->regions[0].base_addr = RT_MPU_BASE_ADDR(start_addr, attr);
+    RT_MPU_REGS->regions[0].limit_addr =
+        RT_MPU_LIMIT_ADDR(start_addr, size, attr);
 }
 
 static inline void rt_mpu_attr_init(void)
 {
-    RT_MPU->attr_indirect[0] = 0;
-    RT_MPU->attr_indirect[1] = 0;
+    RT_MPU_REGS->attr_indirect[0] = 0;
+    RT_MPU_REGS->attr_indirect[1] = 0;
 }
 
 static inline void rt_mpu_attr_set(uint32_t index, uint32_t attr)
@@ -326,15 +330,15 @@ static inline void rt_mpu_attr_set(uint32_t index, uint32_t attr)
 
 static inline void rt_mpu_enable(void)
 {
-    RT_MPU->ctrl = RT_MPU_CTRL_ENABLE | RT_MPU_CTRL_HFNMI_ENABLE |
-                   RT_MPU_CTRL_PRIVDEF_ENABLE;
+    RT_MPU_REGS->ctrl = RT_MPU_CTRL_ENABLE | RT_MPU_CTRL_HFNMI_ENABLE |
+                        RT_MPU_CTRL_PRIVDEF_ENABLE;
 #if __ARM_ARCH == 8 && !defined(__ARM_ARCH_8M_BASE__)
     /* Once the MPU is enabled, set the region number to the offset that will
      * be used for context switches because the region number is not part of
      * the region config on v8-m like it is in v7-m. On v8-m.base we need to
      * set the region number while reconfiguring anyway, so don't bother
      * setting an offset up front. */
-    RT_MPU->number = RT_MPU_TASK_REGION_START_ID;
+    RT_MPU_REGS->number = RT_MPU_TASK_REGION_START_ID;
 #endif
     __asm__("dmb" ::: "memory");
     __asm__("isb");
@@ -347,7 +351,7 @@ static inline void rt_mpu_reconfigure(const struct rt_mpu_config *config)
     {
         __asm__("ldmia %0, {r4-r11}; stmia %1, {r4-r11}"
                 :
-                : "r"(&config->regions[i]), "r"(RT_MPU->regions)
+                : "r"(&config->regions[i]), "r"(RT_MPU_REGS->regions)
                 : "r4", "r5", "r6", "r7", "r8", "r9", "r10", "r11");
     }
 #else
@@ -358,9 +362,9 @@ static inline void rt_mpu_reconfigure(const struct rt_mpu_config *config)
          * the region config register, but also does not have region alias
          * registers, so we have to set the region number for each reconfigured
          * region here. */
-        RT_MPU->number = RT_MPU_TASK_REGION_START_ID + i;
+        RT_MPU_REGS->number = RT_MPU_TASK_REGION_START_ID + i;
 #endif
-        RT_MPU->regions[i % RT_MPU_NUM_REGION_REGS] = config->regions[i];
+        RT_MPU_REGS->regions[i % RT_MPU_NUM_REGION_REGS] = config->regions[i];
     }
 #endif
 }
