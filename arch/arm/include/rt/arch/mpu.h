@@ -25,7 +25,9 @@
 #define RT_MPU_CTRL_HFNMI_ENABLE (UINT32_C(1) << 1)
 #define RT_MPU_CTRL_PRIVDEF_ENABLE (UINT32_C(1) << 2)
 
-#if __ARM_ARCH_PROFILE == 'M'
+#if __ARM_ARCH_PROFILE == 'R'
+#include <../r/coprocessor.h>
+#elif __ARM_ARCH_PROFILE == 'M'
 #define RT_MPU_REGS ((volatile struct rt_mpu *)0xE000ED90UL)
 #endif
 
@@ -104,9 +106,6 @@ struct rt_mpu
     struct rt_mpu_region regions[RT_MPU_NUM_REGION_REGS];
 };
 
-#define RT_MPU_VALID (UINT32_C(1) << 4)
-#define RT_MPU_REGION_MASK (UINT32_C(0xF))
-
 #define RT_MPU_ATTR_XN (UINT32_C(1) << 28)
 
 #define RT_MPU_ATTR_AP(p) ((uint32_t)(p) << 24)
@@ -136,6 +135,15 @@ struct rt_mpu
 #define RT_MPU_STACK_ATTR                                                      \
     (RT_MPU_ATTR_RW | RT_MPU_ATTR_XN | RT_MPU_ATTR_CACHED_WB_RWALLOC |         \
      RT_MPU_ATTR_ENABLE)
+
+#if __ARM_ARCH_PROFILE == 'R'
+// v7-r doesn't use the lower 5 bits of the base address register
+#define RT_MPU_VALID (UINT32_C(0))
+#define RT_MPU_REGION_MASK (UINT32_C(0))
+#elif __ARM_ARCH_PROFILE == 'M'
+#define RT_MPU_VALID (UINT32_C(1) << 4)
+#define RT_MPU_REGION_MASK (UINT32_C(0xF))
+#endif
 
 #define RT_MPU_BASE_ADDR(id, start_addr)                                       \
     (((id)&RT_MPU_REGION_MASK) | RT_MPU_VALID | (start_addr))
@@ -170,9 +178,18 @@ static inline void rt_mpu_config_init(struct rt_mpu_config *config)
 static inline void rt_mpu_region_set(uint32_t id, uintptr_t start_addr,
                                      size_t size, uint32_t attr)
 {
+#if __ARM_ARCH_PROFILE == 'R'
+    rgnr_set(id);
+    drbar_set(start_addr);
+    const uint32_t attr_size = RT_MPU_ATTR_SIZE(start_addr, size, attr);
+    // The size, subregion disable, and enable bit are in drsr.
+    drsr_set(attr_size & UINT32_C(0xFFFF));
+    dracr_set(attr_size >> 16);
+#elif __ARM_ARCH_PROFILE == 'M'
     RT_MPU_REGS->regions[0].base_addr = RT_MPU_BASE_ADDR(id, start_addr);
     RT_MPU_REGS->regions[0].attr_size =
         RT_MPU_ATTR_SIZE(start_addr, size, attr);
+#endif
 }
 
 #elif __ARM_ARCH == 8
@@ -330,6 +347,9 @@ static inline void rt_mpu_attr_set(uint32_t index, uint32_t attr)
 
 static inline void rt_mpu_enable(void)
 {
+#if __ARM_ARCH_PROFILE == 'R'
+    sctlr_oreq(SCTLR_M | SCTLR_BR);
+#elif __ARM_ARCH_PROFILE == 'M'
     RT_MPU_REGS->ctrl = RT_MPU_CTRL_ENABLE | RT_MPU_CTRL_HFNMI_ENABLE |
                         RT_MPU_CTRL_PRIVDEF_ENABLE;
 #if __ARM_ARCH == 8 && !defined(__ARM_ARCH_8M_BASE__)
@@ -339,22 +359,34 @@ static inline void rt_mpu_enable(void)
      * set the region number while reconfiguring anyway, so don't bother
      * setting an offset up front. */
     RT_MPU_REGS->number = RT_MPU_TASK_REGION_START_ID;
-#endif
+#endif // v8-m && !v8-m.base
+#endif // __ARM_ARCH_PROFILE
+
     __asm__("dmb" ::: "memory");
     __asm__("isb");
 }
 
 static inline void rt_mpu_reconfigure(const struct rt_mpu_config *config)
 {
+#if __ARM_ARCH_PROFILE == 'R'
+    for (uint32_t i = 0; i < RT_MPU_NUM_TASK_REGIONS; ++i)
+    {
+        rgnr_set(RT_MPU_TASK_REGION_START_ID + i);
+        drbar_set(config->regions[i].base_addr);
+        drsr_set(config->regions[i].attr_size & UINT32_C(0xFFFF));
+        dracr_set(config->regions[i].attr_size >> 16);
+    }
+#elif __ARM_ARCH_PROFILE == 'M'
+
 #if (RT_MPU_NUM_REGION_REGS == 4) && ((RT_MPU_NUM_TASK_REGIONS % 4) == 0)
-    for (int i = 0; i < RT_MPU_NUM_TASK_REGIONS; i += 4)
+    for (uint32_t i = 0; i < RT_MPU_NUM_TASK_REGIONS; i += 4)
     {
         __asm__("ldmia %0, {r4-r11}; stmia %1, {r4-r11}"
                 :
                 : "r"(&config->regions[i]), "r"(RT_MPU_REGS->regions)
                 : "r4", "r5", "r6", "r7", "r8", "r9", "r10", "r11");
     }
-#else
+#else // no alias registers, or # of task regions not a multiple of 4
     for (uint32_t i = 0; i < RT_MPU_NUM_TASK_REGIONS; ++i)
     {
 #ifdef __ARM_ARCH_8M_BASE__
@@ -367,6 +399,8 @@ static inline void rt_mpu_reconfigure(const struct rt_mpu_config *config)
         RT_MPU_REGS->regions[i % RT_MPU_NUM_REGION_REGS] = config->regions[i];
     }
 #endif
+
+#endif // __ARM_ARCH_PROFILE
 }
 
 #endif // RT_MPU_ENABLE

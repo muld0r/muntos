@@ -237,15 +237,22 @@ void rt_stop(void)
     }
 }
 
+#if PROFILE_R
+static inline uint32_t cpsr_mode(void)
+{
+    uint32_t cpsr;
+    __asm__ __volatile__("mrs %0, cpsr" : "=r"(cpsr));
+    return cpsr & CPSR_MODE_MASK;
+}
+#endif
+
 bool rt_interrupt_is_active(void)
 {
 #if PROFILE_R
-    uint32_t cpsr;
-    __asm__ __volatile__("mrs %0, cpsr" : "=r"(cpsr));
-    const uint32_t mode = cpsr & CPSR_MODE_MASK;
+    const uint32_t mode = cpsr_mode();
     /*
      * NOTE: this assumes that nested interrupts don't use system mode.
-     * Interrupt nesting can use supervisor mode, which doesn't require each
+     * Interrupt nesting should use supervisor mode, which doesn't require each
      * task stack to accommodate interrupts.
      */
     return (mode != CPSR_MODE_SYS) && (mode != CPSR_MODE_USR);
@@ -268,14 +275,20 @@ static inline bool interrupts_masked(void)
 void rt_syscall_pend(void)
 {
 #if PROFILE_R
-
+    if (cpsr_mode() == CPSR_MODE_USR)
+    {
+        __asm__("svc 0");
+    }
+    else
+    {
 #if RT_ARCH_ARM_R_VIC_TYPE == VIM_SSI
 #define SYS_SSIR1 (*(volatile uint32_t *)0xFFFFFFB0U)
 #define SYS_SSIR1_KEY (UINT32_C(0x75) << 8)
-    SYS_SSIR1 = SYS_SSIR1_KEY;
-    __asm__("dsb" ::: "memory");
-    __asm__("isb");
+        SYS_SSIR1 = SYS_SSIR1_KEY;
+        __asm__("dsb" ::: "memory");
+        __asm__("isb");
 #endif // RT_ARCH_ARM_R_VIC_TYPE
+    }
 
 #elif PROFILE_M
 
