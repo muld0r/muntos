@@ -4,7 +4,7 @@
  * The interrupt management code for the syscall handler depends on both the
  * type of interrupt controller and the source of the syscall interrupt, so we
  * provide a way to extend this code with assembly macros.
- * vic_syscall_start needs to clear and mask the syscall interrupt such that
+ * vic_syscall_start needs to mask and clear the syscall interrupt such that
  * another syscall cannot occur when IRQs are re-enabled. vic_syscall_finish
  * must unmask the syscall interrupt. Both are run with IRQs disabled.
  */
@@ -30,7 +30,7 @@
 rt_syscall_handler_irq:
     sub lr, 4
 rt_syscall_handler_svc:
-    // Push lr (task pc) and spsr (task cpsr) to the system stack.
+    // Push lr (task pc) and spsr (task cpsr) to the system/user stack.
     srsdb 31!
     // Switch to system mode.
     cps 31
