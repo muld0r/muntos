@@ -4,7 +4,7 @@
 static inline bool disable(void)
 {
     bool primask;
-    __asm__("mrs %0, primask" : "=r"(primask));
+    __asm__ __volatile__("mrs %0, primask" : "=r"(primask));
     __asm__("cpsid i" ::: "memory");
     return primask;
 }
