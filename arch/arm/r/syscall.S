@@ -40,7 +40,7 @@ rt_syscall_handler_svc:
 
     // Switch to supervisor mode and re-enable interrupts.
     cpsie i, 19
-    blx rt_syscall_run
+    bl rt_syscall_run
     // Switch back to system mode to save and restore task contexts.
     cps 31
 
