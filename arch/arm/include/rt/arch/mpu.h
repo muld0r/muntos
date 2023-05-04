@@ -39,11 +39,14 @@
  * regions with size 32 or greater, but only supports subregions for regions
  * with size 256 or greater. An MPU region of size 32 can be achieved with a
  * 256-byte region and one active subregion, so just use >= 256 bytes always.
+ * Let 0 represent the maximum-size region (4GB).
  */
 #define RT_MPU_SIZEBITS(n)                                                     \
-    (((n) <= 256) ? UINT32_C(7) : (UINT32_C(31) - (uint32_t)__builtin_clzl(n)))
+    (((n) <= 256) ? UINT32_C(7)                                                \
+     : ((n) == 0) ? UINT32_C(31)                                               \
+                  : (UINT32_C(30) - (uint32_t)__builtin_clzl(n)))
 
-#define RT_MPU_REGION_SIZE(n) ((uint64_t)1 << (RT_MPU_SIZEBITS(n) + 1))
+#define RT_MPU_REGION_SIZE(n) (UINT32_C(1) << (RT_MPU_SIZEBITS(n) + 1))
 
 #define RT_MPU_SUBREGION_SIZE(n) (RT_MPU_REGION_SIZE(n) / 8)
 
@@ -73,7 +76,8 @@
          : UINT32_C(0))
 
 #define RT_MPU_ALIGN(n)                                                        \
-    (RT_MPU_SUBREGIONS(n) > 4 ? RT_MPU_REGION_SIZE(n)                          \
+    (((n) == 0)                 ? UINT64_C(0x100000000)                        \
+     : RT_MPU_SUBREGIONS(n) > 4 ? RT_MPU_REGION_SIZE(n)                        \
      : RT_MPU_SUBREGIONS(n) > 2                                                \
          ? 4 * RT_MPU_SUBREGION_SIZE(n)                                        \
          : RT_MPU_SUBREGIONS(n) * RT_MPU_SUBREGION_SIZE(n))
