@@ -339,7 +339,7 @@ static inline void rt_mpu_attr_init(void)
 
 static inline void rt_mpu_attr_set(uint32_t index, uint32_t attr)
 {
-    volatile uint32_t *const mair = &RT_MPU->attr_indirect[index / 4];
+    volatile uint32_t *const mair = &RT_MPU_REGS->attr_indirect[index / 4];
     const int shift = (index % 4) * 8;
     const uint32_t mask = UINT32_C(0xFF) << shift;
     *mair = (*mair & ~mask) | (attr << shift);
