@@ -342,16 +342,18 @@ uint32_t rt_cycle(void)
 #if PROFILE_R && FPU
 // A flag indicating whether the active task has an fp context.
 volatile bool rt_task_fp_enabled = false;
+#endif
 
 void rt_task_enable_fp(void)
 {
+#if PROFILE_R && FPU
     rt_task_fp_enabled = true;
     /* rt_task_fp_enabled must be set before fpscr. If fpscr is set first and
      * then a context switch occurs, the write to fpscr will be lost. */
     __asm__("dsb" ::: "memory");
     __asm__("vmsr fpscr, %0" : : "r"(0));
-}
 #endif
+}
 
 void rt_task_drop_privilege(void)
 {

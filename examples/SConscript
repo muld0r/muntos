@@ -1,6 +1,7 @@
 Import("env")
 
 env.Program("empty.c")
+env.Program("float.c")
 env.Program("list.c")
 env.Program("mutex.c")
 env.Program("newtask.c")

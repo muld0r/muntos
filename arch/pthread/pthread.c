@@ -308,6 +308,14 @@ void rt_stop(void)
     pthread_kill(main_thread, SIGRESUME);
 }
 
+void rt_task_drop_privilege(void)
+{
+}
+
+void rt_task_enable_fp(void)
+{
+}
+
 uint32_t rt_cycle(void)
 {
 #if defined(__aarch64__)
