@@ -359,7 +359,7 @@ void rt_task_drop_privilege(void)
     __asm__("cps %0" : : "i"(CPSR_MODE_USR));
 #elif PROFILE_M && RT_MPU_ENABLE
     uint32_t control;
-    __asm__("mrs %0, control" : "=r"(control));
+    __asm__ __volatile__("mrs %0, control" : "=r"(control));
     __asm__("msr control, %0" : : "r"(control | CONTROL_NPRIV));
     __asm__("isb");
 #endif
