@@ -96,17 +96,20 @@ struct rt_task
     enum rt_task_state state;
 };
 
+#define RT_TASK_INIT(name_, name_str, priority_)                               \
+    {                                                                          \
+        .list = RT_LIST_INIT(name_.list),                                      \
+        .sleep_list = RT_LIST_INIT(name_.sleep_list),                          \
+        .record.syscall = RT_SYSCALL_TASK_READY, .name = (name_str),           \
+        .priority = (priority_),                                               \
+    }
+
 #define RT_TASK(fn, stack_size, priority_)                                     \
     do                                                                         \
     {                                                                          \
         RT_STACK(fn##_task_stack, stack_size);                                 \
-        static struct rt_task fn##_task = {                                    \
-            .list = RT_LIST_INIT(fn##_task.list),                              \
-            .sleep_list = RT_LIST_INIT(fn##_task.sleep_list),                  \
-            .record.syscall = RT_SYSCALL_TASK_READY,                           \
-            .name = #fn,                                                       \
-            .priority = (priority_),                                           \
-        };                                                                     \
+        static struct rt_task fn##_task =                                      \
+            RT_TASK_INIT(fn##_task, #fn, priority_);                           \
         fn##_task.ctx =                                                        \
             rt_context_create((fn), fn##_task_stack, sizeof fn##_task_stack);  \
         rt_mpu_config_init(&fn##_task.mpu_config);                             \
@@ -120,13 +123,8 @@ struct rt_task
     do                                                                         \
     {                                                                          \
         RT_STACK(fn##_task_stack, stack_size);                                 \
-        static struct rt_task fn##_task = {                                    \
-            .list = RT_LIST_INIT(fn##_task.list),                              \
-            .sleep_list = RT_LIST_INIT(fn##_task.sleep_list),                  \
-            .record.syscall = RT_SYSCALL_TASK_READY,                           \
-            .name = #fn "(" #arg ")",                                          \
-            .priority = (priority_),                                           \
-        };                                                                     \
+        static struct rt_task fn##_task =                                      \
+            RT_TASK_INIT(fn##_task, #fn "(" #arg ")", priority_);              \
         fn##_task.ctx = rt_context_create_arg((fn), (arg), fn##_task_stack,    \
                                               sizeof fn##_task_stack);         \
         rt_mpu_config_init(&fn##_task.mpu_config);                             \
