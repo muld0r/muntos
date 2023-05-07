@@ -38,12 +38,13 @@
  * regions with size 32 or greater, but only supports subregions for regions
  * with size 256 or greater. An MPU region of size 32 can be achieved with a
  * 256-byte region and one active subregion, so just use >= 256 bytes always.
- * Let 0 represent the maximum-size region (4GB).
+ * Let SIZE_MAX represent the maximum-size region (4GB), even though it is
+ * off-by-one.
  */
 #define RT_MPU_SIZEBITS(n)                                                     \
-    (((n) <= 256) ? UINT32_C(7)                                                \
-     : ((n) == 0) ? UINT32_C(31)                                               \
-                  : (UINT32_C(30) - (uint32_t)__builtin_clzl(n)))
+    (((n) <= 256)        ? UINT32_C(7)                                         \
+     : ((n) == SIZE_MAX) ? UINT32_C(31)                                        \
+                         : (UINT32_C(30) - (uint32_t)__builtin_clzl(n)))
 
 #define RT_MPU_REGION_SIZE(n) (UINT32_C(1) << (RT_MPU_SIZEBITS(n) + 1))
 
@@ -53,7 +54,8 @@
  * run-time division during configurations. Static task stacks should have this
  * property. Also require n > 0 because the calculations don't work for n == 0.
  */
-#define RT_MPU_USE_SUBREGIONS(n) (__builtin_constant_p(n) && (n > 0))
+#define RT_MPU_USE_SUBREGIONS(n)                                               \
+    (__builtin_constant_p(n) && ((n) > 0) && ((n) != SIZE_MAX))
 
 #define RT_MPU_SUBREGIONS(n)                                                   \
     (RT_MPU_USE_SUBREGIONS(n) ? ((((n)-1) / RT_MPU_SUBREGION_SIZE(n)) + 1) : 8)
@@ -70,18 +72,20 @@
 
 #define RT_MPU_SRD(a, n)                                                       \
     (RT_MPU_USE_SUBREGIONS(n)                                                  \
-         ? (RT_MPU_SRD_PREFIX(RT_MPU_SUBREGION_OFFSET(a, n)) |                 \
-            RT_MPU_SRD_SUFFIX(RT_MPU_SUBREGION_OFFSET((a) + (n)-1, n)))        \
+         ? (RT_MPU_SRD_PREFIX(RT_MPU_SUBREGION_OFFSET((a), (n))) |             \
+            RT_MPU_SRD_SUFFIX(RT_MPU_SUBREGION_OFFSET((a) + (n)-1, (n))))      \
          : UINT32_C(0))
 
 #define RT_MPU_ALIGN(n)                                                        \
-    (((n) == 0)                 ? UINT64_C(0x100000000)                        \
+    (((n) == SIZE_MAX)          ? UINT64_C(0x100000000)                        \
      : RT_MPU_SUBREGIONS(n) > 4 ? RT_MPU_REGION_SIZE(n)                        \
      : RT_MPU_SUBREGIONS(n) > 2                                                \
          ? 4 * RT_MPU_SUBREGION_SIZE(n)                                        \
          : RT_MPU_SUBREGIONS(n) * RT_MPU_SUBREGION_SIZE(n))
 
-#define RT_MPU_SIZE(n) (RT_MPU_SUBREGION_SIZE(n) * RT_MPU_SUBREGIONS(n))
+#define RT_MPU_SIZE(n)                                                         \
+    (((n) == SIZE_MAX) ? UINT64_C(0x100000000)                                 \
+                       : RT_MPU_SUBREGION_SIZE(n) * RT_MPU_SUBREGIONS(n))
 
 struct rt_mpu_region
 {
@@ -152,7 +156,8 @@ struct rt_mpu
     (((id)&RT_MPU_REGION_MASK) | RT_MPU_VALID | (start_addr))
 
 #define RT_MPU_ATTR_SIZE(start_addr, size, attr)                               \
-    (RT_MPU_SIZEBITS(size) << 1 | RT_MPU_SRD(start_addr, size) << 8 | (attr))
+    (RT_MPU_SIZEBITS(size) << 1 | RT_MPU_SRD((start_addr), (size)) << 8 |      \
+     ((attr) & ~(((size) == 0) ? RT_MPU_ATTR_ENABLE : UINT32_C(0))))
 
 static inline void rt_mpu_config_set(struct rt_mpu_config *config, uint32_t id,
                                      uintptr_t start_addr, size_t size,
@@ -174,7 +179,7 @@ static inline void rt_mpu_config_init(struct rt_mpu_config *config)
          * configuration is applied, disabling already-configured regions. */
         config->regions[i].base_addr =
             RT_MPU_BASE_ADDR(RT_MPU_TASK_REGION_START_ID + i, 0);
-        config->regions[i].attr_size = RT_MPU_ATTR_SIZE(0, 256, 0);
+        config->regions[i].attr_size = RT_MPU_ATTR_SIZE(0, 0, 0);
     }
 }
 
@@ -224,8 +229,10 @@ struct rt_mpu_config
 #if RT_MPU_NUM_TASK_REGIONS > 4
 #error "Only up to 4 task regions are supported on armv8-m.main"
 /*
- * TODO: this can be implemented by updating the region number dynamically if
- * necessary.
+ * This is because we use a fixed region number offset and there are only four
+ * alias registers that use this offset to determine the region number.
+ * TODO: this limitation can be removed by updating the region number
+ * dynamically if necessary.
  */
 #endif
 
@@ -300,11 +307,13 @@ struct rt_mpu
 #define RT_MPU_STACK_ATTR (RT_MPU_ATTR_RW | RT_MPU_ATTR_XN | RT_MPU_ATTR_ENABLE)
 
 #define RT_MPU_BASE_ADDR(start_addr, attr)                                     \
-    ((start_addr & RT_MPU_ADDR_MASK) | (attr & RT_MPU_ATTR_MASK))
+    (((start_addr)&RT_MPU_ADDR_MASK) | ((attr)&RT_MPU_ATTR_MASK))
 
 #define RT_MPU_LIMIT_ADDR(start_addr, size, attr)                              \
-    (((start_addr + size - 1) & RT_MPU_ADDR_MASK) |                            \
-     ((attr >> RT_MPU_ATTR_RLAR_SHIFT) & RT_MPU_ATTR_MASK))
+    ((((start_addr) + (size)-1) & RT_MPU_ADDR_MASK) |                          \
+     ((((attr) & ~(((size) == 0) ? RT_MPU_ATTR_ENABLE : UINT32_C(0))) >>       \
+       RT_MPU_ATTR_RLAR_SHIFT) &                                               \
+      RT_MPU_ATTR_MASK))
 
 static inline void rt_mpu_config_init(struct rt_mpu_config *config)
 {
