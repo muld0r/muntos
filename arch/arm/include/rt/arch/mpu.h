@@ -1,5 +1,4 @@
-#ifndef RT_ARCH_MPU_H
-#define RT_ARCH_MPU_H
+#pragma once
 
 #include <rt/mpu.h>
 
@@ -408,5 +407,3 @@ static inline void rt_mpu_reconfigure(const struct rt_mpu_config *config)
 }
 
 #endif // RT_MPU_ENABLE
-
-#endif // RT_ARCH_MPU_H

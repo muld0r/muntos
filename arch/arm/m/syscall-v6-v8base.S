@@ -39,10 +39,10 @@
 #define CONTEXT_SIZE (32 + PSPLIM_SIZE + CONTROL_SIZE)
 
     bl rt_syscall_run
-    /* If there's no new context to switch to, return early. */
+    // If there's no new context to switch to, return early.
     returnifnull
 
-    /* Store the suspending task's context to its stack. */
+    // Store the suspending task's context to its stack.
     mrs r1, psp
     subs r1, CONTEXT_SIZE
 
@@ -59,18 +59,18 @@
     mov r7, r11
     stmia r1!, {r4-r7}
 
-    /* Load the new context returned by rt_syscall_run. */
+    // Load the new context returned by rt_syscall_run.
     mov r1, r0
-    adds r1, CONTEXT_SIZE - 16
-    ldmia r1!, {r4-r7}
+    adds r0, CONTEXT_SIZE - 16
+    ldmia r0!, {r4-r7}
     mov r8, r4
     mov r9, r5
     mov r10, r6
     mov r11, r7
-    ldmia r0!, {controltemp psplimtemp r4-r7}
+    ldmia r1!, {controltemp psplimtemp r4-r7}
 
-    /* Set the new stack pointer. */
-    msr psp, r1
+    // Set the new stack pointer.
+    msr psp, r0
     setcontrol
     setpsplim
 

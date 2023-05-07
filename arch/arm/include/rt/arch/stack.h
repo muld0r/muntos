@@ -1,5 +1,4 @@
-#ifndef RT_ARCH_STACK_H
-#define RT_ARCH_STACK_H
+#pragma once
 
 #include <rt/mpu.h>
 
@@ -11,9 +10,9 @@
 #define RT_STACK_SIZE(n) RT_MPU_SIZE(n)
 #endif
 
-#endif /* RT_MPU_ENABLE */
+#endif // RT_MPU_ENABLE
 
-/* The Arm ABI specifies a minimum stack alignment of 8 bytes. */
+// The Arm ABI specifies a minimum stack alignment of 8 bytes.
 #ifndef RT_STACK_ALIGN
 #define RT_STACK_ALIGN(n) 8UL
 #endif
@@ -25,5 +24,3 @@
  * own can use just the context size of 64-72 bytes.
  */
 #define RT_STACK_MIN 128
-
-#endif /* RT_ARCH_STACK_H */

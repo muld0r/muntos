@@ -13,7 +13,7 @@
  * non-volatile fp context should be saved/restored as well.
  */
 #define excreturn ,lr
-#define pushlr push {r3, lr} /* push r3 as well to keep sp 8-byte aligned */
+#define pushlr push {r3, lr} // push r3 as well to keep sp 8-byte aligned
 #define poplr pop {r3, lr}
 #define savefp tst lr, 0x10; it eq; vstmdbeq r1!, {s16-s31}
 #define loadfp tst lr, 0x10; it eq; vldmiaeq r0!, {s16-s31}
@@ -45,7 +45,7 @@
 #define psplimtemp r3,
 #define getpsplim mrs r3, psplim
 #define setpsplim msr psplim, r3
-#else /* v7 */
+#else // v7
 #define psplimtemp
 #define getpsplim
 #define setpsplim
@@ -57,26 +57,26 @@
     pushlr
     bl rt_syscall_run
     poplr
-    /* If there's no new context to switch to, return early. */
+    // If there's no new context to switch to, return early.
     cbz r0, .Lreturn
 
-    /* Write the suspending context to its stack pointer. */
+    // Write the suspending context to its stack pointer.
     mrs r1, psp
     savefp
     getcontrol
     getpsplim
     saveregs
 
-    /* Store the new stack pointer with the saved context. */
+    // Store the new stack pointer with the saved context.
     ldr r2, =rt_context_prev
     ldr r2, [r2]
     str r1, [r2]
 
-    /* Load the new context returned by rt_syscall_run. */
+    // Load the new context returned by rt_syscall_run.
     loadregs
     loadfp
 
-    /* Set the new stack pointer. */
+    // Set the new stack pointer.
     msr psp, r0
     setcontrol
     setpsplim
