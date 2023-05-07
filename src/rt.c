@@ -361,6 +361,7 @@ static void task_init(struct rt_task *task, const char *name, unsigned priority,
     rt_list_init(&task->sleep_list);
     task->record.syscall = RT_SYSCALL_TASK_READY;
 #if RT_MPU_ENABLE
+    rt_mpu_config_init(&task->mpu_config);
     rt_mpu_config_set(&task->mpu_config, RT_MPU_TASK_REGION_START_ID,
                       (uintptr_t)stack, stack_size, RT_MPU_STACK_ATTR);
 #else

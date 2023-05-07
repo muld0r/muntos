@@ -196,6 +196,14 @@ void rt_start(void)
     // The idle task stack needs to be large enough to store a context.
     RT_STACK(idle_task_stack, sizeof(struct context));
 
+#if RT_MPU_ENABLE
+    struct rt_mpu_config *const idle_mpu_config = &rt_task_self()->mpu_config;
+    rt_mpu_config_init(idle_mpu_config);
+    rt_mpu_config_set(idle_mpu_config, RT_MPU_TASK_REGION_START_ID,
+                      (uintptr_t)idle_task_stack, sizeof idle_task_stack,
+                      RT_MPU_STACK_ATTR);
+#endif
+
 #if V8M
     // If supported, set the process stack pointer limit.
     __asm__("msr psplim, %0" : : "r"(idle_task_stack));
