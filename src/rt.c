@@ -45,7 +45,7 @@ static struct rt_task idle_task = {
 
 static struct rt_task *active_task = &idle_task;
 
-void rt_sched(void)
+void rt_task_yield(void)
 {
     rt_syscall_pend();
 }

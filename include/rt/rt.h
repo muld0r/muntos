@@ -11,9 +11,4 @@ void rt_start(void);
  */
 void rt_stop(void);
 
-/*
- * Schedule a new task to run.
- */
-void rt_sched(void);
-
 #endif /* RT_H */

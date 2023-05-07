@@ -9,7 +9,7 @@ static volatile uint32_t cycles = 0;
 static void task0(void)
 {
     start_cycle = rt_cycle();
-    rt_sched();
+    rt_task_yield();
 }
 
 static void task1(void)

@@ -37,8 +37,14 @@ void rt_task_init_arg(struct rt_task *task, void (*fn)(uintptr_t),
                       void *stack, size_t stack_size);
 
 /*
- * Exit from the current task. This should be called automatically when a
- * task function returns.
+ * Yield the core to another task of the same priority. If the current task is
+ * still the highest priority, it will continue executing.
+ */
+void rt_task_yield(void);
+
+/*
+ * Exit from the current task. This will be called automatically when a task
+ * function returns.
  */
 void rt_task_exit(void);
 
@@ -57,7 +63,7 @@ struct rt_task *rt_task_self(void);
  * to indicate that it needs a floating-point context; this function is only
  * implemented for those architectures (currently just Arm R-Profile). On these
  * architectures, rt_task_enable_fp must be called in each task before that
- * task executes any floating-point code.
+ * task executes any floating-point instructions.
  */
 void rt_task_enable_fp(void);
 

@@ -5,7 +5,7 @@ static void simple(uintptr_t arg)
 {
     for (int i = 0; i < 100; ++i)
     {
-        rt_sched();
+        rt_task_yield();
     }
 
     if (arg == 1)
