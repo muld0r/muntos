@@ -95,8 +95,8 @@ static void *sched(void)
 
     const bool still_running = active_task->state == RT_TASK_STATE_RUNNING;
 
-    /* If the active task is still running and the new task is lower priority,
-     * then continue executing the active task. */
+    /* If the active task is still running and has higher priority than the
+     * next task, then continue executing the active task. */
     if (still_running && (active_task->priority > next_task->priority))
     {
         rt_logf("sched: %s is still highest priority (%u > %u)\n",
