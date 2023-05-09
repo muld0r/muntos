@@ -126,10 +126,9 @@ static struct context *context_create(void *stack, size_t stack_size,
     (void)fn_addr;
     ctx->psr = PSR_THUMB;
 #if RT_MPU_ENABLE
-    /* Tasks start privileged. The SPSEL bit is not accessible in handler mode
-     * where context switches occur and is ignored on exception return. The
-     * exception return value specifies which stack pointer is used when
-     * returning to thread mode. */
+    /* Tasks start privileged. The SPSEL bit is RAZ/WI in handler mode where
+     * context switches occur. The exception return value specifies which stack
+     * pointer is used when returning to thread mode. */
     ctx->control = 0;
 #endif
 #if FPU
