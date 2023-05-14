@@ -52,7 +52,6 @@
 
     add r2, 1
     cmp r2, r5
-    it lt
     blt .Lmpusetloop
     dsb
 #endif
