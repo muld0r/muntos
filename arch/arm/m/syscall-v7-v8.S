@@ -6,9 +6,11 @@
 
 #include <rt/mpu.h>
 
+#include "exc_return.h"
+
 #ifdef __ARM_FP
 /*
- * For floating-point, save and restore lr, which contains exception return
+ * For floating-point, save and restore lr, which contains the exception return
  * value, and use the floating-point context bit of this value to decide if the
  * non-volatile fp context should be saved/restored as well.
  */
@@ -35,10 +37,65 @@
 #define controltemp r2,
 #define getcontrol mrs r2, control
 #define setcontrol msr control, r2
+
+.macro mpuconfigure
+    ldr r1, =rt_mpu_config
+    ldr r1, [r1]
+    ldr r2, =0xE000ED9C
+    mpuset RT_MPU_TASK_REGION_START_ID, RT_MPU_NUM_TASK_REGIONS
+    dsb
+.endm
+
+.macro mpuset r, n
+    .if \n == 0
+    .exitm
+    .endif
+
+#if (__ARM_ARCH == 8) && (RT_MPU_NUM_TASK_REGIONS > 4)
+    .if (\r == RT_MPU_TASK_REGION_START_ID) || ((\r % 4) == 0)
+    mov r3, \r & 0xFC
+    str r3, [r2, -4]
+    .endif
+#endif
+
+    .if ((\r % 4) == 0) && (\n >= 4)
+    ldmia r1!, {r4-r11}
+    stmia r2, {r4-r11}
+    mpuset (\r + 4), (\n - 4)
+    .elseif ((\r % 4) == 1) && (\n >= 3)
+    ldmia r1!, {r4-r9}
+#if __ARM_ARCH == 8
+    add r3, r2, 4
+    stmia r3, {r4-r9}
+#else
+    stmia r2, {r4-r9}
+#endif
+    mpuset (\r + 3), (\n - 3)
+    .elseif ((\r % 4) == 2) && (\n >= 2)
+    ldmia r1!, {r4-r7}
+#if __ARM_ARCH == 8
+    add r3, r2, 8
+    stmia r3, {r4-r7}
+#else
+    stmia r2, {r4-r7}
+#endif
+    mpuset (\r + 2), (\n - 2)
+    .else
+    ldmia r1!, {r4-r5}
+#if __ARM_ARCH == 8
+    strd r4, r5, [r2, (\r % 4) * 4]
+#else
+    strd r4, r5, [r2]
+#endif
+    mpuset (\r + 1), (\n - 1)
+    .endif
+.endm
+
 #else
 #define controltemp
 #define getcontrol
 #define setcontrol
+#define mpuconfigure
 #endif
 
 #if __ARM_ARCH == 8
@@ -71,6 +128,8 @@
     ldr r2, =rt_context_prev
     ldr r2, [r2]
     str r1, [r2]
+
+    mpuconfigure
 
     // Load the new context returned by rt_syscall_run.
     loadregs

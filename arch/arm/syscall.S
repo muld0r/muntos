@@ -12,8 +12,6 @@ rt_syscall_handler:
 
 #elif __ARM_ARCH_PROFILE == 'M'
 
-#include "m/exc_return.h"
-
 #if __ARM_ARCH == 6 || defined(__ARM_ARCH_8M_BASE__)
 #include "m/syscall-v6-v8base.S"
 #else

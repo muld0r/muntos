@@ -20,12 +20,14 @@ void make_water(void)
 
 static void timeout(void)
 {
+    rt_task_drop_privilege();
     rt_sleep(TICKS_TO_RUN);
     rt_stop();
 }
 
 static void oxygen_loop(void)
 {
+    rt_task_drop_privilege();
     for (;;)
     {
         oxygen();
@@ -35,6 +37,7 @@ static void oxygen_loop(void)
 
 static void hydrogen_loop(void)
 {
+    rt_task_drop_privilege();
     for (;;)
     {
         hydrogen();

@@ -10,6 +10,7 @@ RT_QUEUE_STATIC(queue, uint32_t, 10);
 
 static void pusher(uintptr_t i)
 {
+    rt_task_drop_privilege();
     for (;;)
     {
         rt_queue_push(&queue, &i);
@@ -26,6 +27,7 @@ static volatile size_t num_popped = 0;
 
 static void popper(void)
 {
+    rt_task_drop_privilege();
     uint32_t x;
     for (;;)
     {

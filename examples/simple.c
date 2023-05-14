@@ -3,6 +3,7 @@
 
 static void simple(uintptr_t arg)
 {
+    rt_task_drop_privilege();
     for (int i = 0; i < 100; ++i)
     {
         rt_task_yield();

@@ -14,6 +14,7 @@ static volatile bool mismatch = false;
 
 static void reader(void)
 {
+    rt_task_drop_privilege();
     for (;;)
     {
         rt_rwlock_rlock(&lock);
@@ -30,6 +31,7 @@ static void reader(void)
 
 static void writer(void)
 {
+    rt_task_drop_privilege();
     for (;;)
     {
         rt_rwlock_wlock(&lock);

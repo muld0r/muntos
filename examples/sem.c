@@ -8,6 +8,7 @@ static RT_SEM(sem, 0);
 
 static void poster(void)
 {
+    rt_task_drop_privilege();
     for (int i = 1; i <= n; ++i)
     {
         rt_sleep(5);
@@ -22,6 +23,7 @@ static volatile bool wait_failed = false;
 
 static void waiter(void)
 {
+    rt_task_drop_privilege();
     for (int i = 1; i <= n; ++i)
     {
         if (!rt_sem_timedwait(&sem, 10))

@@ -9,6 +9,7 @@ static struct rt_task tasks[2];
 
 static void fn(uintptr_t arg)
 {
+    rt_task_drop_privilege();
     rt_logf("hello from %u\n", (unsigned)arg);
 
     if (arg == N)

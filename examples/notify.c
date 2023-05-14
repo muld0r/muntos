@@ -9,6 +9,7 @@ static RT_NOTIFY(note, 0);
 
 static void notifier(void)
 {
+    rt_task_drop_privilege();
     for (int i = 1; i <= n; ++i)
     {
         rt_sleep(5);
@@ -23,6 +24,7 @@ static volatile bool wait_failed = false;
 
 static void waiter(void)
 {
+    rt_task_drop_privilege();
     uint32_t value;
 
     for (int i = 1; i <= n; ++i)

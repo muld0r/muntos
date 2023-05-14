@@ -74,6 +74,9 @@ void rt_task_exit(void)
 }
 
 void **rt_context_prev;
+#if RT_MPU_ENABLE
+struct rt_mpu_config *rt_mpu_config;
+#endif
 
 static void *sched(void)
 {
@@ -128,12 +131,12 @@ static void *sched(void)
     active_task = next_task;
     active_task->state = RT_TASK_STATE_RUNNING;
 
+#if RT_MPU_ENABLE
+    rt_mpu_config = &active_task->mpu_config;
+#endif
+
     rt_logf("sched: switching to %s with priority %u\n", rt_task_name(),
             active_task->priority);
-
-#if RT_MPU_ENABLE
-    rt_mpu_reconfigure(&active_task->mpu_config);
-#endif
 
     return active_task->ctx;
 }

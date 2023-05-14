@@ -18,6 +18,7 @@ static void fn(void)
 
 static void oncer(void)
 {
+    rt_task_drop_privilege();
     for (unsigned long i = 0; i < ITERATIONS; ++i)
     {
         rt_once(&once, fn);
@@ -27,6 +28,7 @@ static void oncer(void)
 
 static void oncer_reset(void)
 {
+    rt_task_drop_privilege();
     for (unsigned long i = 0; i < ITERATIONS; ++i)
     {
         rt_once(&once, fn);

@@ -2,12 +2,6 @@
 
 #include <rt/mpu.h>
 
-#if RT_MPU_ENABLE && !defined(__ASSEMBLER__)
-
-#include <stddef.h>
-#include <stdint.h>
-#include <string.h>
-
 #ifndef RT_MPU_NUM_REGIONS
 #define RT_MPU_NUM_REGIONS 8
 #endif
@@ -16,9 +10,19 @@
 #define RT_MPU_NUM_TASK_REGIONS 4
 #endif
 
+#if RT_MPU_NUM_TASK_REGIONS < 1
+#error "At least one per-task region is required for the stack."
+#endif
+
 // Per-task regions have higher region IDs so they can override static regions.
 #define RT_MPU_TASK_REGION_START_ID                                            \
     (RT_MPU_NUM_REGIONS - RT_MPU_NUM_TASK_REGIONS)
+
+#if RT_MPU_ENABLE && !defined(__ASSEMBLER__)
+
+#include <stddef.h>
+#include <stdint.h>
+#include <string.h>
 
 #define RT_MPU_CTRL_ENABLE (UINT32_C(1) << 0)
 #define RT_MPU_CTRL_HFNMI_ENABLE (UINT32_C(1) << 1)
@@ -225,17 +229,6 @@ struct rt_mpu_config
 #else
 #define RT_MPU_NUM_REGION_REGS 4
 #define RT_MPU_NUM_RESERVED 1
-
-#if RT_MPU_NUM_TASK_REGIONS > 4
-#error "Only up to 4 task regions are supported on armv8-m.main"
-/*
- * This is because we use a fixed region number offset and there are only four
- * alias registers that use this offset to determine the region number.
- * TODO: this limitation can be removed by updating the region number
- * dynamically if necessary.
- */
-#endif
-
 #endif
 
 struct rt_mpu
@@ -364,55 +357,20 @@ static inline void rt_mpu_enable(void)
 #elif __ARM_ARCH_PROFILE == 'M'
     RT_MPU_REGS->ctrl = RT_MPU_CTRL_ENABLE | RT_MPU_CTRL_HFNMI_ENABLE |
                         RT_MPU_CTRL_PRIVDEF_ENABLE;
-#if __ARM_ARCH == 8 && !defined(__ARM_ARCH_8M_BASE__)
+#if __ARM_ARCH == 8 && !defined(__ARM_ARCH_8M_BASE__) &&                       \
+    (RT_MPU_NUM_TASK_REGIONS <= RT_MPU_NUM_REGION_REGS)
     /* Once the MPU is enabled, set the region number to the offset that will
      * be used for context switches because the region number is not part of
-     * the region config on v8-m like it is in v7-m. On v8-m.base we need to
-     * set the region number while reconfiguring anyway, so don't bother
-     * setting an offset up front. */
-    RT_MPU_REGS->number = RT_MPU_TASK_REGION_START_ID;
-#endif // v8-m && !v8-m.base
+     * the region config on v8-m like it is in v7-m. On v8-m.base, or if there
+     * are more task regions than region registers, we need to set the region
+     * number while reconfiguring anyway, so don't bother setting an offset up
+     * front. Mask off the lower two bits so that the non-alias configuration
+     * registers always refer to the region ID that is a multiple of 4. */
+    RT_MPU_REGS->number = RT_MPU_TASK_REGION_START_ID & ~UINT32_C(0x3);
+#endif // v8-m && !v8-m.base && task regions <= region regs
 #endif // __ARM_ARCH_PROFILE
-
-    __asm__("dmb" ::: "memory");
+    __asm__("dsb" ::: "memory");
     __asm__("isb");
-}
-
-static inline void rt_mpu_reconfigure(const struct rt_mpu_config *config)
-{
-#if __ARM_ARCH_PROFILE == 'R'
-    for (uint32_t i = 0; i < RT_MPU_NUM_TASK_REGIONS; ++i)
-    {
-        rgnr_set(RT_MPU_TASK_REGION_START_ID + i);
-        drbar_set(config->regions[i].base_addr);
-        drsr_set(config->regions[i].attr_size & UINT32_C(0xFFFF));
-        dracr_set(config->regions[i].attr_size >> 16);
-    }
-#elif __ARM_ARCH_PROFILE == 'M'
-
-#if (RT_MPU_NUM_REGION_REGS == 4) && ((RT_MPU_NUM_TASK_REGIONS % 4) == 0)
-    for (uint32_t i = 0; i < RT_MPU_NUM_TASK_REGIONS; i += 4)
-    {
-        __asm__("ldmia %0, {r4-r11}; stmia %1, {r4-r11}"
-                :
-                : "r"(&config->regions[i]), "r"(RT_MPU_REGS->regions)
-                : "r4", "r5", "r6", "r7", "r8", "r9", "r10", "r11");
-    }
-#else // no alias registers, or # of task regions not a multiple of 4
-    for (uint32_t i = 0; i < RT_MPU_NUM_TASK_REGIONS; ++i)
-    {
-#ifdef __ARM_ARCH_8M_BASE__
-        /* armv8-m.base is unique in that it does not embed the region number in
-         * the region config register, but also does not have region alias
-         * registers, so we have to set the region number for each reconfigured
-         * region here. */
-        RT_MPU_REGS->number = RT_MPU_TASK_REGION_START_ID + i;
-#endif
-        RT_MPU_REGS->regions[i % RT_MPU_NUM_REGION_REGS] = config->regions[i];
-    }
-#endif
-
-#endif // __ARM_ARCH_PROFILE
 }
 
 #endif // RT_MPU_ENABLE

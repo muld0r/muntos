@@ -10,16 +10,42 @@
 
 #include <rt/mpu.h>
 
+#include "exc_return.h"
+
 #if RT_MPU_ENABLE
 #define CONTROL_SIZE 4
 #define controltemp r2,
 #define getcontrol mrs r2, control
 #define setcontrol msr control, r2
+
+.macro mpuconfigure
+    ldr r1, =rt_mpu_config
+    ldr r1, [r1]
+    ldr r2, =0xE000ED98
+    mpuset RT_MPU_TASK_REGION_START_ID, RT_MPU_NUM_TASK_REGIONS
+    dsb
+.endm
+
+.macro mpuset r, n
+    .if \n == 0
+    .exitm
+    .endif
+#if __ARM_ARCH == 8
+    mov r3, \r & 0xFC
+    str r3, [r2]
+#endif
+    ldmia r1!, {r4-r5}
+    str r4, [r2, 4]
+    str r5, [r2, 8]
+    mpuset (\r + 1), (\n - 1)
+.endm
+
 #else
 #define CONTROL_SIZE 0
 #define controltemp
 #define getcontrol
 #define setcontrol
+#define mpuconfigure
 #endif
 
 #if __ARM_ARCH == 8
@@ -58,6 +84,8 @@
     mov r6, r10
     mov r7, r11
     stmia r1!, {r4-r7}
+
+    mpuconfigure
 
     // Load the new context returned by rt_syscall_run.
     mov r1, r0

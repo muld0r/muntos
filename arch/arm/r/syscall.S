@@ -9,6 +9,8 @@
  * must unmask the syscall interrupt. Both are run with IRQs disabled.
  */
 
+#include <rt/mpu.h>
+
 #include "vic.h"
 
 #if RT_ARCH_ARM_R_VIC_TYPE == VIM_SSI
@@ -22,6 +24,39 @@
     beq \label
 .endm
 #endif
+
+.macro mpuconfigure
+#if RT_MPU_ENABLE
+    ldr r1, =rt_mpu_config
+    ldr r1, [r1]
+    movs r2, RT_MPU_TASK_REGION_START_ID
+    adds r5, r2, RT_MPU_NUM_TASK_REGIONS
+
+.Lmpusetloop:
+    // Set the region number register.
+    mcr 15, 0, r2, cr6, cr2, 0
+
+    // Load the region configuration and advance to the next one.
+    ldmia r1!, {r3, r4}
+
+    // Set the base address register.
+    mcr 15, 0, r3, cr6, cr1, 0
+
+    // Set the size and enable register.
+    uxtb r3, r4
+    mcr 15, 0, r3, cr6, cr1, 2
+
+    // Set the access control register.
+    lsrs r3, r4, 16
+    mcr 15, 0, r3, cr6, cr1, 4
+
+    add r2, 1
+    cmp r2, r5
+    it lt
+    blt .Lmpusetloop
+    dsb
+#endif
+.endm
 
     .global rt_syscall_handler_irq
     .global rt_syscall_handler_svc
@@ -72,6 +107,8 @@ rt_syscall_handler_svc:
     ldr r2, =rt_context_prev
     ldr r2, [r2]
     str sp, [r2]
+
+    mpuconfigure
 
     // Switch to the new task stack returned by rt_syscall_run.
     mov sp, r0

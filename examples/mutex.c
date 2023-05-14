@@ -22,6 +22,7 @@ static void stop_last(void)
 
 static void increment_lock(void)
 {
+    rt_task_drop_privilege();
     for (unsigned long i = 0; i < ITERATIONS; ++i)
     {
         rt_mutex_lock(&mutex);
@@ -33,6 +34,7 @@ static void increment_lock(void)
 
 static void increment_trylock(void)
 {
+    rt_task_drop_privilege();
     for (unsigned long i = 0; i < ITERATIONS; ++i)
     {
         while (!rt_mutex_trylock(&mutex))
@@ -47,6 +49,7 @@ static void increment_trylock(void)
 
 static void increment_timedlock(void)
 {
+    rt_task_drop_privilege();
     for (unsigned long i = 0; i < ITERATIONS; ++i)
     {
         while (!rt_mutex_timedlock(&mutex, 1))

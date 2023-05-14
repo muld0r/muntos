@@ -277,7 +277,7 @@ bool rt_interrupt_is_active(void)
 static inline bool interrupts_masked(void)
 {
     uint32_t primask;
-    __asm__("mrs %0, primask" : "=r"(primask));
+    __asm__ __volatile__("mrs %0, primask" : "=r"(primask));
     return primask != 0;
 }
 #endif

@@ -11,6 +11,7 @@ static rt_atomic_bool wrong_tick = false;
 
 static void sleep_periodic(uintptr_t period)
 {
+    rt_task_drop_privilege();
     unsigned long last_wake_tick = 0;
     for (int i = 0; i < nloops; ++i)
     {
