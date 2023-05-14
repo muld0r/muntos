@@ -15,8 +15,8 @@
  * non-volatile fp context should be saved/restored as well.
  */
 #define excreturn ,lr
-#define pushlr push {r3, lr} // push r3 as well to keep sp 8-byte aligned
-#define poplr pop {r3, lr}
+#define pushlr str lr, [sp, -8]! // Push only lr but keep sp 8-byte aligned.
+#define poplr ldr lr, [sp], 8
 #define savefp tst lr, 0x10; it eq; vstmdbeq r1!, {s16-s31}
 #define loadfp tst lr, 0x10; it eq; vldmiaeq r0!, {s16-s31}
 #define return bx lr
