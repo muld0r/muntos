@@ -274,11 +274,11 @@ bool rt_interrupt_is_active(void)
 }
 
 #if PROFILE_M
-static inline bool interrupts_masked(void)
+static inline uint32_t control(void)
 {
-    uint32_t primask;
-    __asm__ __volatile__("mrs %0, primask" : "=r"(primask));
-    return primask != 0;
+    uint32_t c;
+    __asm__ __volatile__("mrs %0, control" : "=r"(c));
+    return c;
 }
 #endif
 
@@ -302,20 +302,22 @@ void rt_syscall_pend(void)
 
 #elif PROFILE_M
 
-#define ICSR (*(volatile uint32_t *)0xE000ED04UL)
-#define PENDSVSET (UINT32_C(1) << 28)
-
-    /* If the MPU is enabled, then the current task might be unprivileged,
-     * which prevents access to ICSR, so system calls must be invoked with svc.
-     * svc can only be used if no interrupt is active and if interrupts are not
-     * masked. TODO: is there a more efficient way to check that svc is allowed?
-     */
-    if (RT_MPU_ENABLE && !rt_interrupt_is_active() && !interrupts_masked())
+    /* If the MPU is enabled, then we might be in an unprivileged task, which
+     * cannot use PendSV, so system calls must be invoked with an SVCall. Use
+     * the NPRIV and SPSEL bits together to determine if this is the case. If
+     * SPSEL is not set, then we are in an exception, because all tasks use PSP.
+     * If NPRIV is not set, then the active task is privileged. */
+#if RT_MPU_ENABLE
+#define CONTROL_USR (CONTROL_NPRIV | CONTROL_SPSEL)
+    if ((control() & CONTROL_USR) == CONTROL_USR)
     {
         __asm__("svc 0");
     }
     else
+#endif
     {
+#define ICSR (*(volatile uint32_t *)0xE000ED04UL)
+#define PENDSVSET (UINT32_C(1) << 28)
         ICSR = PENDSVSET;
         __asm__("dsb" ::: "memory");
         __asm__("isb");
@@ -362,9 +364,7 @@ void rt_task_drop_privilege(void)
 #if PROFILE_R
     __asm__("cps %0" : : "i"(CPSR_MODE_USR));
 #elif PROFILE_M && RT_MPU_ENABLE
-    uint32_t control;
-    __asm__ __volatile__("mrs %0, control" : "=r"(control));
-    __asm__("msr control, %0" : : "r"(control | CONTROL_NPRIV));
+    __asm__("msr control, %0" : : "r"(control() | CONTROL_NPRIV));
     __asm__("isb");
 #endif
 }
