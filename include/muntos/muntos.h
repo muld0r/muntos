@@ -2,12 +2,12 @@
 #define RT_H
 
 /*
- * Start the rt scheduler.
+ * Start the muntos scheduler.
  */
 void rt_start(void);
 
 /*
- * Stop the rt scheduler.
+ * Stop the muntos scheduler.
  */
 void rt_stop(void);
 

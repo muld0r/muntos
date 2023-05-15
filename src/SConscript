@@ -1,7 +1,7 @@
 Import("env")
 
 librt = env.StaticLibrary(
-    target="rt",
+    target="muntos",
     source=[
         "barrier.c",
         "cond.c",
@@ -10,7 +10,7 @@ librt = env.StaticLibrary(
         "notify.c",
         "once.c",
         "queue.c",
-        "rt.c",
+        "muntos.c",
         "rwlock.c",
         "sem.c",
         "sleep.c",

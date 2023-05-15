@@ -1,11 +1,11 @@
 #include "water.h"
 
-#include <rt/atomic.h>
-#include <rt/log.h>
-#include <rt/rt.h>
-#include <rt/sleep.h>
-#include <rt/task.h>
-#include <rt/tick.h>
+#include <muntos/atomic.h>
+#include <muntos/log.h>
+#include <muntos/muntos.h>
+#include <muntos/sleep.h>
+#include <muntos/task.h>
+#include <muntos/tick.h>
 
 static rt_atomic_uint32_t hydrogen_bonded = 0;
 static rt_atomic_uint32_t oxygen_bonded = 0;

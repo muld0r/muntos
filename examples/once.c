@@ -1,7 +1,7 @@
-#include <rt/log.h>
-#include <rt/once.h>
-#include <rt/rt.h>
-#include <rt/task.h>
+#include <muntos/log.h>
+#include <muntos/once.h>
+#include <muntos/muntos.h>
+#include <muntos/task.h>
 
 #define ITERATIONS 10000UL
 

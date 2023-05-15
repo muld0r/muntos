@@ -1,7 +1,7 @@
 #ifndef RT_STACK_H
 #define RT_STACK_H
 
-#include <rt/arch/stack.h>
+#include <muntos/arch/stack.h>
 
 #ifndef RT_STACK_SIZE
 #define RT_STACK_SIZE(n)                                                       \

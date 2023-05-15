@@ -1,12 +1,12 @@
-#include <rt/context.h>
-#include <rt/cycle.h>
-#include <rt/interrupt.h>
-#include <rt/log.h>
-#include <rt/mpu.h>
-#include <rt/rt.h>
-#include <rt/stack.h>
-#include <rt/syscall.h>
-#include <rt/task.h>
+#include <muntos/context.h>
+#include <muntos/cycle.h>
+#include <muntos/interrupt.h>
+#include <muntos/log.h>
+#include <muntos/mpu.h>
+#include <muntos/muntos.h>
+#include <muntos/stack.h>
+#include <muntos/syscall.h>
+#include <muntos/task.h>
 
 #define PROFILE_R (__ARM_ARCH_PROFILE == 'R')
 #define PROFILE_M (__ARM_ARCH_PROFILE == 'M')

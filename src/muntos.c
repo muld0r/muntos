@@ -1,17 +1,17 @@
-#include <rt/rt.h>
+#include <muntos/muntos.h>
 
-#include <rt/atomic.h>
-#include <rt/container.h>
-#include <rt/context.h>
-#include <rt/cycle.h>
-#include <rt/list.h>
-#include <rt/log.h>
-#include <rt/mutex.h>
-#include <rt/sem.h>
-#include <rt/sleep.h>
-#include <rt/syscall.h>
-#include <rt/task.h>
-#include <rt/tick.h>
+#include <muntos/atomic.h>
+#include <muntos/container.h>
+#include <muntos/context.h>
+#include <muntos/cycle.h>
+#include <muntos/list.h>
+#include <muntos/log.h>
+#include <muntos/mutex.h>
+#include <muntos/sem.h>
+#include <muntos/sleep.h>
+#include <muntos/syscall.h>
+#include <muntos/task.h>
+#include <muntos/tick.h>
 
 #define task_from_member(p, m) (rt_container_of((p), struct rt_task, m))
 #define task_from_list(l) (task_from_member(l, list))

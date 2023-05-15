@@ -1,9 +1,9 @@
 #ifndef RT_SEM_H
 #define RT_SEM_H
 
-#include <rt/atomic.h>
-#include <rt/list.h>
-#include <rt/syscall.h>
+#include <muntos/atomic.h>
+#include <muntos/list.h>
+#include <muntos/syscall.h>
 
 #include <limits.h>
 #include <stdbool.h>

@@ -1,8 +1,8 @@
 #ifndef RT_RWLOCK_H
 #define RT_RWLOCK_H
 
-#include <rt/cond.h>
-#include <rt/mutex.h>
+#include <muntos/cond.h>
+#include <muntos/mutex.h>
 
 struct rt_rwlock;
 

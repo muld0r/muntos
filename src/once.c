@@ -1,4 +1,4 @@
-#include <rt/once.h>
+#include <muntos/once.h>
 
 void rt_once_slow(struct rt_once *once, void (*fn)(void))
 {

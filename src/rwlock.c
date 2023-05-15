@@ -1,4 +1,4 @@
-#include <rt/rwlock.h>
+#include <muntos/rwlock.h>
 
 void rt_rwlock_init(struct rt_rwlock *lock)
 {

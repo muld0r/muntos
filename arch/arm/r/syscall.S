@@ -9,7 +9,7 @@
  * must unmask the syscall interrupt. Both are run with IRQs disabled.
  */
 
-#include <rt/mpu.h>
+#include <muntos/mpu.h>
 
 #include "vic.h"
 

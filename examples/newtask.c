@@ -1,6 +1,6 @@
-#include <rt/log.h>
-#include <rt/rt.h>
-#include <rt/task.h>
+#include <muntos/log.h>
+#include <muntos/muntos.h>
+#include <muntos/task.h>
 
 RT_STACKS(task_stacks, RT_STACK_MIN, 2);
 static struct rt_task tasks[2];

@@ -1,5 +1,5 @@
-#include <rt/rt.h>
-#include <rt/task.h>
+#include <muntos/muntos.h>
+#include <muntos/task.h>
 
 static void simple(uintptr_t arg)
 {

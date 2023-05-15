@@ -1,12 +1,12 @@
 #ifndef RT_TASK_H
 #define RT_TASK_H
 
-#include <rt/context.h>
-#include <rt/cycle.h>
-#include <rt/list.h>
-#include <rt/mpu.h>
-#include <rt/stack.h>
-#include <rt/syscall.h>
+#include <muntos/context.h>
+#include <muntos/cycle.h>
+#include <muntos/list.h>
+#include <muntos/mpu.h>
+#include <muntos/stack.h>
+#include <muntos/syscall.h>
 
 #include <stddef.h>
 #include <stdint.h>

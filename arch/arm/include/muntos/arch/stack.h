@@ -1,6 +1,6 @@
 #pragma once
 
-#include <rt/mpu.h>
+#include <muntos/mpu.h>
 
 #if RT_MPU_ENABLE
 

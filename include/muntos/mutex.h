@@ -1,7 +1,7 @@
 #ifndef RT_MUTEX_H
 #define RT_MUTEX_H
 
-#include <rt/sem.h>
+#include <muntos/sem.h>
 
 struct rt_mutex;
 

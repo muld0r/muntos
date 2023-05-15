@@ -7,7 +7,7 @@
 
 #if RT_MPU_ENABLE
 
-#include <rt/arch/mpu.h>
+#include <muntos/arch/mpu.h>
 
 #else
 /* Provide no-op versions for the static task initialization macros when

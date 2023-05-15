@@ -1,8 +1,8 @@
 #ifndef RT_ONCE_H
 #define RT_ONCE_H
 
-#include <rt/atomic.h>
-#include <rt/mutex.h>
+#include <muntos/atomic.h>
+#include <muntos/mutex.h>
 
 struct rt_once;
 

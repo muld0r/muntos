@@ -1,7 +1,7 @@
 #ifndef RT_COND_H
 #define RT_COND_H
 
-#include <rt/sem.h>
+#include <muntos/sem.h>
 
 #include <stdbool.h>
 

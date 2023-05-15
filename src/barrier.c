@@ -1,7 +1,7 @@
-#include <rt/barrier.h>
+#include <muntos/barrier.h>
 
-#include <rt/log.h>
-#include <rt/task.h>
+#include <muntos/log.h>
+#include <muntos/task.h>
 
 void rt_barrier_init(struct rt_barrier *barrier, int count)
 {

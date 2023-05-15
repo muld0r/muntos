@@ -8,7 +8,7 @@
  * different, mainly due to the lack of stmdb and ldm.w/stm.w.
  */
 
-#include <rt/mpu.h>
+#include <muntos/mpu.h>
 
 #include "exc_return.h"
 

@@ -4,7 +4,7 @@
  * This variant of the syscall handler supports armv{7,8}-m{,+nofp}.
  */
 
-#include <rt/mpu.h>
+#include <muntos/mpu.h>
 
 #include "exc_return.h"
 

@@ -2,7 +2,7 @@
 
 set -xe
 
-name="rt"
+name="muntos"
 image="$name-builder"
 
 docker build --tag "$image" "$(dirname $0)"

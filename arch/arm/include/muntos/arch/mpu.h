@@ -1,6 +1,6 @@
 #pragma once
 
-#include <rt/mpu.h>
+#include <muntos/mpu.h>
 
 #ifndef RT_MPU_NUM_REGIONS
 #define RT_MPU_NUM_REGIONS 8

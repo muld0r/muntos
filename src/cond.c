@@ -1,9 +1,9 @@
-#include <rt/cond.h>
+#include <muntos/cond.h>
 
-#include <rt/log.h>
-#include <rt/mutex.h>
-#include <rt/task.h>
-#include <rt/tick.h>
+#include <muntos/log.h>
+#include <muntos/mutex.h>
+#include <muntos/task.h>
+#include <muntos/tick.h>
 
 void rt_cond_init(struct rt_cond *cond)
 {

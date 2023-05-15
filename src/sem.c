@@ -1,8 +1,8 @@
-#include <rt/sem.h>
+#include <muntos/sem.h>
 
-#include <rt/interrupt.h>
-#include <rt/log.h>
-#include <rt/task.h>
+#include <muntos/interrupt.h>
+#include <muntos/log.h>
+#include <muntos/task.h>
 
 void rt_sem_init_max(struct rt_sem *sem, int count, int max)
 {

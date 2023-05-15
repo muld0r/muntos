@@ -1,12 +1,12 @@
-#include <rt/context.h>
-#include <rt/cycle.h>
-#include <rt/interrupt.h>
-#include <rt/log.h>
-#include <rt/rt.h>
-#include <rt/syscall.h>
+#include <muntos/context.h>
+#include <muntos/cycle.h>
+#include <muntos/interrupt.h>
+#include <muntos/log.h>
+#include <muntos/muntos.h>
+#include <muntos/syscall.h>
 
-#include <rt/task.h>
-#include <rt/tick.h>
+#include <muntos/task.h>
+#include <muntos/tick.h>
 
 #include <pthread.h>
 #include <semaphore.h>

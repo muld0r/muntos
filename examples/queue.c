@@ -1,8 +1,8 @@
-#include <rt/log.h>
-#include <rt/queue.h>
-#include <rt/rt.h>
-#include <rt/sleep.h>
-#include <rt/task.h>
+#include <muntos/log.h>
+#include <muntos/queue.h>
+#include <muntos/muntos.h>
+#include <muntos/sleep.h>
+#include <muntos/task.h>
 
 #include <stdint.h>
 

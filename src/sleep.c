@@ -1,8 +1,8 @@
-#include <rt/sleep.h>
+#include <muntos/sleep.h>
 
-#include <rt/log.h>
-#include <rt/syscall.h>
-#include <rt/task.h>
+#include <muntos/log.h>
+#include <muntos/syscall.h>
+#include <muntos/task.h>
 
 void rt_sleep(unsigned long ticks)
 {

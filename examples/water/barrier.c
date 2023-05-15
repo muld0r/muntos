@@ -1,7 +1,7 @@
 #include "water.h"
 
-#include <rt/barrier.h>
-#include <rt/sem.h>
+#include <muntos/barrier.h>
+#include <muntos/sem.h>
 
 struct reaction
 {

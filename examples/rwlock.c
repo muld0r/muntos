@@ -1,8 +1,8 @@
-#include <rt/log.h>
-#include <rt/rt.h>
-#include <rt/rwlock.h>
-#include <rt/sleep.h>
-#include <rt/task.h>
+#include <muntos/log.h>
+#include <muntos/muntos.h>
+#include <muntos/rwlock.h>
+#include <muntos/sleep.h>
+#include <muntos/task.h>
 
 static RT_RWLOCK(lock);
 static unsigned long x = 0;

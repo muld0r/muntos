@@ -11,5 +11,5 @@ RUN apt-get update && \
       llvm \
       scons
 
-RUN useradd rt
-USER rt
+RUN useradd muntos
+USER muntos

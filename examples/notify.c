@@ -1,7 +1,7 @@
-#include <rt/notify.h>
-#include <rt/rt.h>
-#include <rt/sleep.h>
-#include <rt/task.h>
+#include <muntos/notify.h>
+#include <muntos/muntos.h>
+#include <muntos/sleep.h>
+#include <muntos/task.h>
 
 static const int n = 10;
 static struct rt_notify note;

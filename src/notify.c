@@ -1,4 +1,4 @@
-#include <rt/notify.h>
+#include <muntos/notify.h>
 
 void rt_notify(struct rt_notify *note)
 {

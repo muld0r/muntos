@@ -1,9 +1,9 @@
 #ifndef RT_BARRIER_H
 #define RT_BARRIER_H
 
-#include <rt/cond.h>
-#include <rt/mutex.h>
-#include <rt/sem.h>
+#include <muntos/cond.h>
+#include <muntos/mutex.h>
+#include <muntos/sem.h>
 
 #include <stdbool.h>
 

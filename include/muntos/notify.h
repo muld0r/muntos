@@ -1,8 +1,8 @@
 #ifndef RT_NOTIFY_H
 #define RT_NOTIFY_H
 
-#include <rt/atomic.h>
-#include <rt/sem.h>
+#include <muntos/atomic.h>
+#include <muntos/sem.h>
 
 #include <stdbool.h>
 #include <string.h>

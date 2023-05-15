@@ -1,10 +1,10 @@
-#include <rt/atomic.h>
-#include <rt/log.h>
-#include <rt/rt.h>
-#include <rt/sem.h>
-#include <rt/sleep.h>
-#include <rt/task.h>
-#include <rt/tick.h>
+#include <muntos/atomic.h>
+#include <muntos/log.h>
+#include <muntos/muntos.h>
+#include <muntos/sem.h>
+#include <muntos/sleep.h>
+#include <muntos/task.h>
+#include <muntos/tick.h>
 
 static const int nloops = 5;
 static rt_atomic_bool wrong_tick = false;

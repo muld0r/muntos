@@ -1,8 +1,8 @@
-#include <rt/atomic.h>
-#include <rt/queue.h>
+#include <muntos/atomic.h>
+#include <muntos/queue.h>
 
-#include <rt/log.h>
-#include <rt/task.h>
+#include <muntos/log.h>
+#include <muntos/task.h>
 
 #include <limits.h>
 #include <stdatomic.h>

@@ -1,8 +1,8 @@
-#include <rt/mutex.h>
-#include <rt/rt.h>
-#include <rt/sem.h>
-#include <rt/sleep.h>
-#include <rt/task.h>
+#include <muntos/mutex.h>
+#include <muntos/muntos.h>
+#include <muntos/sem.h>
+#include <muntos/sleep.h>
+#include <muntos/task.h>
 
 static RT_MUTEX(mutex);
 static unsigned long x = 0;

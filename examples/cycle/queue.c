@@ -1,8 +1,8 @@
-#include <rt/cycle.h>
-#include <rt/log.h>
-#include <rt/queue.h>
-#include <rt/rt.h>
-#include <rt/task.h>
+#include <muntos/cycle.h>
+#include <muntos/log.h>
+#include <muntos/queue.h>
+#include <muntos/muntos.h>
+#include <muntos/task.h>
 
 static volatile uint32_t start_cycle = 0;
 static volatile uint32_t cycles = 0;

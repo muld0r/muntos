@@ -11,8 +11,8 @@
  * the queue is empty.
  */
 
-#include <rt/atomic.h>
-#include <rt/sem.h>
+#include <muntos/atomic.h>
+#include <muntos/sem.h>
 
 #include <assert.h>
 #include <limits.h>

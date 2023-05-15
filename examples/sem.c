@@ -1,7 +1,7 @@
-#include <rt/rt.h>
-#include <rt/sem.h>
-#include <rt/sleep.h>
-#include <rt/task.h>
+#include <muntos/muntos.h>
+#include <muntos/sem.h>
+#include <muntos/sleep.h>
+#include <muntos/task.h>
 
 static const int n = 10;
 static RT_SEM(sem, 0);
