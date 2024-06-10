@@ -1,0 +1,109 @@
+[package]
+name = "muntos"
+version = "0.0.1"
+authors = ["Chris Copeland <chris@chrisnc.net>"]
+description = "A real-time operating system capable of full preemption"
+license = "Apache-2.0"
+repository = "https://git.rtng.org/rt/rt"
+documentation = "https://docs.rs/rt"
+keywords = ["real-time", "rtos"]
+categories = ["concurrency", "embedded", "no-std"]
+edition = "2021"
+rust-version = "1.76.0"
+build = "rust/build.rs"
+autoexamples = false
+include = [
+  "/src/",
+  "/include/",
+  "/arch/",
+  "/rust/",
+  "!SCons*",
+  "!Dockerfile",
+  "!*.bash",
+]
+
+[lib]
+path = "rust/src/lib.rs"
+
+[dependencies]
+paste = "1.0"
+
+[dev-dependencies]
+atomic_float = { version = "1.0" }
+
+[build-dependencies]
+bindgen = "0.69"
+cc = "1.0"
+
+[profile.release]
+debug = true
+
+[features]
+hercules = []
+sitara-vim = []
+sitara-intc = []
+task-mpu = []
+
+[[example]]
+name = "cond"
+path = "rust/examples/cond.rs"
+
+[[example]]
+name = "async"
+path = "rust/examples/async.rs"
+
+[[example]]
+name = "donate"
+path = "rust/examples/donate.rs"
+
+[[example]]
+name = "empty"
+path = "rust/examples/empty.rs"
+
+[[example]]
+name = "float"
+path = "rust/examples/float.rs"
+
+[[example]]
+name = "mutex"
+path = "rust/examples/mutex.rs"
+
+[[example]]
+name = "notify"
+path = "rust/examples/notify.rs"
+
+[[example]]
+name = "once"
+path = "rust/examples/once.rs"
+
+[[example]]
+name = "queue"
+path = "rust/examples/queue.rs"
+
+[[example]]
+name = "rwlock"
+path = "rust/examples/rwlock.rs"
+
+[[example]]
+name = "sem"
+path = "rust/examples/sem.rs"
+
+[[example]]
+name = "simple"
+path = "rust/examples/simple.rs"
+
+[[example]]
+name = "sleep"
+path = "rust/examples/sleep.rs"
+
+[[example]]
+name = "water-barrier"
+path = "rust/examples/water/barrier.rs"
+
+[[example]]
+name = "water-condvar"
+path = "rust/examples/water/condvar.rs"
+
+[[example]]
+name = "water-sem"
+path = "rust/examples/water/sem.rs"

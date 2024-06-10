@@ -1,2 +1,5 @@
 /build/
 .sconsign.dblite
+
+/target/
+/Cargo.lock
